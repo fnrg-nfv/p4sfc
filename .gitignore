@@ -1,0 +1,5 @@
+.ropeproject/
+
+*.swp
+
+*.pyc
