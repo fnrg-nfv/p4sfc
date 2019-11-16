@@ -16,7 +16,7 @@ run_args += -j $(DEFAULT_JSON)
 all: run
 
 run: build
-	sudo python $(RUN_SCRIPT) --behavioral-exe $(BMV2_SWITCH_EXE) --json $(PROG_PREFIX).p4
+	sudo python $(RUN_SCRIPT) --behavioral-exe $(BMV2_SWITCH_EXE) --json $(BUILD_DIR)/$(PROG_PREFIX).json
 
 stop:
 	sudo mn -c
