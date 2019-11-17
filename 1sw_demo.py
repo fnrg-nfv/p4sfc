@@ -15,12 +15,13 @@
 # limitations under the License.
 #
 
-from mininet.net import Mininet
+from mininet.net import Mininet, Containernet
+from mininet.node import Controller, Docker
 from mininet.topo import Topo
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
-from p4_mininet import P4Switch, P4Host
+from p4_mininet import P4Switch
 
 import argparse
 from time import sleep
@@ -49,40 +50,25 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-
-class SingleSwitchTopo(Topo):
-    "Single switch connected to n (< 256) hosts."
-
-    def __init__(self, sw_path, json_path, thrift_port, pcap_dump, n, **opts):
-        # Initialize topology and default options
-        Topo.__init__(self, **opts)
-
-        switch = self.addSwitch('s1',
-                                sw_path=sw_path,
-                                json_path=json_path,
-                                thrift_port=thrift_port,
-                                pcap_dump=pcap_dump)
-
-        for h in range(n):
-            host = self.addHost('h%d' % (h + 1),
-                                ip="10.0.%d.10/24" % h,
-                                mac='00:04:00:00:00:%02x' % h)
-            self.addLink(host, switch)
-
-
 def main():
     num_hosts = args.num_hosts
     mode = args.mode
 
-    topo = SingleSwitchTopo(args.behavioral_exe,
-                            args.json,
-                            args.thrift_port,
-                            args.pcap_dump,
-                            num_hosts)
-    net = Mininet(topo=topo,
-                  host=P4Host,
-                  switch=P4Switch,
-                  controller=None)
+    net = Containernet(controller=Controller,
+                       switch=P4Switch)
+    switch = net.addSwitch('s1',
+                            sw_path=args.behavioral_exe,
+                            json_path=args.json,
+                            thrift_port=args.thrift_port,
+                            pcap_dump=args.pcap_dump)
+
+    for h in range(num_hosts):
+        host = net.addDocker('h%d' % (h + 1),
+                            ip="10.0.%d.10/24" % h,
+                            mac='00:04:00:00:00:%02x' % h,
+                            dimage="ubuntu:trusty")
+        net.addLink(host, switch)
+
     net.start()
 
     sw_mac = ["00:aa:bb:00:00:%02x" % n for n in range(num_hosts)]
@@ -97,11 +83,11 @@ def main():
             h.setARP(sw_addr[n], sw_mac[n])
             h.setDefaultRoute("dev eth0 via %s" % sw_addr[n])
 
-    for n in range(num_hosts):
-        h = net.get('h%d' % (n + 1))
-        h.describe()
+    # for n in range(num_hosts):
+    #     h = net.get('h%d' % (n + 1))
+    #     h.describe()
 
-    sleep(1)
+    # sleep(1)
 
     print("Ready !")
 
@@ -112,3 +98,4 @@ def main():
 if __name__ == '__main__':
     setLogLevel('info')
     main()
+
