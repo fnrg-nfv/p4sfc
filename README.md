@@ -22,7 +22,7 @@
 
 ### Second Try
 
-follow <u>user-bootstrap.sh</u>
+follow *user-bootstrap.sh*
 
 - use the above protobuf.
   - rebuild protobuf
@@ -30,15 +30,14 @@ follow <u>user-bootstrap.sh</u>
 
 ### Third Try
 
-Switch ubuntu version from 18.04 to **16.04**, and follow <u>user-bootstrap.sh</u>
-
+Switch ubuntu version from 18.04 to **16.04**, and follow *user-bootstrap.sh*
 **[succeed]**
 
 ## *P4*+*containernet*
 
 ### *P4*嵌入*mininet*原理
 
-1.  *p4c*: .p4 file => .json file
+1. *p4c*: .p4 file => .json file
 
 2. run *bmv2* in *mininet*
 
