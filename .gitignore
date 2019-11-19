@@ -1,9 +1,7 @@
 .ropeproject/
+build/
+pcaps/
 
 *.swp
-
 *.pyc
-
 *.pcap
-
-build/
