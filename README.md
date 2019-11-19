@@ -30,21 +30,23 @@ follow <u>user-bootstrap.sh</u>
 
 ### Third Try
 
-Switch ubuntu version from 18.04 to **16.04**, and follow <u>user-bootstrap.sh</u>
+Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user-bootstrap.sh*.
 
 **[succeed]**
 
 ## *P4*+*containernet*
 
-### *P4*嵌入*mininet*原理
+1.  *p4c*: .p4 file => .json file & .txt file
 
-1.  *p4c*: .p4 file => .json file
-
-2. run *bmv2* in *mininet*
+2. run *bmv2* as Switch in *mininet*. (sample command is following:)
 
    ```bash
    sudo python 1sw_demo.py --behavioral-exe <behavioral exe> --json <json file(compiled from p4)>
    ```
+
+3. create Containernet instead of Mininet and add dockers instead of general hosts.
+
+4. run mycontroller.py to add rules into p4switch by grpc interface.
 
 #### TODO
 
