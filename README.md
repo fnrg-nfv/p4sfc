@@ -48,5 +48,8 @@ Switch ubuntu version from 18.04 to **16.04**, and follow <u>user-bootstrap.sh</
 
 #### TODO
 
-- controller
-- diff ingress & egress
+- [DONE]~~controller~~
+- [CONCEPT] diff ingress & egress in v1model;
+- implement DPDK nfv in Docker;
+- design state communicaiton between docker and p4switch;
+- sfc workflow design
