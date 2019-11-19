@@ -4,4 +4,6 @@
 
 *.pyc
 
+*.pcap
+
 build/
