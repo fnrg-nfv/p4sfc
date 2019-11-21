@@ -1,5 +1,6 @@
 BUILD_DIR = build
 PCAP_DIR = pcaps
+LOG_DIR = logs
 PROG_PREFIX = test
 RUN_SCRIPT = 1sw_demo.py
 
@@ -22,8 +23,9 @@ build: dirs
 	$(P4C) $(P4C_ARGS) $(PROG_PREFIX).p4 -o $(BUILD_DIR)
 
 dirs:
-	mkdir -p $(BUILD_DIR) $(PCAP_DIR)
+	mkdir -p $(BUILD_DIR) $(PCAP_DIR) $(LOG_DIR)
 
 clean: stop
 	rm -f ./*.pcap
-	rm -rf $(BUILD_DIR) $(PCAP_DIR)
+	rm -rf $(BUILD_DIR) $(PCAP_DIR) $(LOG_DIR)
+

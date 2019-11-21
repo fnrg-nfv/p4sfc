@@ -60,6 +60,8 @@ def main():
                             thrift_port=args.thrift_port,
                             pcap_dump=args.pcap_dump)
 
+    print "%d" % net.get('s1').thrift_port
+
     sw_ip = ["10.0.%d.10" % n for n in range(num_hosts)]
     sw_mac = ["00:04:00:00:00:%02x" % n for n in range(num_hosts)]
 

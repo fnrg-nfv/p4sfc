@@ -47,22 +47,8 @@ def readTableRules(p4info_helper, sw):
     for response in sw.ReadTableEntries():
         for entity in response.entities:
             entry = entity.table_entry
-            # TODO For extra credit, you can use the p4info_helper to translate
-            #      the IDs in the entry to names
             print entry
             print '-----'
-            # table_name = p4info_helper.get_tables_name(entry.table_id)
-            # print '%s: ' % table_name,
-            # for m in entry.match:
-            #     print p4info_helper.get_match_field_name(table_name, m.field_id),
-            #     print '%r' % (p4info_helper.get_match_field_value(m),),
-            # action = entry.action.action
-            # action_name = p4info_helper.get_actions_name(action.action_id)
-            # print '->', action_name,
-            # for p in action.params:
-            #     print p4info_helper.get_action_param_name(action_name, p.param_id),
-            #     print '%r' % p.value,
-            # print
 
 def printCounter(p4info_helper, sw, counter_name, index):
     """
@@ -93,29 +79,26 @@ def main(p4info_file_path, bmv2_file_path):
         # Also, dump all P4Runtime messages sent to switch to given txt files.
         s = p4runtime_lib.bmv2.Bmv2SwitchConnection(
             name='s',
-            address='127.0.0.1:50051',
-            device_id=0)
-            # proto_dump_file='logs/s1-p4runtime-requests.txt')
+            address='127.0.0.1:50051', # TODO why it the port 50051
+            device_id=0,
+            proto_dump_file='logs/s-p4runtime-requests.txt')
 
         # Send master arbitration update message to establish this controller as
         # master (required by P4Runtime before performing any other write operation)
         s.MasterArbitrationUpdate()
-        # s2.MasterArbitrationUpdate()
 
         # Install the P4 program on the switches
+        # TODO why install P4 program again?
+        # (P4 program has been installed during the making stage)
         s.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
                                       bmv2_json_file_path=bmv2_file_path)
         print "Installed P4 Program using SetForwardingPipelineConfig on s"
 
-        # Write the rules that tunnel traffic from h1 to h2
+        # Write the rules that forward traffic between h1 and h2
         write_ipv4_forward_rules(p4info_helper, sw = s, dst_ip_addr="10.0.0.10",
                                  dst_eth_addr="00:04:00:00:00:00", port=1)
         write_ipv4_forward_rules(p4info_helper, sw = s, dst_ip_addr="10.0.1.10",
                                  dst_eth_addr="00:04:00:00:00:01", port=2)
-
-        # Write the rules that tunnel traffic from h2 to h1
-        # writeTunnelRules(p4info_helper, ingress_sw=s2, egress_sw=s1, tunnel_id=200,
-        #                  dst_eth_addr="08:00:00:00:01:11", dst_ip_addr="10.0.1.1")
 
         readTableRules(p4info_helper, s)
 
@@ -123,8 +106,7 @@ def main(p4info_file_path, bmv2_file_path):
         # while True:
         #     sleep(2)
         #     print '\n----- Reading tunnel counters -----'
-        #     printCounter(p4info_helper, s1, "MyIngress.ingressTunnelCounter", 100)
-        #     printCounter(p4info_helper, s1, "MyIngress.egressTunnelCounter", 200)
+        #     printCounter(p4info_helper, s, "MyIngress.ingressTunnelCounter", 100)
 
     except KeyboardInterrupt:
         print " Shutting down."
@@ -152,3 +134,4 @@ if __name__ == '__main__':
         print "\nBMv2 JSON file not found: %s\nHave you run 'make'?" % args.bmv2_json
         parser.exit(1)
     main(args.p4info, args.bmv2_json)
+
