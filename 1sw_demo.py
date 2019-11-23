@@ -67,9 +67,9 @@ def main():
 
     for h in range(num_hosts):
         host = net.addDocker('h%d' % (h + 1),
-                            ip=sw_ip[h],
-                            mac=sw_mac[h],
-                            dimage="ubuntu:trusty")
+                             ip=sw_ip[h],
+                             mac=sw_mac[h],
+                             dimage="dpdk-app-testpmd:latest")
         net.addLink(host, switch)
 
     net.start()
