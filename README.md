@@ -4,13 +4,13 @@
 
 ## How to Run
 
-Compile *test.p4* and run Containernet illustrated by *1sw_demo.py*:
+Compile <u>test.p4</u> and run Containernet illustrated by <u>1sw_demo.py</u>:
 
 ```bash
 make run
 ```
 
-Open another terminal, run *mycontroller.py* as a controller to inject rules to bmv2.
+Open another terminal, run <u>mycontroller.py</u> as a controller to inject rules to bmv2.
 
 ```bash
 python mycontroller.py
