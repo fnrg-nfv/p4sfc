@@ -1,12 +1,12 @@
 # p4sfc
 
-## Related Concepts
+### Related Concepts
 
 - protobuf
 - grpc
 - thrift: a framework for scalable cross-language services development
 
-## Environment Settings（mininet+bmv2+p4c+PI/p4runtime+dpdk)
+## Environment Setting（containernet+bmv2+p4c+PI+docker+dpdk)
 
 ### First Try
 
@@ -37,12 +37,34 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 
 3. create Containernet instead of Mininet and add dockers instead of general hosts.
 
-4. run mycontroller.py to add rules into p4switch by grpc interface.
+4. run mycontroller.py to add rules into p4switch through grpc interface.
 
-#### TODO
+## *DPDK*+*Docker*
 
-- [DONE]~~controller~~
+1. Make dpdk and build image
+
+2. Run the image in containernet
+
+   - bind `/dev/hugepages`
+
+     ```python
+     host = net.addDocker(<name>, ip=<ip>, mac=<mac>, dimage=<image>, volumes=['/dev/hugetables:/dev/hugetables:rw'])
+     ```
+
+     
+
+3. Attach to the container, and bind the veth (created by containernet). Replace <veth> with the name of created virtual ethernet device.
+
+```bash
+testpmd -l <core-list> -n <channel_number> --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=<veth>' -- -i
+```
+
+
+
+## TODO
+
 - [CONCEPT] diff ingress & egress in v1model;
+- implement pktgen in Docker;
 - implement DPDK nfv in Docker;
-- design state communicaiton between docker and p4switch;
-- sfc workflow design
+- design **state** communicaiton between docker and p4switch;
+- **sfc workflow** design.
