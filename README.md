@@ -25,7 +25,11 @@ For each created container, attach to its bash and run: (replace <> with your ow
 e.g.
 
 ```bash
-testpmd -l 1-2 -n 4 --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=h1-eth0' -- -i
+./testpmd -l 1-2 -n 4 --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=h1-eth0' -- -i
+```
+
+```bash
+./pktgen -l 0-2 -n 3 --file-prefix pktgen --no-pci --vdev 'eth_af_packet,iface=h2-eth0' -- -P -m"[1:2].0"
 ```
 
 
@@ -38,7 +42,7 @@ testpmd -l 1-2 -n 4 --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=h1-e
 
 
 
-（以下为试验记录）
+（以下为实验记录）
 
 ### Related Packages
 
@@ -88,7 +92,7 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
    - bind `/dev/hugepages`
 
      ```python
-     host = net.addDocker(<name>, ip=<ip>, mac=<mac>, dimage=<image>, volumes=['/dev/hugetables:/dev/hugetables:rw'])
+     host = net.addDocker(<name>, ip=<ip>, mac=<mac>, dimage=<image>, volumes=['/dev/hugepages:/dev/hugepages:rw'])
      ```
 
 3. Attach to the container, and bind the veth (created by containernet). Replace <veth> with the name of created virtual ethernet device.
