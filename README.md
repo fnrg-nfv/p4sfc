@@ -1,6 +1,30 @@
 # p4sfc
 
-### Related Concepts
+
+
+## How to Run
+
+```bash
+make run
+```
+
+Open another terminal, run a controller to inject rules to bmv2.
+
+```bash
+python mycontroller.py
+```
+
+For each created container, attach to its bash and run: (replace <> with your own arguments)
+
+```bash
+<dpdk-app> -l <core-list> -n <channel_number> --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=<veth>' -- <app-args>
+```
+
+
+
+（以下为试验记录）
+
+### Related Packages
 
 - protobuf
 - grpc
@@ -29,7 +53,7 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 
 1.  *p4c*: .p4 file => .json file & .txt file
 
-2. run *bmv2* as Switch in *mininet*. (sample command is following:)
+2. run *bmv2* as Switch in *mininet*.
 
    ```bash
    sudo python 1sw_demo.py --behavioral-exe <behavioral exe> --json <json file(compiled from p4)>
@@ -51,20 +75,20 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
      host = net.addDocker(<name>, ip=<ip>, mac=<mac>, dimage=<image>, volumes=['/dev/hugetables:/dev/hugetables:rw'])
      ```
 
-     
-
 3. Attach to the container, and bind the veth (created by containernet). Replace <veth> with the name of created virtual ethernet device.
 
-```bash
-testpmd -l <core-list> -n <channel_number> --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=<veth>' -- -i
-```
-
-
+    ```bash
+    testpmd -l <core-list> -n <channel_number> --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=<veth>' -- -i
+    ```
 
 ## TODO
 
 - [CONCEPT] diff ingress & egress in v1model;
 - implement pktgen in Docker;
-- implement DPDK nfv in Docker;
+- implement DPDK nfv and p4 in Docker;
 - design **state** communicaiton between docker and p4switch;
 - **sfc workflow** design.
+
+## Contact
+
+None
