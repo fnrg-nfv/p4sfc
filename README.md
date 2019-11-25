@@ -1,10 +1,8 @@
 # p4sfc
 
-
-
 ## How to Run
 
-Compile <u>test.p4</u> and run Containernet illustrated by <u>1sw_demo.py</u>:
+Compile <u>test.p4</u> and run Containernet (<u>1sw_demo.py</u>):
 
 ```bash
 make run
@@ -108,7 +106,3 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 - implement DPDK nfv and p4 in Docker;
 - design **state** communicaiton between docker and p4switch;
 - **sfc workflow** design.
-
-## Contact
-
-None
