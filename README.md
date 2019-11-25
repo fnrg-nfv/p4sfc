@@ -4,11 +4,13 @@
 
 ## How to Run
 
+Compile *test.p4* and run Containernet illustrated by *1sw_demo.py*:
+
 ```bash
 make run
 ```
 
-Open another terminal, run a controller to inject rules to bmv2.
+Open another terminal, run *mycontroller.py* as a controller to inject rules to bmv2.
 
 ```bash
 python mycontroller.py
@@ -17,8 +19,22 @@ python mycontroller.py
 For each created container, attach to its bash and run: (replace <> with your own arguments)
 
 ```bash
-<dpdk-app> -l <core-list> -n <channel_number> --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=<veth>' -- <app-args>
+<dpdk-app> -l <core-list> -n <channel_number> --file-prefix <prefix> --no-pci --vdev 'eth_af_packet,iface=<veth>' -- <app-args>
 ```
+
+e.g.
+
+```bash
+testpmd -l 1-2 -n 4 --file-prefix vdev --no-pci --vdev 'eth_af_packet,iface=h1-eth0' -- -i
+```
+
+
+
+@
+
+@
+
+@
 
 
 
