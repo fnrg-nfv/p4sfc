@@ -48,4 +48,6 @@ Switch ubuntu version from 18.04 to **16.04**, and follow *user-bootstrap.sh*
 #### TODO
 
 - controller
+  - connect
+  - manipulate table entries
 - diff ingress & egress
