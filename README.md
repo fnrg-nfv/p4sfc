@@ -2,16 +2,17 @@
 
 ## How to Run
 
-Compile <u>test.p4</u> and run Containernet (<u>1sw_demo.py</u>):
+Compile your p4 program and start Containernet topo
+<!-- Compile <u>test.p4</u> and run Containernet (<u>1sw_demo.py</u>): -->
 
 ```bash
-make run
+make run PROG_PREFIX=<your_p4_program_name> RUN_SCRIPT=<your_topo>.py
 ```
 
-Open another terminal, run <u>mycontroller.py</u> as a controller to inject rules to bmv2.
+Open another terminal, run <u>your_controller.py</u> as a controller to inject rules to bmv2.
 
 ```bash
-python mycontroller.py
+python <your_controller>.py --p4info ./bulid/<your_p4_program_name>.txt --bmv2-json ./build/<your_p4_program_name>.json
 ```
 
 For each created container, attach to its bash and run: (replace <> with your own arguments)
