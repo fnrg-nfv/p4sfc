@@ -46,6 +46,8 @@ parser.add_argument(
     action="store",
     required=False,
     default=False)
+parser.add_argument('-l', '--log-dir', help='Path to log files',
+                   type=str, required=False)
 
 args = parser.parse_args()
 
@@ -58,7 +60,8 @@ def main():
                             sw_path=args.behavioral_exe,
                             json_path=args.json,
                             thrift_port=args.thrift_port,
-                            pcap_dump=args.pcap_dump)
+                            pcap_dump=args.pcap_dump,
+                            log_file=args.log_dir)
 
     print "%d" % net.get('s1').thrift_port
 
@@ -66,10 +69,19 @@ def main():
     sw_mac = ["00:04:00:00:00:%02x" % n for n in range(num_hosts)]
 
     for h in range(num_hosts):
-        host = net.addDocker('h%d' % (h + 1),
-                             ip=sw_ip[h],
-                             mac=sw_mac[h],
-                             dimage="dpdk-app-testpmd:latest")
+        host = None
+        if (h % 2) == 0:
+            host = net.addDocker('h%d' % (h + 1),
+                                ip=sw_ip[h],
+                                mac=sw_mac[h],
+                                dimage="dpdk-app-testpmd:latest",
+                                volumes=["/dev/hugepages:/dev/hugepages:rw"])
+        else:
+            host = net.addDocker('h%d' % (h + 1),
+                                ip=sw_ip[h],
+                                mac=sw_mac[h],
+                                dimage="dpdk-pktgen:latest",
+                                volumes=["/dev/hugepages:/dev/hugepages:rw"])
         net.addLink(host, switch)
 
     net.start()

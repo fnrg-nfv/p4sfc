@@ -59,6 +59,7 @@ class P4Switch(Switch):
                  thrift_port=None,
                  pcap_dump=False,
                  log_console=False,
+                 log_file= None,
                  verbose=False,
                  device_id=None,
                  enable_debugger=False,
@@ -81,6 +82,10 @@ class P4Switch(Switch):
         self.pcap_dump = pcap_dump
         self.enable_debugger = enable_debugger
         self.log_console = log_console
+        if log_file is not None:
+            self.log_file = log_file
+        else:
+            self.log_file = "/tmp/p4s.{}.log".format(self.name)
         if device_id is not None:
             self.device_id = device_id
             P4Switch.device_id = max(P4Switch.device_id, device_id)
@@ -115,7 +120,7 @@ class P4Switch(Switch):
             if not intf.IP():
                 args.extend(['-i', str(port) + "@" + intf.name])
         if self.pcap_dump:
-            args.append("--pcap")
+            args.append("--pcap %s" % self.pcap_dump)
             # args.append("--useFiles")
         if self.thrift_port:
             args.extend(['--thrift-port', str(self.thrift_port)])
