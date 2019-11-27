@@ -2,7 +2,14 @@ BUILD_DIR = build
 PCAP_DIR = pcaps
 LOG_DIR = logs
 PROG_PREFIX = test
+
+ifndef PROG_PREFIX
+PROG_PREFIX = test
+endif
+
+ifndef RUN_SCRIPT
 RUN_SCRIPT = 1sw_demo.py
+endif
 
 P4C = p4c
 P4C_ARGS = --target bmv2 --arch v1model --p4runtime-files $(BUILD_DIR)/$(PROG_PREFIX).txt
