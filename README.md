@@ -1,10 +1,8 @@
 # p4sfc
 
-
-
 ## How to Run
 
-Compile <u>test.p4</u> and run Containernet illustrated by <u>1sw_demo.py</u>:
+Compile <u>test.p4</u> and run Containernet (<u>1sw_demo.py</u>):
 
 ```bash
 make run
@@ -32,15 +30,11 @@ e.g.
 ./pktgen -l 0-2 -n 3 --file-prefix pktgen --no-pci --vdev 'eth_af_packet,iface=h2-eth0' -- -P -m"[1:2].0"
 ```
 
-
-
 @
 
 @
 
 @
-
-
 
 （以下为实验记录）
 
@@ -71,7 +65,7 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 
 ## *P4*+*containernet*
 
-1.  *p4c*: .p4 file => .json file & .txt file
+1. *p4c*: .p4 file => .json file & .txt file
 
 2. run *bmv2* as Switch in *mininet*.
 
@@ -108,7 +102,3 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 - implement DPDK nfv and p4 in Docker;
 - design **state** communicaiton between docker and p4switch;
 - **sfc workflow** design.
-
-## Contact
-
-None
