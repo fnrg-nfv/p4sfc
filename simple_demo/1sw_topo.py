@@ -21,10 +21,13 @@ from mininet.topo import Topo
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
-from p4_mininet import P4Switch
-
 import argparse
 from time import sleep
+
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),                                                                                                                   '../utils/'))
+from p4_mininet import P4Switch
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',

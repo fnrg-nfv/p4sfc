@@ -21,11 +21,7 @@ from sys import exit
 import os
 import tempfile
 import socket
-from time import sleep
 
-from netstat import check_listening_on_port
-
-SWITCH_START_TIMEOUT = 10 # seconds
 
 class P4Host(Host):
     def config(self, **params):
@@ -45,27 +41,28 @@ class P4Host(Host):
         return r
 
     def describe(self):
-        print "**********"
-        print self.name
-        print "default interface: %s\t%s\t%s" %(
+        print("**********")
+        print(self.name)
+        print("default interface: %s\t%s\t%s" % (
             self.defaultIntf().name,
             self.defaultIntf().IP(),
             self.defaultIntf().MAC()
-        )
-        print "**********"
+        ))
+        print("**********")
+
 
 class P4Switch(Switch):
     """P4 virtual switch"""
     device_id = 0
 
-    def __init__(self, name, sw_path = None, json_path = None,
-                 thrift_port = None,
-                 pcap_dump = False,
-                 log_console = False,
-                 log_file = None,
-                 verbose = False,
-                 device_id = None,
-                 enable_debugger = False,
+    def __init__(self, name, sw_path=None, json_path=None,
+                 thrift_port=None,
+                 pcap_dump=False,
+                 log_console=False,
+                 log_file= None,
+                 verbose=False,
+                 device_id=None,
+                 enable_debugger=False,
                  **kwargs):
         Switch.__init__(self, name, **kwargs)
         assert(sw_path)
@@ -82,9 +79,6 @@ class P4Switch(Switch):
         logfile = "/tmp/p4s.{}.log".format(self.name)
         self.output = open(logfile, 'w')
         self.thrift_port = thrift_port
-        if check_listening_on_port(self.thrift_port):
-            error('%s cannot bind port %d because it is bound by another process\n' % (self.name, self.grpc_port))
-            exit(1)
         self.pcap_dump = pcap_dump
         self.enable_debugger = enable_debugger
         self.log_console = log_console
@@ -107,14 +101,16 @@ class P4Switch(Switch):
     def check_switch_started(self, pid):
         """While the process is running (pid exists), we check if the Thrift
         server has been started. If the Thrift server is ready, we assume that
-        the switch was started successfully. This is only reliable if the Thrift
-        server is started at the end of the init process"""
+        the switch was started successfully. This is only reliable if the
+        Thrift server is started at the end of the init process"""
         while True:
             if not os.path.exists(os.path.join("/proc", str(pid))):
                 return False
-            if check_listening_on_port(self.thrift_port):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+            result = sock.connect_ex(("localhost", self.thrift_port))
+            if result == 0:
                 return True
-            sleep(0.5)
 
     def start(self, controllers):
         "Start up a new P4 switch"
@@ -125,6 +121,7 @@ class P4Switch(Switch):
                 args.extend(['-i', str(port) + "@" + intf.name])
         if self.pcap_dump:
             args.append("--pcap %s" % self.pcap_dump)
+            # args.append("--useFiles")
         if self.thrift_port:
             args.extend(['--thrift-port', str(self.thrift_port)])
         if self.nanomsg:
@@ -136,12 +133,18 @@ class P4Switch(Switch):
             args.append("--debugger")
         if self.log_console:
             args.append("--log-console")
+        logfile = "/tmp/p4s.{}.log".format(self.name)
         info(' '.join(args) + "\n")
 
         pid = None
         with tempfile.NamedTemporaryFile() as f:
             # self.cmd(' '.join(args) + ' > /dev/null 2>&1 &')
-            self.cmd(' '.join(args) + ' >' + self.log_file + ' 2>&1 & echo $! >> ' + f.name)
+            self.cmd(
+                ' '.join(args) +
+                ' >' +
+                logfile +
+                ' 2>&1 & echo $! >> ' +
+                f.name)
             pid = int(f.read())
         debug("P4 switch {} PID is {}.\n".format(self.name, pid))
         if not self.check_switch_started(pid):

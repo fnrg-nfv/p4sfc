@@ -1,7 +1,6 @@
 BUILD_DIR = build
 PCAP_DIR = pcaps
 LOG_DIR = logs
-PROG_PREFIX = test
 
 ifndef PROG_PREFIX
 PROG_PREFIX = test
