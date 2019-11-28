@@ -1,6 +1,7 @@
 .ropeproject/
 build/
 pcaps/
+logs/
 
 *.swp
 *.pyc
