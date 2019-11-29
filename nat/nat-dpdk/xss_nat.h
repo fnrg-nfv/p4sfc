@@ -46,12 +46,15 @@ nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
 		else{
 			ret = nat_modify_pkt_private(m, qconf);
 		}
-		if(ret<0){
+
+		//important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!comment for test!!!! This will drop pkt anyway for test!
+		// if(ret<0){
 			rte_pktmbuf_free(m);
 			return;
-		}
-		//send pkt logic
+		// }
 
+
+		//send pkt logic
 #ifdef DO_RFC_1812_CHECKS
 		/* Update time to live and header checksum */
 		--(ipv4_hdr->time_to_live);

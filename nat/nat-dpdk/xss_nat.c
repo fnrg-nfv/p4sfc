@@ -45,7 +45,7 @@
 
 #define IPV6_ADDR_LEN 16
 
-uint32_t nat_public_ip = 0xfffffff0;//shoule be statically configured
+uint32_t nat_public_ip = 0x0ffffff0;//shoule be statically configured
 
 struct nat_rule
 {

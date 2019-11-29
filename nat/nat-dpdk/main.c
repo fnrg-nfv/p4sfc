@@ -111,7 +111,8 @@ static struct rte_eth_conf port_conf = {
 		.mq_mode = ETH_MQ_RX_RSS,
 		.max_rx_pkt_len = ETHER_MAX_LEN,
 		.split_hdr_size = 0,
-		.offloads = DEV_RX_OFFLOAD_CHECKSUM,
+		//.offloads = DEV_RX_OFFLOAD_CHECKSUM,
+		.offloads = 0,
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -148,7 +149,7 @@ static struct nat_implement_mode nat_xss_implement = {
 
 
 static void
-setup_l3fwd_lookup_tables(void)
+setup_nat_lookup_tables(void)
 {
 	nat_implement = nat_xss_implement;
 }
@@ -221,7 +222,6 @@ get_port_n_rx_queues(const uint16_t port)
 	return (uint8_t)(++queue);
 }
 
-// 0.0
 //according to the --config parameters users input, save the correspoding relationship
 //between lcore and rx queue into lcore_conf --- by xss
 static int
@@ -335,7 +335,7 @@ parse_hash_entry_number(const char *hash_entry_num)
 	return hash_en;
 }
 
-// 0.0
+// parse config from --config
 static int
 parse_config(const char *q_arg)
 {
@@ -396,7 +396,7 @@ parse_config(const char *q_arg)
 	return 0;
 }
 
-// 0.0
+// parse config from --eth-dest
 static void
 parse_eth_dest(const char *optarg)
 {
@@ -479,7 +479,6 @@ static const struct option lgopts[] = {
 	nb_lcores*MEMPOOL_CACHE_SIZE),		\
 	(unsigned)8192)
 
-// 0.0
 /* Parse the argument given in the command line of the application */
 static int
 parse_args(int argc, char **argv)
@@ -789,7 +788,7 @@ main(int argc, char **argv)
 	nb_lcores = rte_lcore_count();
 
 	/* Setup function pointers for lookup method. */
-	setup_l3fwd_lookup_tables();
+	setup_nat_lookup_tables();
 
 	/* initialize all ports */
 	RTE_ETH_FOREACH_DEV(portid) {
@@ -862,7 +861,7 @@ main(int argc, char **argv)
 			rte_exit(EXIT_FAILURE, "init_mem failed\n");
 
 		/* init one TX queue per couple (lcore,port) */
-		//from here, wo can also see that for every lcore, it need a tx queue in each port
+		//from here, we can also see that for every lcore, it need a tx queue in each port
 		//so, if your nic do not support multi-queue, you can only use one lcore to start the app --- by xss
 		queueid = 0;
 		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
