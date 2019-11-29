@@ -18,7 +18,6 @@ SWITCH_TO_HOST_PORT = 1
 SWITCH_TO_SWITCH_PORT = 2
 
 
-
 def write_ipv4_forward_rules(p4info_helper, sw, dst_ip_addr, port,
                              dst_eth_addr):
     table_entry = p4info_helper.buildTableEntry(
