@@ -2,12 +2,6 @@
 
 A Service Function Chain(SFC) project led by Fudan Future Network Research Group(FNRG).
 
-@
-
-@
-
-@
-
 （以下为实验记录）
 
 ### Related Packages
