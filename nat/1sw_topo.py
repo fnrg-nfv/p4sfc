@@ -53,7 +53,7 @@ def main():
                            pcap_dump=args.pcap_dump,
                            log_file=args.log_dir)
 
-    print "%d" % net.get('s1').thrift_port
+    print("P4 thrift port: %d" % net.get('s1').thrift_port)
 
     sw_ip = ["10.0.%d.10" % n for n in range(num_hosts)]
     sw_mac = ["00:04:00:00:00:%02x" % n for n in range(num_hosts)]
@@ -67,7 +67,6 @@ def main():
         net.addLink(host, switch)
 
     net.start()
-
     for n1 in range(num_hosts):
         h = net.get('h%d' % (n1 + 1))
         for n in range(num_hosts):
