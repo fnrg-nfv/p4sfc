@@ -22,6 +22,9 @@
     "switches": {
         "s1": {
             "runtime_json": "simple-topo/s1-runtime.json"
+        },
+        "s2": {
+            "runtime_json": "simple-topo/s2-runtime.json"
         }
     },
     "links": [
@@ -30,8 +33,12 @@
             "s1-p1"
         ],
         [
-            "h2",
+            "s2-p2",
             "s1-p2"
+        ],
+        [
+            "h2",
+            "s2-p1"
         ]
     ]
 }

@@ -1,7 +1,7 @@
 {
   "target": "bmv2",
-  "p4info": "build/ingress.p4.p4info.txt",
-  "bmv2_json": "build/ingress.json",
+  "p4info": "build/egress.p4.p4info.txt",
+  "bmv2_json": "build/egress.json",
   "table_entries": [
     {
       "table": "MyIngress.port_exact",
@@ -16,7 +16,7 @@
       },
       "action_name": "MyIngress.port_forward",
       "action_params": {
-        "dstAddr": "08:00:00:00:02:00",
+        "dstAddr": "08:00:00:00:01:00",
         "port": 2
       }
     },
@@ -27,7 +27,7 @@
       },
       "action_name": "MyIngress.port_forward",
       "action_params": {
-        "dstAddr": "08:00:00:00:01:11",
+        "dstAddr": "08:00:00:00:02:22",
         "port": 1
       }
     }
