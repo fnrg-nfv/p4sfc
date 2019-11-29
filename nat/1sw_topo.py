@@ -61,11 +61,19 @@ def main():
     sw_mac = ["00:04:00:00:00:%02x" % n for n in range(num_hosts)]
 
     for h in range(num_hosts):
-        host = net.addDocker('h%d' % (h + 1),
-                             ip=sw_ip[h],
-                             mac=sw_mac[h],
-                             dimage="dpdk-pktgen:latest",
-                             volumes=["/dev/hugepages:/dev/hugepages:rw"])
+	host=None
+	if (h%2) == 0:
+		host = net.addDocker('h%d' % (h + 1),
+                                    ip=sw_ip[h],
+                                    mac=sw_mac[h],
+                                    dimage="dpdk-pktgen:latest",
+                                    volumes=["/dev/hugepages:/dev/hugepages:rw"])
+	else:
+		host = net.addDocker('h%d' % (h + 1),
+                                    ip=sw_ip[h],
+                                    mac=sw_mac[h],
+                                    dimage="dpdk-nat:latest",
+                                    volumes=["/dev/hugepages:/dev/hugepages:rw","/home/mjt/p4nfv/p4sfc-project/nat/nat-dpdk:/root:rw"])
         net.addLink(host, switch)
 
     net.start()
