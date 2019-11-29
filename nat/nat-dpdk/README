@@ -1,0 +1,39 @@
+when you want to test the program. please take care of the following thing:
+1. You can use --config (port,queue,lcore, public, dest_port) to config 
+   which queue in which port belong to which lcore, and whether the port is public or not, and the dest_port is what
+2. and then, you can use --eth-dest=X,Mac_addr to config the dest mac addr for port X, So you can let the pkt go the nic you want
+   and so you can test the program
+
+Some program details to remember:
+1. struct lcore_paras used to save the config information
+    struct lcore_params {
+        uint16_t port_id;
+        uint8_t queue_id;
+        uint8_t lcore_id;
+        uint8_t public_port;
+        uint16_t dest_port;
+    } __rte_cache_aligned;
+
+2. when get the config information, the information will be saved in struct lcore_rx_queue for later use
+    struct lcore_rx_queue {
+        uint16_t port_id;
+        uint8_t queue_id;
+        bool public_port;
+        uint16_t dest_port;
+    } __rte_cache_aligned;
+
+3. the logic is, when you receive pkt from some rx_queue, you can also get know that
+   the port is public or private(so use different to lookup nat rule), and when pkt be modified,
+   what port to sent this pkt to!
+
+There still exist some todo list:
+1. when you modified the pkt, you should modify the checksum too !
+2. when rule is too long don't use, the rule should be deleted and return the port to the port pool .
+3. when the pkt's dst ip is private ip addr, we should ignore it rather than forward it.
+4. when there are not enough port, should print some prompt message
+5. the NAT's public ip should be config static through cmd line when startup the program
+
+The test cmd may like this:
+sudo ./build/app/xss_nat -l 0 --proc-type auto --file-prefix pg1 -- -p 3 --parse-ptype --config="(0,0,0,0,1), (1,0,0,1,0)" --eth-dest=0,00:50:56:97:7c:36 --eth-dest=1,00:50:56:97:7c:36
+
+sudo -E ./pktgen -l 1-2 -n 4 -b 02:01.0 -b 02:02.0 -m 1024 --proc-type auto --file-prefix pg2 -- -P -m "2.0"
