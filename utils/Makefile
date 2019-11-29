@@ -14,16 +14,6 @@ endif
 source = $(wildcard *.p4)
 compiled_json := $(source:.p4=.json)
 
-ifndef DEFAULT_PROG
-DEFAULT_PROG = $(wildcard *.p4)
-endif
-DEFAULT_JSON = $(BUILD_DIR)/$(DEFAULT_PROG:.p4=.json)
-
-# Define NO_P4 to start BMv2 without a program
-# ifndef NO_P4
-# run_args += -j $(DEFAULT_JSON)
-# endif
-
 # Set BMV2_SWITCH_EXE to override the BMv2 target
 ifdef BMV2_SWITCH_EXE
 run_args += -b $(BMV2_SWITCH_EXE)
