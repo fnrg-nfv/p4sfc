@@ -1,6 +1,5 @@
 #!/usr/bin/env python2
 
-from p4_mininet import P4Switch
 from mininet.net import Mininet, Containernet
 from mininet.node import Controller, Docker
 from mininet.topo import Topo
@@ -12,8 +11,11 @@ from time import sleep
 
 import sys
 import os
+
 sys.path.append(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../utils/'))
+
+from p4_mininet import P4Switch
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',
