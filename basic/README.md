@@ -52,4 +52,7 @@ A simple demo program to test whether your environment has been set up correctly
     
     Then, the other pktgen program starts to receive packets. Otherwise, it means that something is wrong in your environment setting.
 
-6. Congratulations! your environment has been set up correctly and you can start your own exploration!
+1. Congratulations! your environment has been set up correctly and you can start your own exploration!
+
+## TODO
+- h1 and h2 in the above containernet cannot ping with each other.
