@@ -82,24 +82,18 @@ xmm_t val_eth[RTE_MAX_ETHPORTS];
 /* mask of enabled ports */
 uint32_t enabled_port_mask;
 
-/* Used only in exact match mode. */
-uint32_t hash_entry_number = HASH_ENTRY_NUMBER_DEFAULT;
-
 struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 
-//the struct save the 4 tuple-->port,queue,lcore,public_port,dest_port --- by xss
+//the struct save the 3 tuple-->port,queue,lcore --- by xss
 struct lcore_params {
 	uint16_t port_id;
 	uint8_t queue_id;
 	uint8_t lcore_id;
-	uint8_t public_port;
-	uint16_t dest_port;
 } __rte_cache_aligned;
 
 static struct lcore_params lcore_params_array[MAX_LCORE_PARAMS];
 static struct lcore_params lcore_params_array_default[] = {
-	{0, 0, 0, 0, 1},
-	{1, 0, 0, 1, 0},
+	{0, 0, 0},
 };
 
 static struct lcore_params * lcore_params = lcore_params_array_default;
@@ -242,10 +236,6 @@ init_lcore_rx_queues(void)
 				lcore_params[i].port_id;
 			lcore_conf[lcore].rx_queue_list[nb_rx_queue].queue_id =
 				lcore_params[i].queue_id;
-			lcore_conf[lcore].rx_queue_list[nb_rx_queue].public_port =
-				lcore_params[i].public_port;
-			lcore_conf[lcore].rx_queue_list[nb_rx_queue].dest_port =
-				lcore_params[i].dest_port;
 			lcore_conf[lcore].n_rx_queue++;
 		}
 	}
@@ -259,14 +249,14 @@ print_usage(const char *prgname)
 	fprintf(stderr, "%s [EAL options] --"
 		" -p PORTMASK"
 		" [-P]"
-		" --config (port,queue,lcore,public_port,dest_port)[,(port,queue,lcore,public_port,dest_port)]"
+		" --config (port,queue,lcore)[,(port,queue,lcore)]"
 		" [--eth-dest=X,MM:MM:MM:MM:MM:MM]"
 		" [--no-numa]"
 		" [--parse-ptype]\n\n"
 
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
-		"  --config (port,queue,lcore,public_port,dest_port): Rx queue configuration\n"
+		"  --config (port,queue,lcore): Rx queue configuration\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: Ethernet destination for port X\n"
 		"  --no-numa: Disable numa awareness\n"
 		"  --parse-ptype: Set to use software to analyze packet type\n\n",
@@ -301,8 +291,6 @@ parse_config(const char *q_arg)
 		FLD_PORT = 0,
 		FLD_QUEUE,
 		FLD_LCORE,
-		FLD_PUBLIC_PORT,
-		FLD_DEST_PORT,
 		_NUM_FLD
 	};
 	unsigned long int_fld[_NUM_FLD];
@@ -341,10 +329,6 @@ parse_config(const char *q_arg)
 			(uint8_t)int_fld[FLD_QUEUE];
 		lcore_params_array[nb_lcore_params].lcore_id =
 			(uint8_t)int_fld[FLD_LCORE];
-		lcore_params_array[nb_lcore_params].public_port =
-			(uint8_t)int_fld[FLD_PUBLIC_PORT];
-		lcore_params_array[nb_lcore_params].dest_port =
-			(uint8_t)int_fld[FLD_DEST_PORT];
 		++nb_lcore_params;
 	}
 	lcore_params = lcore_params_array;
@@ -380,14 +364,11 @@ parse_eth_dest(const char *optarg)
 	*(uint64_t *)(val_eth + portid) = dest_eth_addr[portid];
 }
 
-#define MAX_JUMBO_PKT_LEN  9600
 #define MEMPOOL_CACHE_SIZE 256
 
 static const char short_options[] =
 	"p:"  /* portmask */
 	"P"   /* promiscuous */
-	"L"   /* enable long prefix match */
-	"E"   /* enable exact match */
 	;
 
 #define CMD_LINE_OPT_CONFIG "config"

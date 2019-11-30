@@ -11,10 +11,6 @@
 
 #define RTE_LOGTYPE_L3FWD RTE_LOGTYPE_USER1
 
-#if !defined(NO_HASH_MULTI_LOOKUP) && defined(RTE_MACHINE_CPUFLAG_NEON)
-#define NO_HASH_MULTI_LOOKUP 1
-#endif
-
 #define MAX_PKT_BURST     32
 #define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
@@ -33,16 +29,8 @@
 /* Used to mark destination port as 'invalid'. */
 #define	BAD_PORT ((uint16_t)-1)
 
-#define FWDSTEP	4
-
-/* replace first 12B of the ethernet header. */
-#define	MASK_ETH 0x3f
-
 /* Hash parameters. */
 #define NAT_HASH_ENTRIES     (65535-1024)
-
-
-#define HASH_ENTRY_NUMBER_DEFAULT	4
 
 struct mbuf_table {
 	uint16_t len;
@@ -52,8 +40,6 @@ struct mbuf_table {
 struct lcore_rx_queue {
 	uint16_t port_id;
 	uint8_t queue_id;
-	bool public_port;
-	uint16_t dest_port;
 } __rte_cache_aligned;
 
 //this struct save sll the queue belong to the lcore
@@ -81,7 +67,6 @@ extern uint32_t enabled_port_mask;
 
 /* Used only in exact match mode. */
 extern int ipv6; /**< ipv6 is false by default. */
-extern uint32_t hash_entry_number;
 
 extern xmm_t val_eth[RTE_MAX_ETHPORTS];
 
