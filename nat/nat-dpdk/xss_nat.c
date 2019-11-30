@@ -43,9 +43,9 @@
 #define DEFAULT_HASH_FUNC       rte_jhash
 #endif
 
-#define IPV6_ADDR_LEN 16
 
-uint32_t nat_static_public_ip = 0x0ffffff0;//shoule be statically configured
+static uint32_t nat_static_public_ip = 0x0ffffff0;//shoule be statically configured
+static uint64_t nat_rule_timeout_threshold = 10; //default timeout:10s
 
 struct nat_rule
 {
@@ -55,10 +55,10 @@ struct nat_rule
 	uint16_t public_port;
 	uint8_t proto;
 	uint16_t assigned_port;
+	uint64_t last_visited;
 	//statistic data fields
 	uint32_t sum_pkts_in2out;
 	uint32_t sum_pkts_out2in;
-	//todo: time_out_field
 };
 
 struct nat_rule_hash_key {
@@ -135,7 +135,9 @@ static struct nat_rule *nat_rules_public[NAT_HASH_ENTRIES];
 static int port_pool[65535-1024];
 
 
-static uint64_t timer_period = 10; /* default period is 10 seconds */
+static uint64_t statistics_show_timer_period = 10; /* default period is 10 seconds */
+static uint64_t rule_timeout_check_timer_period = 30;
+
 //show NAT statistic
 static void format_ip_addr(char *s, uint32_t ip){
 	int addr_1 = ip >> 24;        // 提取第一部分IP地址
@@ -206,6 +208,7 @@ nat_insert_new_rule(struct nat_rule_hash_key *key,struct lcore_conf *qconf)
 	rule->public_port = key->dst_port;
 	rule->proto = key->proto;
 	rule->assigned_port = rte_cpu_to_be_16(nat_get_avaliable_port());
+	rule->last_visited = rte_rdtsc();
 	rule->sum_pkts_in2out = 0;
 	rule->sum_pkts_out2in = 0;
 	//todo by xss
@@ -276,6 +279,7 @@ nat_private_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 	}
 	else{
 		rule = nat_rules_private[ret];
+		rule->last_visited = rte_rdtsc();
 	}
 	rule->sum_pkts_in2out++;
 	ipv4_hdr->src_addr = nat_static_public_ip;
@@ -323,6 +327,7 @@ nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 		return ret;
 	// printf("Matching successfully in public direction !");
 	struct nat_rule *rule = nat_rules_public[ret];
+	rule -> last_visited = rte_rdtsc();
 	rule->sum_pkts_out2in++;
 	ipv4_hdr->dst_addr = rule->private_ip;
 	if(tcp){
@@ -333,6 +338,57 @@ nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 	}
 	return 1;	// success
 
+}
+
+static void nat_rule_clear(struct nat_rule *timeout_rule, struct lcore_conf *qconf) {
+	struct nat_rule_hash_key key;
+	int ret;
+	//in side
+	key.src_ip_addr = timeout_rule->private_ip;
+	key.dst_ip_addr = timeout_rule->public_ip;
+	key.src_port = timeout_rule->private_port;
+	key.dst_port = timeout_rule->public_port;
+	key.proto = timeout_rule->proto;
+	ret = rte_hash_del_key((const struct rte_hash *)qconf->nat_private_lookup_struct, (const void *) &key);
+	if(ret<0) {
+		printf("Error happens when delete timeout rule\n");
+		return;
+	}
+	nat_rules_private[ret] = NULL;
+
+	//out side
+	key.src_ip_addr = timeout_rule->public_ip;
+	key.dst_ip_addr = nat_static_public_ip;
+	key.src_port = timeout_rule->public_port;
+	key.dst_port = timeout_rule->assigned_port;
+	ret = rte_hash_del_key((const struct rte_hash *)qconf->nat_public_lookup_struct, (const void *) &key);
+	if(ret<0) {
+		printf("Error happens when delete timeout rule\n");
+		return;
+	}
+	nat_rules_public[ret] = NULL;
+
+	//final step
+	printf("Port %d return to nat port pool.\n", rte_be_to_cpu_16(timeout_rule->assigned_port));
+	port_pool[rte_be_to_cpu_16(timeout_rule->assigned_port)-1024] = 0;
+	rte_free(timeout_rule);
+	
+}
+
+static void nat_rule_timeout_checker(struct lcore_conf *qconf) {
+	struct nat_rule *rule;
+	uint64_t cur_tsc;
+	uint64_t timeout_threshold_tsc = nat_rule_timeout_threshold * rte_get_timer_hz();
+	for(int i=0; i<(65535-1024); i++){
+		rule = nat_rules_private[i];
+		if(rule != NULL){
+			cur_tsc = rte_rdtsc();
+			// printf("cur %lu  last_visited %lu\n", cur_tsc, rule->last_visited);
+			if(cur_tsc - rule->last_visited >= timeout_threshold_tsc) {
+				nat_rule_clear(rule, qconf);
+			}
+		}
+	}
 }
 
 /* Requirements:
@@ -453,7 +509,7 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	unsigned lcore_id;
-	uint64_t prev_tsc, diff_tsc, cur_tsc, timer_tsc;
+	uint64_t prev_tsc, diff_tsc, cur_tsc, statistics_show_timer_tsc, rule_timeout_check_timer_tsc;
 	int i, nb_rx;
 	uint8_t queueid;
 	uint16_t portid;
@@ -462,8 +518,10 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 		US_PER_S * BURST_TX_DRAIN_US;
 
 	prev_tsc = 0;
-	timer_tsc = 0;
-	timer_period *= rte_get_timer_hz();
+	statistics_show_timer_tsc = 0;
+	rule_timeout_check_timer_tsc = 0;
+	statistics_show_timer_period *= rte_get_timer_hz();
+	rule_timeout_check_timer_period *= rte_get_timer_hz();
 
 	lcore_id = rte_lcore_id();
 	qconf = &lcore_conf[lcore_id];
@@ -505,23 +563,41 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 				qconf->tx_mbufs[portid].len = 0;
 			}
 
-			if (timer_period > 0) {
+			//print statistic logic
+			if (statistics_show_timer_period > 0) {
 
 				/* advance the timer */
-				timer_tsc += diff_tsc;
+				statistics_show_timer_tsc += diff_tsc;
 
 				/* if timer has reached its timeout */
-				if (unlikely(timer_tsc >= timer_period)) {
+				if (unlikely(statistics_show_timer_tsc >= statistics_show_timer_period)) {
 
 					/* do this only on master core */
 					if (lcore_id == rte_get_master_lcore()) {
 						print_statistic();
 						/* reset the timer */
-						timer_tsc = 0;
+						statistics_show_timer_tsc = 0;
 					}
 				}
 			}
 
+			//clear timeout rule logic
+			if (rule_timeout_check_timer_period > 0) {
+
+				/* advance the timer */
+				rule_timeout_check_timer_tsc += diff_tsc;
+
+				/* if timer has reached its timeout */
+				if (unlikely(rule_timeout_check_timer_tsc >= rule_timeout_check_timer_period)) {
+
+					/* do this only on master core */
+					if (lcore_id == rte_get_master_lcore()) {
+						nat_rule_timeout_checker(qconf);
+						/* reset the timer */
+						rule_timeout_check_timer_tsc = 0;
+					}
+				}
+			}
 			prev_tsc = cur_tsc;
 		}
 
