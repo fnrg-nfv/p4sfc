@@ -1,37 +1,7 @@
 /* -*- P4_16 -*- */
 #include <core.p4>
 #include <v1model.p4>
-
-const bit<16> TYPE_IPV4 = 0x800;
-const bit<16> TYPE_FOO = 0xcdf;  // customed type
-
-/*************************************************************************
-*********************** H E A D E R S  ***********************************
-*************************************************************************/
-
-typedef bit<9>  egressSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-
-header ethernet_t {
-    macAddr_t dstAddr;
-    macAddr_t srcAddr;
-    bit<16>   etherType;
-}
-
-header foo_t {
-    bit<1>    flag;
-    bit<15>   offset;
-}
-
-struct metadata {
-    /* empty */
-}
-
-struct headers {
-    ethernet_t   ethernet;
-    foo_t        foo;
-}
+#include "header.h"
 
 /*************************************************************************
 *********************** P A R S E R  ***********************************
@@ -101,11 +71,15 @@ control MyIngress(inout headers hdr,
     }
 
     action ingress_add_foo() {
+        hdr.foo.setValid();
+        hdr.foo.etherType = hdr.ethernet.etherType;
         hdr.foo.flag = 1;
+        hdr.ethernet.etherType = TYPE_FOO;
     }
     
     apply {
         port_exact.apply();
+        ingress_add_foo();
     }
 }
 
@@ -135,7 +109,7 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        // packet.emit(hdr.foo);
+        packet.emit(hdr.foo);
     }
 }
 

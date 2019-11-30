@@ -79,7 +79,15 @@ def configureDockerHost(**host_args):
             Docker.__init__(self, name, **kwargs)
 
         def describe(self):
-            print "%s -> dimage: %s" % (self.name, self.dimage)
+            print "**********"
+            print self.name
+            print "default interface: %s\t%s\t%s" %(
+                self.defaultIntf().name,
+                self.defaultIntf().IP(),
+                self.defaultIntf().MAC()
+            )
+            print "image: %s" % self.dimage
+            print "**********"
 
     return ConfiguredDockerHost
 
