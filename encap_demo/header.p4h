@@ -84,7 +84,6 @@ parser MyParser(packet_in packet,
 
     state parse_foo {
         packet.extract(hdr.foo);
-        transition accept;
         transition select(hdr.foo.etherType) {
             TYPE_IPV4: parse_ipv4;
             default: accept;
@@ -93,7 +92,7 @@ parser MyParser(packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        transition select(hdr.ipv4.protocol) {
+        transition select((bit<16>)hdr.ipv4.protocol) {
             PROTOCOL_TCP: parse_tcp_udp;
             PROTOCOL_UDP: parse_tcp_udp;
             default: accept;
@@ -108,6 +107,14 @@ parser MyParser(packet_in packet,
 
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
+*************************************************************************/
+
+control MyVerifyChecksum(inout headers hdr, inout metadata meta) {   
+    apply {  }
+}
+
+/*************************************************************************
+*************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
 
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
@@ -130,14 +137,5 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16
         );
-    }
-}
-
-/*************************************************************************
-*************   C H E C K S U M    C O M P U T A T I O N   **************
-*************************************************************************/
-
-control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
-    apply {
     }
 }

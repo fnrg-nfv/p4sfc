@@ -63,15 +63,11 @@ control MyIngress(inout headers hdr,
             NoAction;
         }
         size = 1024;
-        default_action = drop();
-    }
-
-    action nat() {
-        nat_exact.apply();
+        default_action = NoAction();
     }
 
     apply {
-        nf();
+        nat_exact.apply();
         port_exact.apply();
     }
 }
