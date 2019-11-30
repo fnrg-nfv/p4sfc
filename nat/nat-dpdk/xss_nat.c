@@ -150,6 +150,22 @@ static void print_statistic(void) {
 	printf("==============================================================================================\n");
 }
 
+/**
+10.0.0.0 - 10.255.255.255
+172.16.0.0 - 172.31.255.255
+192.168.0.0 - 192.168.255.255
+*/
+static int is_ip_private(uint32_t ip){
+	ip = ip << 16;
+	int addr_1 = ip >> 24;
+	ip = ip << 8;
+	int addr_2 = ip >> 24;
+	if(addr_2==10 || (addr_2==172 && addr_1>=16 && addr_1<=31) || (addr_2==192 && addr_1==168)){
+		return 1;
+	}
+	return 0;
+}
+
 static int nat_get_avaliable_port(void){
 	for(int i=0; i<(65535-1024); i++){
 		if(port_pool[i] == 0){
@@ -460,6 +476,7 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 		diff_tsc = cur_tsc - prev_tsc;
 		if (unlikely(diff_tsc > drain_tsc)) {
 
+			//send packets logic
 			for (i = 0; i < qconf->n_tx_port; ++i) {
 				portid = qconf->tx_port_id[i];
 				if (qconf->tx_mbufs[portid].len == 0)
