@@ -9,6 +9,5 @@ xss-nat:
 ```
 
 ## Todo
-1. NAT rule timeout detection
-2. Parse user-defined protocol header
-3. Insert nat rule to bmv2 through gprc
+1. Parse user-defined protocol header
+2. Insert nat rule to bmv2 through gprc
