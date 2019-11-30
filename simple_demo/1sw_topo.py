@@ -72,15 +72,10 @@ def main():
     for n1 in range(num_hosts):
         h = net.get('h%d' % (n1 + 1))
         for n in range(num_hosts):
-            print "%d %s %s" % (n, sw_ip[n], sw_mac[n])
-            h.setARP(sw_ip[n], sw_mac[n])
-            h.setDefaultRoute("dev eth0 via %s" % sw_ip[n])
-
-    # for n in range(num_hosts):
-    #     h = net.get('h%d' % (n + 1))
-    #     h.describe()
-
-    # sleep(1)
+            if n is not n1:
+                print "%d %s %s" % (n, sw_ip[n], sw_mac[n])
+                h.setARP(sw_ip[n], sw_mac[n])
+        # h.setDefaultRoute("dev eth0 via %s" % sw_ip[n1])
 
     print("Ready !")
 

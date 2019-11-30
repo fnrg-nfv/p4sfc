@@ -15,7 +15,7 @@ P4C_ARGS = --target bmv2 --arch v1model --p4runtime-files $(BUILD_DIR)/$(PROG_PR
 
 BMV2_SWITCH_EXE = simple_switch_grpc
 
-RUN_ARGS = --behavioral-exe $(BMV2_SWITCH_EXE) --pcap-dump $(PCAP_DIR) --json $(BUILD_DIR)/$(PROG_PREFIX).json
+RUN_ARGS = --behavioral-exe $(BMV2_SWITCH_EXE) --pcap-dump $(PCAP_DIR) -l $(LOG_DIR) --json $(BUILD_DIR)/$(PROG_PREFIX).json
 
 all: run
 
