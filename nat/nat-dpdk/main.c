@@ -259,47 +259,18 @@ print_usage(const char *prgname)
 	fprintf(stderr, "%s [EAL options] --"
 		" -p PORTMASK"
 		" [-P]"
-		" [-E]"
-		" [-L]"
-		" --config (port,queue,lcore)[,(port,queue,lcore)]"
+		" --config (port,queue,lcore,public_port,dest_port)[,(port,queue,lcore,public_port,dest_port)]"
 		" [--eth-dest=X,MM:MM:MM:MM:MM:MM]"
-		" [--enable-jumbo [--max-pkt-len PKTLEN]]"
 		" [--no-numa]"
-		" [--hash-entry-num]"
-		" [--ipv6]"
 		" [--parse-ptype]\n\n"
 
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
-		"  -E : Enable exact match\n"
-		"  -L : Enable longest prefix match (default)\n"
-		"  --config (port,queue,lcore): Rx queue configuration\n"
+		"  --config (port,queue,lcore,public_port,dest_port): Rx queue configuration\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: Ethernet destination for port X\n"
-		"  --enable-jumbo: Enable jumbo frames\n"
-		"  --max-pkt-len: Under the premise of enabling jumbo,\n"
-		"                 maximum packet length in decimal (64-9600)\n"
 		"  --no-numa: Disable numa awareness\n"
-		"  --hash-entry-num: Specify the hash entry number in hexadecimal to be setup\n"
-		"  --ipv6: Set if running ipv6 packets\n"
 		"  --parse-ptype: Set to use software to analyze packet type\n\n",
 		prgname);
-}
-
-static int
-parse_max_pkt_len(const char *pktlen)
-{
-	char *end = NULL;
-	unsigned long len;
-
-	/* parse decimal string */
-	len = strtoul(pktlen, &end, 10);
-	if ((pktlen[0] == '\0') || (end == NULL) || (*end != '\0'))
-		return -1;
-
-	if (len == 0)
-		return -1;
-
-	return len;
 }
 
 static int
@@ -317,22 +288,6 @@ parse_portmask(const char *portmask)
 		return -1;
 
 	return pm;
-}
-
-static int
-parse_hash_entry_number(const char *hash_entry_num)
-{
-	char *end = NULL;
-	unsigned long hash_en;
-	/* parse hexadecimal string */
-	hash_en = strtoul(hash_entry_num, &end, 16);
-	if ((hash_entry_num[0] == '\0') || (end == NULL) || (*end != '\0'))
-		return -1;
-
-	if (hash_en == 0)
-		return -1;
-
-	return hash_en;
 }
 
 // parse config from --config
@@ -438,8 +393,6 @@ static const char short_options[] =
 #define CMD_LINE_OPT_CONFIG "config"
 #define CMD_LINE_OPT_ETH_DEST "eth-dest"
 #define CMD_LINE_OPT_NO_NUMA "no-numa"
-#define CMD_LINE_OPT_ENABLE_JUMBO "enable-jumbo"
-#define CMD_LINE_OPT_HASH_ENTRY_NUM "hash-entry-num"
 #define CMD_LINE_OPT_PARSE_PTYPE "parse-ptype"
 enum {
 	/* long options mapped to a short option */
@@ -450,8 +403,6 @@ enum {
 	CMD_LINE_OPT_CONFIG_NUM,
 	CMD_LINE_OPT_ETH_DEST_NUM,
 	CMD_LINE_OPT_NO_NUMA_NUM,
-	CMD_LINE_OPT_ENABLE_JUMBO_NUM,
-	CMD_LINE_OPT_HASH_ENTRY_NUM_NUM,
 	CMD_LINE_OPT_PARSE_PTYPE_NUM,
 };
 
@@ -459,8 +410,6 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_CONFIG, 1, 0, CMD_LINE_OPT_CONFIG_NUM},
 	{CMD_LINE_OPT_ETH_DEST, 1, 0, CMD_LINE_OPT_ETH_DEST_NUM},
 	{CMD_LINE_OPT_NO_NUMA, 0, 0, CMD_LINE_OPT_NO_NUMA_NUM},
-	{CMD_LINE_OPT_ENABLE_JUMBO, 0, 0, CMD_LINE_OPT_ENABLE_JUMBO_NUM},
-	{CMD_LINE_OPT_HASH_ENTRY_NUM, 1, 0, CMD_LINE_OPT_HASH_ENTRY_NUM_NUM},
 	{CMD_LINE_OPT_PARSE_PTYPE, 0, 0, CMD_LINE_OPT_PARSE_PTYPE_NUM},
 	{NULL, 0, 0, 0}
 };
@@ -527,43 +476,6 @@ parse_args(int argc, char **argv)
 			numa_on = 0;
 			break;
 
-		case CMD_LINE_OPT_ENABLE_JUMBO_NUM: {
-			const struct option lenopts = {
-				"max-pkt-len", required_argument, 0, 0
-			};
-
-			port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_JUMBO_FRAME;
-			port_conf.txmode.offloads |= DEV_TX_OFFLOAD_MULTI_SEGS;
-
-			/*
-			 * if no max-pkt-len set, use the default
-			 * value ETHER_MAX_LEN.
-			 */
-			if (getopt_long(argc, argvopt, "",
-					&lenopts, &option_index) == 0) {
-				ret = parse_max_pkt_len(optarg);
-				if (ret < 64 || ret > MAX_JUMBO_PKT_LEN) {
-					fprintf(stderr,
-						"invalid maximum packet length\n");
-					print_usage(prgname);
-					return -1;
-				}
-				port_conf.rxmode.max_rx_pkt_len = ret;
-			}
-			break;
-		}
-
-		case CMD_LINE_OPT_HASH_ENTRY_NUM_NUM:
-			ret = parse_hash_entry_number(optarg);
-			if ((ret > 0) && (ret <= NAT_HASH_ENTRIES)) {
-				hash_entry_number = ret;
-			} else {
-				fprintf(stderr, "invalid hash entry number\n");
-				print_usage(prgname);
-				return -1;
-			}
-			break;
-
 		case CMD_LINE_OPT_PARSE_PTYPE_NUM:
 			printf("soft parse-ptype is enabled\n");
 			parse_ptype = 1;
@@ -591,7 +503,6 @@ print_ethaddr(const char *name, const struct ether_addr *eth_addr)
 	printf("%s%s", name, buf);
 }
 
-// 0.0
 //This funciont will create mem pool in every socket and invoke the necessary setup function
 //to setup the forward information(e.g setup_hash in em mode)
 static int
@@ -643,7 +554,6 @@ init_mem(unsigned nb_mbuf)
 	return 0;
 }
 
-// 0.0
 /* Check the link status of all ports in up to 9s, and print them finally */
 static void
 check_all_ports_link_status(uint32_t port_mask)
@@ -703,7 +613,6 @@ check_all_ports_link_status(uint32_t port_mask)
 	}
 }
 
-// 0.0
 static void
 signal_handler(int signum)
 {
@@ -714,7 +623,6 @@ signal_handler(int signum)
 	}
 }
 
-// 0.0
 static int
 prepare_ptype_parser(uint16_t portid, uint16_t queueid)
 {
@@ -788,6 +696,7 @@ main(int argc, char **argv)
 	nb_lcores = rte_lcore_count();
 
 	/* Setup function pointers for lookup method. */
+	//感觉这个有点类似于多态，根据输入的参数决定具体执行哪个方法，通过函数指针的方式
 	setup_nat_lookup_tables();
 
 	/* initialize all ports */
@@ -828,6 +737,7 @@ main(int argc, char **argv)
 				local_port_conf.rx_adv_conf.rss_conf.rss_hf);
 		}
 
+		//important! Actually port configure happens here! ---by xss
 		ret = rte_eth_dev_configure(portid, nb_rx_queue,
 					(uint16_t)n_tx_queue, &local_port_conf);
 		if (ret < 0)
@@ -852,6 +762,7 @@ main(int argc, char **argv)
 		/*
 		 * prepare src MACs for each port.
 		 */
+		 //necessary???---by xss
 		ether_addr_copy(&ports_eth_addr[portid],
 			(struct ether_addr *)(val_eth + portid) + 1);
 
