@@ -57,18 +57,12 @@ nat_simple_forward(struct rte_mbuf *m, struct lcore_conf *qconf)
 		}
 
 		//send pkt logic
+		
 #ifdef DO_RFC_1812_CHECKS
 		/* Update time to live and header checksum */
 		--(ipv4_hdr->time_to_live);
 		++(ipv4_hdr->hdr_checksum);
 #endif
-		//actually, nat do not modify ethernet filed, so comment below!---by xss
-		
-		/* dst addr */
-		// *(uint64_t *)&eth_hdr->d_addr = dest_eth_addr[dst_port];
-
-		/* src addr */
-		// ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->s_addr);
 
 		send_single_packet(qconf, m, dst_port);
 	}

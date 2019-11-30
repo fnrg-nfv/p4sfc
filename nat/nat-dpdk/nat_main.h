@@ -58,17 +58,11 @@ struct lcore_conf {
 
 extern volatile bool force_quit;
 
-/* ethernet addresses of ports */
-extern uint64_t dest_eth_addr[RTE_MAX_ETHPORTS];
-extern struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
-
 /* mask of enabled ports */
 extern uint32_t enabled_port_mask;
 
 /* Used only in exact match mode. */
 extern int ipv6; /**< ipv6 is false by default. */
-
-extern xmm_t val_eth[RTE_MAX_ETHPORTS];
 
 extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 

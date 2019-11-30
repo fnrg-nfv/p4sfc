@@ -73,12 +73,6 @@ static int parse_ptype; /**< Parse packet type using rx callback, and */
 
 volatile bool force_quit;
 
-/* ethernet addresses of ports */
-uint64_t dest_eth_addr[RTE_MAX_ETHPORTS];
-struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
-
-xmm_t val_eth[RTE_MAX_ETHPORTS];
-
 /* mask of enabled ports */
 uint32_t enabled_port_mask;
 
@@ -250,14 +244,12 @@ print_usage(const char *prgname)
 		" -p PORTMASK"
 		" [-P]"
 		" --config (port,queue,lcore)[,(port,queue,lcore)]"
-		" [--eth-dest=X,MM:MM:MM:MM:MM:MM]"
 		" [--no-numa]"
 		" [--parse-ptype]\n\n"
 
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
 		"  --config (port,queue,lcore): Rx queue configuration\n"
-		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: Ethernet destination for port X\n"
 		"  --no-numa: Disable numa awareness\n"
 		"  --parse-ptype: Set to use software to analyze packet type\n\n",
 		prgname);
@@ -335,34 +327,6 @@ parse_config(const char *q_arg)
 	return 0;
 }
 
-// parse config from --eth-dest
-static void
-parse_eth_dest(const char *optarg)
-{
-	uint16_t portid;
-	char *port_end;
-	uint8_t c, *dest, peer_addr[6];
-
-	errno = 0;
-	portid = strtoul(optarg, &port_end, 10);
-	if (errno != 0 || port_end == optarg || *port_end++ != ',')
-		rte_exit(EXIT_FAILURE,
-		"Invalid eth-dest: %s", optarg);
-	if (portid >= RTE_MAX_ETHPORTS)
-		rte_exit(EXIT_FAILURE,
-		"eth-dest: port %d >= RTE_MAX_ETHPORTS(%d)\n",
-		portid, RTE_MAX_ETHPORTS);
-
-	if (cmdline_parse_etheraddr(NULL, port_end,
-		&peer_addr, sizeof(peer_addr)) < 0)
-		rte_exit(EXIT_FAILURE,
-		"Invalid ethernet address: %s\n",
-		port_end);
-	dest = (uint8_t *)&dest_eth_addr[portid];
-	for (c = 0; c < 6; c++)
-		dest[c] = peer_addr[c];
-	*(uint64_t *)(val_eth + portid) = dest_eth_addr[portid];
-}
 
 #define MEMPOOL_CACHE_SIZE 256
 
@@ -372,7 +336,6 @@ static const char short_options[] =
 	;
 
 #define CMD_LINE_OPT_CONFIG "config"
-#define CMD_LINE_OPT_ETH_DEST "eth-dest"
 #define CMD_LINE_OPT_NO_NUMA "no-numa"
 #define CMD_LINE_OPT_PARSE_PTYPE "parse-ptype"
 enum {
@@ -382,14 +345,12 @@ enum {
 	 * conflict with short options */
 	CMD_LINE_OPT_MIN_NUM = 256,
 	CMD_LINE_OPT_CONFIG_NUM,
-	CMD_LINE_OPT_ETH_DEST_NUM,
 	CMD_LINE_OPT_NO_NUMA_NUM,
 	CMD_LINE_OPT_PARSE_PTYPE_NUM,
 };
 
 static const struct option lgopts[] = {
 	{CMD_LINE_OPT_CONFIG, 1, 0, CMD_LINE_OPT_CONFIG_NUM},
-	{CMD_LINE_OPT_ETH_DEST, 1, 0, CMD_LINE_OPT_ETH_DEST_NUM},
 	{CMD_LINE_OPT_NO_NUMA, 0, 0, CMD_LINE_OPT_NO_NUMA_NUM},
 	{CMD_LINE_OPT_PARSE_PTYPE, 0, 0, CMD_LINE_OPT_PARSE_PTYPE_NUM},
 	{NULL, 0, 0, 0}
@@ -449,10 +410,6 @@ parse_args(int argc, char **argv)
 			}
 			break;
 
-		case CMD_LINE_OPT_ETH_DEST_NUM:
-			parse_eth_dest(optarg);
-			break;
-
 		case CMD_LINE_OPT_NO_NUMA_NUM:
 			numa_on = 0;
 			break;
@@ -474,14 +431,6 @@ parse_args(int argc, char **argv)
 	ret = optind-1;
 	optind = 1; /* reset getopt lib */
 	return ret;
-}
-
-static void
-print_ethaddr(const char *name, const struct ether_addr *eth_addr)
-{
-	char buf[ETHER_ADDR_FMT_SIZE];
-	ether_format_addr(buf, ETHER_ADDR_FMT_SIZE, eth_addr);
-	printf("%s%s", name, buf);
 }
 
 //This funciont will create mem pool in every socket and invoke the necessary setup function
@@ -650,13 +599,6 @@ main(int argc, char **argv)
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	/* pre-init dst MACs for all ports to 02:00:00:00:00:xx */
-	for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++) {
-		dest_eth_addr[portid] =
-			ETHER_LOCAL_ADMIN_ADDR + ((uint64_t)portid << 40);
-		*(uint64_t *)(val_eth + portid) = dest_eth_addr[portid];
-	}
-
 	/* parse application arguments (after the EAL ones) */
 	ret = parse_args(argc, argv);
 	if (ret < 0)
@@ -733,19 +675,7 @@ main(int argc, char **argv)
 				 "Cannot adjust number of descriptors: err=%d, "
 				 "port=%d\n", ret, portid);
 
-		rte_eth_macaddr_get(portid, &ports_eth_addr[portid]);
-		print_ethaddr(" Address:", &ports_eth_addr[portid]);
 		printf(", ");
-		print_ethaddr("Destination:",
-			(const struct ether_addr *)&dest_eth_addr[portid]);
-		printf(", ");
-
-		/*
-		 * prepare src MACs for each port.
-		 */
-		 //necessary???---by xss
-		ether_addr_copy(&ports_eth_addr[portid],
-			(struct ether_addr *)(val_eth + portid) + 1);
 
 		/* init memory */
 		ret = init_mem(NB_MBUF);
