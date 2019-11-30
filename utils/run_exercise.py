@@ -75,13 +75,15 @@ def configureP4Switch(**switch_args):
 def configureDockerHost(**host_args):
     class ConfiguredDockerHost(Docker):
         def __init__(self, name, **kwargs):
-            kwargs.update(host_args)
-            Docker.__init__(self, name, **kwargs)
+            new_args = {}
+            new_args.update(host_args)
+            new_args.update(kwargs)
+            Docker.__init__(self, name, **new_args)
 
         def describe(self):
             print "**********"
             print self.name
-            print "default interface: %s\t%s\t%s" %(
+            print "default interface: %s\t%s\t%s" % (
                 self.defaultIntf().name,
                 self.defaultIntf().IP(),
                 self.defaultIntf().MAC()
@@ -284,6 +286,7 @@ class ExerciseRunner:
             self.hosts, self.switches, self.links, self.log_dir, self.bmv2_exe, self.pcap_dir)
 
         defaultHostClass = configureDockerHost(
+            dimage='dpdk-pktgen:latest',
             volumes=["/dev/hugepages:/dev/hugepages:rw"])
 
         self.net = Containernet(topo=self.topo,
