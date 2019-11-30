@@ -1,44 +1,7 @@
 /* -*- P4_16 -*- */
 #include <core.p4>
 #include <v1model.p4>
-#include "header.h"
-
-/*************************************************************************
-*********************** P A R S E R  ***********************************
-*************************************************************************/
-
-parser MyParser(packet_in packet,
-                out headers hdr,
-                inout metadata meta,
-                inout standard_metadata_t standard_metadata) {
-
-    state start {
-        transition parse_ethernet;
-    }
-
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            TYPE_FOO: parse_foo;
-            default: accept;
-        }
-    }
-
-    state parse_foo {
-        packet.extract(hdr.foo);
-        transition accept;
-    }
-
-}
-
-/*************************************************************************
-************   C H E C K S U M    V E R I F I C A T I O N   *************
-*************************************************************************/
-
-control MyVerifyChecksum(inout headers hdr, inout metadata meta) {   
-    apply {  }
-}
-
+#include "header.p4h"
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -75,6 +38,38 @@ control MyIngress(inout headers hdr,
             hdr.foo.flag = 0;
     }
 
+    action change_src_addr_port(ip4Addr_t srcAddr, bit<16> srcPort) {
+        hdr.ipv4.srcAddr = srcAddr;
+        hdr.tcp_udp.srcPort = srcPort;
+    }
+
+    action change_dst_addr_port(ip4Addr_t dstAddr, bit<16> dstPort) {
+        hdr.ipv4.dstAddr = dstAddr;
+        hdr.tcp_udp.dstPort = dstPort;
+    }
+
+    table nat_exact {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.protocol: exact;
+            hdr.tcp_udp.srcPort: exact;
+            hdr.tcp_udp.dstPort: exact;
+        }
+        actions = {
+            change_src_addr_port;
+            change_dst_addr_port;
+            port_forward;
+            NoAction;
+        }
+        size = 1024;
+        default_action = drop();
+    }
+
+    action nat() {
+        nat_exact.apply();
+    }
+
     apply {
         nf();
         port_exact.apply();
@@ -92,15 +87,6 @@ control MyEgress(inout headers hdr,
 }
 
 /*************************************************************************
-*************   C H E C K S U M    C O M P U T A T I O N   **************
-*************************************************************************/
-
-control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
-    apply {
-    }
-}
-
-/*************************************************************************
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
@@ -108,6 +94,8 @@ control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.foo);
+        packet.emit(hdr.ipv4);
+        packet.emit(hdr.tcp_udp);
     }
 }
 
