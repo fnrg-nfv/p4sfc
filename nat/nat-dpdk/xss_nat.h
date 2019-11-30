@@ -5,6 +5,8 @@
 #ifndef __XSS_NAT_H__
 #define __XSS_NAT_H__
 
+#define EGRESS_PORT 0
+
 static int is_ip_private(uint32_t ip);
 
 static inline int 
@@ -14,18 +16,17 @@ static inline int
 nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf);
 
 static __rte_always_inline void
-nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
-		struct lcore_conf *qconf)
+nat_simple_forward(struct rte_mbuf *m, struct lcore_conf *qconf)
 {
-	struct ether_hdr *eth_hdr;
+	// struct ether_hdr *eth_hdr;
 	struct ipv4_hdr *ipv4_hdr;
 	int ret;
-	uint16_t dst_port = dest_port;
+	uint16_t dst_port = EGRESS_PORT;
 	uint32_t tcp;
 	uint32_t udp;
 	uint32_t l3_ptypes;
 
-	eth_hdr = rte_pktmbuf_mtod(m, struct ether_hdr *);
+	// eth_hdr = rte_pktmbuf_mtod(m, struct ether_hdr *);
 	tcp = m->packet_type & RTE_PTYPE_L4_TCP;
 	udp = m->packet_type & RTE_PTYPE_L4_UDP;
 	l3_ptypes = m->packet_type & RTE_PTYPE_L3_MASK;
@@ -50,12 +51,10 @@ nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
 			ret = nat_public_pkt_handler(m, qconf);
 		}
 
-		//important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!comment for test!!!! This will drop pkt anyway for test!
-		// if(ret<0){
+		if(ret<0){
 			rte_pktmbuf_free(m);
 			return;
-		// }
-
+		}
 
 		//send pkt logic
 #ifdef DO_RFC_1812_CHECKS
@@ -63,11 +62,13 @@ nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
 		--(ipv4_hdr->time_to_live);
 		++(ipv4_hdr->hdr_checksum);
 #endif
+		//actually, nat do not modify ethernet filed, so comment below!---by xss
+		
 		/* dst addr */
-		*(uint64_t *)&eth_hdr->d_addr = dest_eth_addr[dst_port];
+		// *(uint64_t *)&eth_hdr->d_addr = dest_eth_addr[dst_port];
 
 		/* src addr */
-		ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->s_addr);
+		// ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->s_addr);
 
 		send_single_packet(qconf, m, dst_port);
 	}
@@ -82,8 +83,7 @@ nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
  * from main_loop.
  */
 static inline void
-nat_no_opt_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
-			bool public_port, uint16_t dest_port, struct lcore_conf *qconf)
+nat_no_opt_send_packets(int nb_rx, struct rte_mbuf **pkts_burst, struct lcore_conf *qconf)
 {
 	int32_t j;
 
@@ -98,12 +98,12 @@ nat_no_opt_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	for (j = 0; j < (nb_rx - PREFETCH_OFFSET); j++) {
 		rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[
 				j + PREFETCH_OFFSET], void *));
-		nat_simple_forward(pkts_burst[j], public_port, dest_port, qconf);
+		nat_simple_forward(pkts_burst[j], qconf);
 	}
 
 	/* Forward remaining prefetched packets */
 	for (; j < nb_rx; j++)
-		nat_simple_forward(pkts_burst[j], public_port, dest_port, qconf);
+		nat_simple_forward(pkts_burst[j], qconf);
 }
 
 #endif /* __XSS_NAT_H__ */

@@ -457,8 +457,6 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 	int i, nb_rx;
 	uint8_t queueid;
 	uint16_t portid;
-	bool public_port;
-	uint16_t dest_port;
 	struct lcore_conf *qconf;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
 		US_PER_S * BURST_TX_DRAIN_US;
@@ -533,15 +531,12 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 		for (i = 0; i < qconf->n_rx_queue; ++i) {
 			portid = qconf->rx_queue_list[i].port_id;
 			queueid = qconf->rx_queue_list[i].queue_id;
-			public_port = qconf->rx_queue_list[i].public_port;
-			dest_port = qconf->rx_queue_list[i].dest_port;
 			nb_rx = rte_eth_rx_burst(portid, queueid, pkts_burst,
 				MAX_PKT_BURST);
 			if (nb_rx == 0)
 				continue;
 
-			nat_no_opt_send_packets(nb_rx, pkts_burst,
-							public_port, dest_port, qconf);
+			nat_no_opt_send_packets(nb_rx, pkts_burst,qconf);
 		}
 	}
 
