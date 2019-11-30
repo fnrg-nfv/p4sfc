@@ -8,10 +8,10 @@
 static int is_ip_private(uint32_t ip);
 
 static inline int 
-nat_modify_pkt_private(struct rte_mbuf *m, struct lcore_conf *qconf);
+nat_private_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf);
 
 static inline int 
-nat_modify_pkt_public(struct rte_mbuf *m, struct lcore_conf *qconf);
+nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf);
 
 static __rte_always_inline void
 nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
@@ -44,10 +44,10 @@ nat_simple_forward(struct rte_mbuf *m, bool public_port, uint16_t dest_port,
 #endif
 
 		if(is_ip_private(ipv4_hdr->src_addr)){
-			ret = nat_modify_pkt_private(m, qconf);
+			ret = nat_private_pkt_handler(m, qconf);
 		}
 		else{
-			ret = nat_modify_pkt_public(m, qconf);
+			ret = nat_public_pkt_handler(m, qconf);
 		}
 
 		//important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!comment for test!!!! This will drop pkt anyway for test!

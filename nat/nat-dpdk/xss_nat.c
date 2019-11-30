@@ -45,19 +45,29 @@
 
 #define IPV6_ADDR_LEN 16
 
-uint32_t nat_public_ip = 0x0ffffff0;//shoule be statically configured
+uint32_t nat_static_public_ip = 0x0ffffff0;//shoule be statically configured
 
 struct nat_rule
 {
-	uint32_t private_ip_src;
+	uint32_t private_ip;
 	uint16_t private_port;
+	uint32_t public_ip;
+	uint16_t public_port;
+	uint8_t proto;
 	uint16_t assigned_port;
-	uint32_t public_ip_dst;
-	int num_pkt_out;
-	int num_pkt_in;
+	//statistic data fields
+	uint32_t sum_pkts_in2out;
+	uint32_t sum_pkts_out2in;
 	//todo: time_out_field
 };
 
+struct nat_rule_hash_key {
+	uint32_t src_ip_addr;
+	uint16_t src_port;
+	uint32_t dst_ip_addr;
+	uint16_t dst_port;
+	uint8_t proto;
+};
 
 struct nat_private_key {
 	uint32_t private_ip_src;
@@ -73,6 +83,30 @@ struct nat_public_key {
 //per socket has a hash table ---by xss
 struct rte_hash *nat_private_lookup_struct[NB_SOCKETS];
 struct rte_hash *nat_public_lookup_struct[NB_SOCKETS];
+
+static inline uint32_t
+nat_hash_crc(const void *data, __rte_unused uint32_t data_len,
+		uint32_t init_val)
+{
+	const struct nat_rule_hash_key *k;
+	k = data;
+
+#ifdef EM_HASH_CRC
+	init_val = rte_hash_crc_4byte(k->src_ip_addr, init_val);
+	init_val = rte_hash_crc_4byte(k->dst_ip_addr, init_val);
+	init_val = rte_hash_crc_4byte((uint32_t)k->src_port, init_val);
+	init_val = rte_hash_crc_4byte((uint32_t)k->dst_port, init_val);
+	init_val = rte_hash_crc_4byte((uint32_t)k->proto, init_val);
+#else
+	init_val = rte_jhash_1word(k->src_ip_addr, init_val);
+	init_val = rte_jhash_1word(k->dst_ip_addr, init_val);
+	init_val = rte_jhash_1word((uint32_t)k->src_port, init_val);
+	init_val = rte_jhash_1word((uint32_t)k->dst_port, init_val);
+	init_val = rte_jhash_1word((uint32_t)k->proto, init_val);
+#endif
+
+	return init_val;
+}
 
 static inline uint32_t
 nat_private_hash_crc(const void *data, __rte_unused uint32_t data_len,
@@ -95,25 +129,6 @@ nat_private_hash_crc(const void *data, __rte_unused uint32_t data_len,
 
 	return init_val;
 }
-
-static inline uint32_t
-nat_public_hash_crc(const void *data, __rte_unused uint32_t data_len,
-		uint32_t init_val)
-{
-	const struct nat_public_key *k;
-	k = data;
-
-#ifdef EM_HASH_CRC
-	init_val = rte_hash_crc_4byte(k->public_ip_src, init_val);
-	init_val = rte_hash_crc_4byte(k->public_port_dst, init_val);
-#else
-	init_val = rte_jhash_1word(k->public_ip_src, init_val);
-	init_val = rte_jhash_1word(k->public_port_dst, init_val);
-#endif
-
-	return init_val;
-}
-
 
 static struct nat_rule *nat_rules_private[NAT_HASH_ENTRIES];
 static struct nat_rule *nat_rules_public[NAT_HASH_ENTRIES];
@@ -141,10 +156,15 @@ static void print_statistic(void) {
 		rule = nat_rules_private[i];
 		if(rule != NULL){
 			printf("NAT rule %3d: ", i);
-			format_ip_addr(ip, rule->private_ip_src);
-			printf("%15s : %5d/%5d ----> ", ip, rte_be_to_cpu_16(rule->private_port), rte_be_to_cpu_16(rule->assigned_port));
-			format_ip_addr(ip, rule->public_ip_dst);
-			printf("%15s  | pkt_in: %d, pkt_out: %d\n", ip, rule->num_pkt_in, rule->num_pkt_out);
+			format_ip_addr(ip, rule->private_ip);
+			printf("%15s : %5d ----> ", ip, rte_be_to_cpu_16(rule->private_port));
+			format_ip_addr(ip, rule->public_ip);
+			printf("%15s : %5d | assigned_port: %5d, pkt_in2out: %d, pkt_out2in: %d\n",
+					ip,
+					rte_be_to_cpu_16(rule->public_port),
+					rte_be_to_cpu_16(rule->assigned_port),
+					rule->sum_pkts_out2in,
+					rule->sum_pkts_in2out);
 		}
 	}
 	printf("==============================================================================================\n");
@@ -177,49 +197,51 @@ static int nat_get_avaliable_port(void){
 }
 
 static inline struct nat_rule *
-nat_insert_new_rule(uint32_t ip1, uint16_t port, uint32_t ip2,
-					struct lcore_conf *qconf)
+nat_insert_new_rule(struct nat_rule_hash_key *key,struct lcore_conf *qconf)
 {
-	// printf("Insert new NAT rule. ");
 	struct nat_rule *rule = (struct nat_rule *)rte_malloc(NULL, sizeof(*rule), 0);
-	rule->private_ip_src = ip1;
-	rule->private_port = port;
-	rule->public_ip_dst = ip2;
+	rule->private_ip = key->src_ip_addr;
+	rule->private_port = key->src_port;
+	rule->public_ip = key->dst_ip_addr;
+	rule->public_port = key->dst_port;
+	rule->proto = key->proto;
 	rule->assigned_port = rte_cpu_to_be_16(nat_get_avaliable_port());
-	rule->num_pkt_out = 0;
-	rule->num_pkt_in = 0;
+	rule->sum_pkts_in2out = 0;
+	rule->sum_pkts_out2in = 0;
 	//todo by xss
 	// if(rule.assigned_port<0)
 	// 	 return rule;
 	
-
-	struct nat_private_key key1;
-	struct nat_public_key key2;
-	key1.private_ip_src = ip1;
-	key1.private_port_src = port;
-	key1.public_ip_dst = ip2;
-	key2.public_ip_src = ip2;
-	key2.public_port_dst = rule->assigned_port;
+	//insert rules in both sides. i.e. in and out.
 	int ret;
-	// printf("Hash 3 tuple in add : %x, %x, %d\n", key1.private_ip_src, key1.public_ip_dst, key1.private_port_src);
-	ret = rte_hash_add_key((const struct rte_hash *)qconf->nat_private_lookup_struct, (const void *) &key1);
-	// printf("Private index: %d\n", ret);
-	// printf("After add, the hash table size is: %d\n", rte_hash_count((const struct rte_hash *)qconf->nat_private_lookup_struct));
+	ret = rte_hash_add_key((const struct rte_hash *)qconf->nat_private_lookup_struct, (const void *) key);
 	nat_rules_private[ret] = rule;
-	ret = rte_hash_add_key((const struct rte_hash *)qconf->nat_public_lookup_struct, (const void *) &key2);
+
+	//we nned modify key for out2in
+	key->src_ip_addr = key->dst_ip_addr;
+	key->dst_ip_addr = nat_static_public_ip;
+	key->src_port = key->dst_port;
+	key->dst_port = rule->assigned_port;
+	ret = rte_hash_add_key((const struct rte_hash *)qconf->nat_public_lookup_struct, (const void *) key);
 	nat_rules_public[ret] = rule;
 
 	//print insert successfully message
 	char ip[32];
-	format_ip_addr(ip, ip1);printf("Insert new NAT rule for : %15s : %5d ----> ", ip, rte_be_to_cpu_16(port));
-	format_ip_addr(ip, ip2);printf("%15s. Assigned port: %5d\n", ip, rte_be_to_cpu_16(rule->assigned_port));
+	format_ip_addr(ip, rule->private_ip);printf("Insert new NAT rule for : %15s : %5d ----> ",
+												ip,
+												rte_be_to_cpu_16(rule->private_port));
+												
+	format_ip_addr(ip, rule->public_ip);printf("%15s : %5d. Assigned port: %5d\n", 
+												ip,
+												rte_be_to_cpu_16(rule->public_port),
+												rte_be_to_cpu_16(rule->assigned_port));
 	return rule;
 }
 
 static inline int 
-nat_modify_pkt_private(struct rte_mbuf *m, struct lcore_conf *qconf){
+nat_private_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 	// printf("Receive pkt from private port...\n");
-	struct nat_private_key key;
+	struct nat_rule_hash_key key;
 	struct ipv4_hdr *ipv4_hdr;
 	struct tcp_hdr *tcp_hdr;
 	struct udp_hdr *udp_hdr;
@@ -229,40 +251,35 @@ nat_modify_pkt_private(struct rte_mbuf *m, struct lcore_conf *qconf){
 	tcp = m->packet_type & RTE_PTYPE_L4_TCP;
 	ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
 						   sizeof(struct ether_hdr));
-	
-	key.private_ip_src = ipv4_hdr->src_addr;
-	key.public_ip_dst = ipv4_hdr->dst_addr;
+
+	//acquire 5-tuple	
+	key.src_ip_addr = ipv4_hdr->src_addr;
+	key.dst_ip_addr = ipv4_hdr->dst_addr;
+	key.proto = ipv4_hdr->next_proto_id;
 	if(tcp) {
-		// tcp_hdr = (struct tcp_hdr *)((char *)ipv4_hdr + m->l3_len);
 		tcp_hdr = rte_pktmbuf_mtod_offset(m, struct tcp_hdr *,
 						   sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
-		key.private_port_src = tcp_hdr->src_port;
+		key.src_port = tcp_hdr->src_port;
+		key.dst_port = tcp_hdr->dst_port;
 	}
 	else {
-		// udp_hdr = (struct udp_hdr *)((char *)ipv4_hdr + m->l3_len);
 		udp_hdr = rte_pktmbuf_mtod_offset(m, struct udp_hdr *,
 						   sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
-		key.private_port_src = udp_hdr->src_port;
+		key.src_port = udp_hdr->src_port;
+		key.dst_port = udp_hdr->dst_port;
 	}
-	// printf("Hash 3 tuple in lookup : %x, %x, %d\n", key.private_ip_src, key.public_ip_dst, key.private_port_src);
-	// printf("Hash size in lookup: %d\n", rte_hash_count((const struct rte_hash *)qconf->nat_private_lookup_struct));
+
 	ret = rte_hash_lookup((const struct rte_hash *)qconf->nat_private_lookup_struct, (const void *)&key);
-	// printf("The Hash return value: %d\n", ret);
 	struct nat_rule *rule;
 	if(ret<0){
-		// printf("I am going to insert new nat rule\n");
-		rule = nat_insert_new_rule(ipv4_hdr->src_addr, key.private_port_src, ipv4_hdr->dst_addr, qconf);
-		//todo by xss
-		// if(rule.assigned_port<0)
-		// 	return -1;
+		rule = nat_insert_new_rule(&key, qconf);
 	}
 	else{
-		// printf("Matching successfully in private direction !\n");
 		rule = nat_rules_private[ret];
 	}
-	rule->num_pkt_out++;
-	ipv4_hdr->src_addr = nat_public_ip;
-		if(tcp){
+	rule->sum_pkts_in2out++;
+	ipv4_hdr->src_addr = nat_static_public_ip;
+	if(tcp){
 		tcp_hdr->src_port = rule->assigned_port;
 	}
 	else{
@@ -272,8 +289,8 @@ nat_modify_pkt_private(struct rte_mbuf *m, struct lcore_conf *qconf){
 }
 
 static inline int 
-nat_modify_pkt_public(struct rte_mbuf *m, struct lcore_conf *qconf){
-	struct nat_public_key key;
+nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
+	struct nat_rule_hash_key key;
 	struct ipv4_hdr *ipv4_hdr;
 	struct tcp_hdr *tcp_hdr;
 	struct udp_hdr *udp_hdr;
@@ -283,19 +300,22 @@ nat_modify_pkt_public(struct rte_mbuf *m, struct lcore_conf *qconf){
 	ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
 						   sizeof(struct ether_hdr));
 
-	key.public_ip_src = ipv4_hdr->src_addr;
-
+	key.src_ip_addr = ipv4_hdr->src_addr;
+	key.dst_ip_addr = ipv4_hdr->dst_addr;
+	key.proto = ipv4_hdr->next_proto_id;
 	if(tcp) {
 		// tcp_hdr = (struct tcp_hdr *)((char *)ipv4_hdr + m->l3_len);
 		tcp_hdr = rte_pktmbuf_mtod_offset(m, struct tcp_hdr *,
 							sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
-		key.public_port_dst = tcp_hdr->dst_port;
+		key.src_port = tcp_hdr->src_port;
+		key.dst_port = tcp_hdr->dst_port;
 	}
 	else {
 		// udp_hdr = (struct udp_hdr *)((char *)ipv4_hdr + m->l3_len);
 		udp_hdr = rte_pktmbuf_mtod_offset(m, struct udp_hdr *,
 						   sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
-		key.public_port_dst = udp_hdr->dst_port;
+		key.src_port = udp_hdr->src_port;
+		key.dst_port = udp_hdr->dst_port;
 	}
 
 	ret = rte_hash_lookup((struct rte_hash *)qconf->nat_public_lookup_struct, (const void *)&key);
@@ -303,8 +323,8 @@ nat_modify_pkt_public(struct rte_mbuf *m, struct lcore_conf *qconf){
 		return ret;
 	// printf("Matching successfully in public direction !");
 	struct nat_rule *rule = nat_rules_public[ret];
-	rule->num_pkt_in++;
-	ipv4_hdr->dst_addr = rule->private_ip_src;
+	rule->sum_pkts_out2in++;
+	ipv4_hdr->dst_addr = rule->private_ip;
 	if(tcp){
 		tcp_hdr->dst_port = rule->private_port;
 	}
@@ -540,7 +560,7 @@ setup_hash(const int socketid)
 		.name = NULL,
 		.entries = NAT_HASH_ENTRIES,
 		.key_len = 10,
-		.hash_func = nat_private_hash_crc,
+		.hash_func = nat_hash_crc,
 		.hash_func_init_val = 0,
 	};
 
@@ -558,7 +578,7 @@ setup_hash(const int socketid)
 		.name = NULL,
 		.entries = NAT_HASH_ENTRIES,
 		.key_len = 6,
-		.hash_func = nat_public_hash_crc,
+		.hash_func = nat_hash_crc,
 		.hash_func_init_val = 0,
 	};
 
