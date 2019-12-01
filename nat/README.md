@@ -9,5 +9,4 @@ xss-nat:
 ```
 
 ## Todo
-1. Parse user-defined protocol header
-2. Insert nat rule to bmv2 through gprc
+1. Insert nat rule to bmv2 through gprc
