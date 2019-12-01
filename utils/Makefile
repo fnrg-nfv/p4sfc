@@ -2,36 +2,39 @@ BUILD_DIR = build
 PCAP_DIR = pcaps
 LOG_DIR = logs
 
-ifndef PROG_PREFIX
-PROG_PREFIX = test
+P4C = p4c-bm2-ss
+P4C_ARGS += --p4runtime-files $(BUILD_DIR)/$(basename $@).p4.p4info.txt
+
+RUN_SCRIPT = ../utils/run_exercise.py
+
+ifndef TOPO
+TOPO = topology.json
 endif
 
-ifndef RUN_SCRIPT
-RUN_SCRIPT = 1sw_demo.py
+source = $(wildcard *.p4)
+compiled_json := $(source:.p4=.json)
+
+# Set BMV2_SWITCH_EXE to override the BMv2 target
+ifdef BMV2_SWITCH_EXE
+run_args += -b $(BMV2_SWITCH_EXE)
 endif
-
-P4C = p4c
-P4C_ARGS = --target bmv2 --arch v1model --p4runtime-files $(BUILD_DIR)/$(PROG_PREFIX).txt
-
-BMV2_SWITCH_EXE = simple_switch_grpc
-
-RUN_ARGS = --behavioral-exe $(BMV2_SWITCH_EXE) --pcap-dump $(PCAP_DIR) -l $(LOG_DIR) --json $(BUILD_DIR)/$(PROG_PREFIX).json
 
 all: run
 
 run: build
-	sudo python $(RUN_SCRIPT) $(RUN_ARGS)
+	sudo python $(RUN_SCRIPT) -t $(TOPO) $(run_args)
 
 stop:
 	sudo mn -c
 
-build: dirs 
-	$(P4C) $(P4C_ARGS) $(PROG_PREFIX).p4 -o $(BUILD_DIR)
+build: dirs $(compiled_json)
+
+%.json: %.p4
+	$(P4C) --p4v 16 $(P4C_ARGS) -o $(BUILD_DIR)/$@ $<
 
 dirs:
 	mkdir -p $(BUILD_DIR) $(PCAP_DIR) $(LOG_DIR)
 
 clean: stop
-	rm -f ./*.pcap
+	rm -f *.pcap
 	rm -rf $(BUILD_DIR) $(PCAP_DIR) $(LOG_DIR)
-
