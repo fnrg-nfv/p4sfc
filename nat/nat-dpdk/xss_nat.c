@@ -391,6 +391,14 @@ static void nat_rule_timeout_checker(struct lcore_conf *qconf) {
 	}
 }
 
+static void
+print_ethaddr(const char *name, const struct ether_addr *eth_addr)
+{
+	char buf[ETHER_ADDR_FMT_SIZE];
+	ether_format_addr(buf, ETHER_ADDR_FMT_SIZE, eth_addr);
+	printf("%s%s", name, buf);
+}
+
 /* Requirements:
  * 1. IP packets without extension;
  * 2. L4 payload should be either TCP or UDP.
