@@ -1,4 +1,4 @@
-RUN_SCRIPT = 1sw_topo.py
-PROG_PREFIX = nat
+BMV2_SWITCH_EXE = simple_switch_grpc
+TOPO = simple-topo/topology.json
 
 include ../utils/Makefile
