@@ -44,8 +44,8 @@
 #endif
 
 
-static uint32_t nat_static_public_ip = 0x0ffffff0;//shoule be statically configured
-static uint64_t nat_rule_timeout_threshold = 10; //default timeout:10s
+static uint32_t nat_static_public_ip = 0xbcbcbcbc;//188.188.188.188
+static uint64_t nat_rule_timeout_threshold = 30; //default timeout:10s
 
 struct nat_rule
 {
@@ -165,8 +165,8 @@ static void print_statistic(void) {
 					ip,
 					rte_be_to_cpu_16(rule->public_port),
 					rte_be_to_cpu_16(rule->assigned_port),
-					rule->sum_pkts_out2in,
-					rule->sum_pkts_in2out);
+					rule->sum_pkts_in2out,
+					rule->sum_pkts_out2in);
 		}
 	}
 	printf("==============================================================================================\n");
@@ -246,28 +246,28 @@ nat_private_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 	// printf("Receive pkt from private port...\n");
 	struct nat_rule_hash_key key;
 	struct ipv4_hdr *ipv4_hdr;
+	bool is_tcp_packet;
 	struct tcp_hdr *tcp_hdr;
 	struct udp_hdr *udp_hdr;
-	uint32_t tcp;
 
 	int ret = 0;
-	tcp = m->packet_type & RTE_PTYPE_L4_TCP;
 	ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
-						   sizeof(struct ether_hdr));
+				sizeof(struct ether_hdr) + sizeof(struct sfc_hdr));
 
+	is_tcp_packet = ipv4_hdr->next_proto_id == TCP_PROTO_ID;
 	//acquire 5-tuple	
 	key.src_ip_addr = ipv4_hdr->src_addr;
 	key.dst_ip_addr = ipv4_hdr->dst_addr;
 	key.proto = ipv4_hdr->next_proto_id;
-	if(tcp) {
+	if(is_tcp_packet) {
 		tcp_hdr = rte_pktmbuf_mtod_offset(m, struct tcp_hdr *,
-						   sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+						   sizeof(struct ether_hdr) + sizeof(struct sfc_hdr) + sizeof(struct ipv4_hdr));
 		key.src_port = tcp_hdr->src_port;
 		key.dst_port = tcp_hdr->dst_port;
 	}
 	else {
 		udp_hdr = rte_pktmbuf_mtod_offset(m, struct udp_hdr *,
-						   sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+						   sizeof(struct ether_hdr) + sizeof(struct sfc_hdr) + sizeof(struct ipv4_hdr));
 		key.src_port = udp_hdr->src_port;
 		key.dst_port = udp_hdr->dst_port;
 	}
@@ -283,7 +283,7 @@ nat_private_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 	}
 	rule->sum_pkts_in2out++;
 	ipv4_hdr->src_addr = nat_static_public_ip;
-	if(tcp){
+	if(is_tcp_packet){
 		tcp_hdr->src_port = rule->assigned_port;
 	}
 	else{
@@ -298,26 +298,26 @@ nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 	struct ipv4_hdr *ipv4_hdr;
 	struct tcp_hdr *tcp_hdr;
 	struct udp_hdr *udp_hdr;
-	uint32_t tcp;
+	bool is_tcp_packet;
 	int ret = 0;
-	tcp = m->packet_type & RTE_PTYPE_L4_TCP;
 	ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
-						   sizeof(struct ether_hdr));
+				sizeof(struct ether_hdr) + sizeof(struct sfc_hdr));
 
+	is_tcp_packet = ipv4_hdr->next_proto_id == TCP_PROTO_ID;
 	key.src_ip_addr = ipv4_hdr->src_addr;
 	key.dst_ip_addr = ipv4_hdr->dst_addr;
 	key.proto = ipv4_hdr->next_proto_id;
-	if(tcp) {
+	if(is_tcp_packet) {
 		// tcp_hdr = (struct tcp_hdr *)((char *)ipv4_hdr + m->l3_len);
 		tcp_hdr = rte_pktmbuf_mtod_offset(m, struct tcp_hdr *,
-							sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+						   sizeof(struct ether_hdr) + sizeof(struct sfc_hdr) + sizeof(struct ipv4_hdr));
 		key.src_port = tcp_hdr->src_port;
 		key.dst_port = tcp_hdr->dst_port;
 	}
 	else {
 		// udp_hdr = (struct udp_hdr *)((char *)ipv4_hdr + m->l3_len);
 		udp_hdr = rte_pktmbuf_mtod_offset(m, struct udp_hdr *,
-						   sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+						   sizeof(struct ether_hdr) + sizeof(struct sfc_hdr) + sizeof(struct ipv4_hdr));
 		key.src_port = udp_hdr->src_port;
 		key.dst_port = udp_hdr->dst_port;
 	}
@@ -327,10 +327,10 @@ nat_public_pkt_handler(struct rte_mbuf *m, struct lcore_conf *qconf){
 		return ret;
 	// printf("Matching successfully in public direction !");
 	struct nat_rule *rule = nat_rules_public[ret];
-	rule -> last_visited = rte_rdtsc();
+	rule->last_visited = rte_rdtsc();
 	rule->sum_pkts_out2in++;
 	ipv4_hdr->dst_addr = rule->private_ip;
-	if(tcp){
+	if(is_tcp_packet){
 		tcp_hdr->dst_port = rule->private_port;
 	}
 	else{
@@ -391,13 +391,13 @@ static void nat_rule_timeout_checker(struct lcore_conf *qconf) {
 	}
 }
 
-static void
-print_ethaddr(const char *name, const struct ether_addr *eth_addr)
-{
-	char buf[ETHER_ADDR_FMT_SIZE];
-	ether_format_addr(buf, ETHER_ADDR_FMT_SIZE, eth_addr);
-	printf("%s%s", name, buf);
-}
+// static void
+// print_ethaddr(const char *name, const struct ether_addr *eth_addr)
+// {
+// 	char buf[ETHER_ADDR_FMT_SIZE];
+// 	ether_format_addr(buf, ETHER_ADDR_FMT_SIZE, eth_addr);
+// 	printf("%s%s", name, buf);
+// }
 
 /* Requirements:
  * 1. IP packets without extension;
