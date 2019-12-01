@@ -46,6 +46,15 @@
 
 static uint32_t nat_static_public_ip = 0xbcbcbcbc;//188.188.188.188
 static uint64_t nat_rule_timeout_threshold = 30; //default timeout:10s
+static uint64_t statistics_show_timer_period = 10; /* default period is 10 seconds */
+static uint64_t rule_timeout_check_timer_period = 30;
+
+//per socket has a hash table ---by xss
+struct rte_hash *nat_private_lookup_struct[NB_SOCKETS];
+struct rte_hash *nat_public_lookup_struct[NB_SOCKETS];
+static struct nat_rule *nat_rules_private[NAT_HASH_ENTRIES];
+static struct nat_rule *nat_rules_public[NAT_HASH_ENTRIES];
+static int port_pool[65535-1024];
 
 struct nat_rule
 {
@@ -80,9 +89,6 @@ struct nat_public_key {
 	uint16_t public_port_dst;
 };
 
-//per socket has a hash table ---by xss
-struct rte_hash *nat_private_lookup_struct[NB_SOCKETS];
-struct rte_hash *nat_public_lookup_struct[NB_SOCKETS];
 
 static inline uint32_t
 nat_hash_crc(const void *data, __rte_unused uint32_t data_len,
@@ -129,14 +135,6 @@ nat_private_hash_crc(const void *data, __rte_unused uint32_t data_len,
 
 	return init_val;
 }
-
-static struct nat_rule *nat_rules_private[NAT_HASH_ENTRIES];
-static struct nat_rule *nat_rules_public[NAT_HASH_ENTRIES];
-static int port_pool[65535-1024];
-
-
-static uint64_t statistics_show_timer_period = 10; /* default period is 10 seconds */
-static uint64_t rule_timeout_check_timer_period = 30;
 
 //show NAT statistic
 static void format_ip_addr(char *s, uint32_t ip){
