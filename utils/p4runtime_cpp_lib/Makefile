@@ -22,7 +22,9 @@ app:
 %.o: %.cpp
 	$(CXX) $(FLAGS) -fPIC -c -o $@ $<
 
-clean:
+clean: cleanapp
 	$(RM) $(LIB_OBJS)
 	$(RM) $(LIB_DIST)
+
+cleanapp:
 	$(RM) app

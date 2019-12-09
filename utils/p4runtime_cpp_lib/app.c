@@ -133,7 +133,8 @@ int main(int argc, char *argv[]) {
 
   pthread_t thread_id;
   pthread_create(&thread_id, NULL, &query_counter, gs);
-  pthread_create(&thread_id, NULL, &add_table_entry, gs);
+  // pthread_create(&thread_id, NULL, &add_table_entry, gs);
+  add_table_entry(gs);
 
   GS_run(gs);
   printf("cannot get here\n");
