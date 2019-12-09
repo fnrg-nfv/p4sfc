@@ -38,6 +38,8 @@
 
 using grpc::Channel;
 
+namespace p4v1 = ::p4::v1;
+
 struct __attribute__((packed)) cpu_header_t {
   char zeros[8];
   uint16_t reason;
@@ -104,6 +106,8 @@ class GeneralSwitch {
     io_service->post(std::move(event));
   }
 
+  int add_one_entry(p4::v1::TableEntry *match_action_entry);
+
  private:
   struct Iface {
     uint16_t port_num;
@@ -136,8 +140,6 @@ class GeneralSwitch {
   void handle_arp_reply(const arp_header_t &arp_header);
   void send_arp_request(uint16_t port, uint32_t dst_addr);
 
-  int add_one_entry(p4::v1::TableEntry *match_action_entry);
-
   int set_one_default_entry(pi_p4_id_t t_id, p4::v1::Action *action);
 
   int add_route_(uint32_t prefix, int pLen, uint32_t nhop, uint16_t port,
@@ -161,8 +163,8 @@ class GeneralSwitch {
   std::unordered_map<uint32_t, uint16_t> next_hops;
   std::unordered_map<uint32_t, PacketQueue> packet_queues;
   int dev_id;
-  pi_p4info_t *p4info{nullptr};
 public:
+  pi_p4info_t *p4info{nullptr};
   boost::asio::io_service *io_service;
 private:
   std::unique_ptr<p4::v1::P4Runtime::Stub> pi_stub_;

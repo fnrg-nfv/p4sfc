@@ -35,7 +35,6 @@
 
 #include "google/rpc/code.pb.h"
 
-namespace p4v1 = ::p4::v1;
 namespace p4configv1 = ::p4::config::v1;
 
 using grpc::ClientContext;
@@ -251,12 +250,13 @@ GeneralSwitch::assign(const std::string &config_buffer,
     pi::p4info::p4info_proto_reader(p4info_proto, &p4info);
   }
 
-  p4v1::SetForwardingPipelineConfigRequest request;
-  request.set_device_id(dev_id);
-  request.set_action(
-      p4v1::SetForwardingPipelineConfigRequest_Action_VERIFY_AND_COMMIT);
-  auto config = request.mutable_config();
-  config->set_allocated_p4info(&p4info_proto);
+  // p4v1::SetForwardingPipelineConfigRequest request;
+  // request.set_device_id(dev_id);
+  // request.set_action(
+  //     p4v1::SetForwardingPipelineConfigRequest_Action_VERIFY_AND_COMMIT);
+  // auto config = request.mutable_config();
+  // config->set_allocated_p4info(&p4info_proto);
+
   /*
   p4::tmp::P4DeviceConfig device_config;
   auto extras = device_config.mutable_extras();
@@ -269,16 +269,16 @@ GeneralSwitch::assign(const std::string &config_buffer,
   device_config.SerializeToString(config->mutable_p4_device_config());
   */
 
-  p4v1::SetForwardingPipelineConfigResponse rep;
-  ClientContext context;
-  auto status = pi_stub_->SetForwardingPipelineConfig(&context, request, &rep);
-  config->release_p4info();
-  if (!status.ok()) {
-    std::cout << "SetForwardingPipelineConfig RPC failed with error code "
-              << status.error_code() << " and error message "
-              << status.error_message() << "\n";
-  }
-  assert(status.ok());
+  // p4v1::SetForwardingPipelineConfigResponse rep;
+  // ClientContext context;
+  // auto status = pi_stub_->SetForwardingPipelineConfig(&context, request, &rep);
+  // config->release_p4info();
+  // if (!status.ok()) {
+  //   std::cout << "SetForwardingPipelineConfig RPC failed with error code "
+  //             << status.error_code() << " and error message "
+  //             << status.error_message() << "\n";
+  // }
+  // assert(status.ok());
 
   packet_io_client->send_init(dev_id);
   packet_io_client->recv_packet_in();

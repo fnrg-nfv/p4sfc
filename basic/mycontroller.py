@@ -20,6 +20,19 @@ def printCounter(p4info_helper, sw, counter_name, index):
                 counter.data.packet_count, counter.data.byte_count
             )
 
+def readTableRules(p4info_helper, sw):
+    """
+    Reads the table entries from all tables on the switch.
+
+    :param p4info_helper: the P4Info helper
+    :param sw: the switch connection
+    """
+    print '\n----- Reading tables rules for %s -----' % sw.name
+    for response in sw.ReadTableEntries():
+        for entity in response.entities:
+            entry = entity.table_entry
+            print entry
+
 def main(p4info_file_path, bmv2_file_path):
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
 
@@ -32,8 +45,10 @@ def main(p4info_file_path, bmv2_file_path):
 
     s.MasterArbitrationUpdate()
 
-    s.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
-                                  bmv2_json_file_path=bmv2_file_path)
+    # s.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
+    #                               bmv2_json_file_path=bmv2_file_path)
+
+    readTableRules(p4info_helper, s)
 
     printCounter(p4info_helper, s, "MyIngress.myCounter", 0)
 

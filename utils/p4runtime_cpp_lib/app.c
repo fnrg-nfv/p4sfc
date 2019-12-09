@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#include <arpa/inet.h>
+
 #include <ctype.h>
 #include <unistd.h>
 
@@ -73,7 +75,7 @@ int parse_opts(int argc, char *const argv[]) {
 }
 
 static
-void *query_counter(void* gs) {
+void *query_counter(general_switch_t gs) {
   printf("Start query thread!\n");
   char* counter_name = "MyIngress.myCounter";
   uint64_t packets;
@@ -83,14 +85,55 @@ void *query_counter(void* gs) {
   return NULL;
 }
 
+static void * add_table_entry(general_switch_t gs) {
+
+  uint32_t ip = 0x0a000303;
+  ip = ntohl(ip);  // "10.0.3.3"
+  GS_match_field_lpm_t match_field_lpm = {
+    .name = "hdr.ipv4.dstAddr",
+    .value = (char*)&ip,
+    .size = sizeof(ip),
+    .plen = 32,
+    .next = NULL
+  };
+
+  uint16_t port = 1;
+  port = ntohs(port);
+  GS_action_para_t action_para2 = {
+    .name = "port",
+    .value = (char*)&port,
+    .size = sizeof(port),
+    .next = NULL
+  };
+
+  unsigned char hw[6] = {0x00, 0xaa, 0xbb, 0x00, 0x00, 0x00};
+  GS_action_para_t action_para1 = {
+    .name = "dstAddr",
+    .value = (char*)hw,
+    .size = sizeof(hw),
+    .next = &action_para2
+  };
+
+  GS_table_entry_t table_entry = {
+    .table_name = "MyIngress.ipv4_lpm",
+    .action_name = "MyIngress.ipv4_forward",
+    .match_field_lpm = &match_field_lpm,
+    .action_para = &action_para1
+  };
+
+  int rc = GS_add_table_entry_lpm(gs, &table_entry);
+  printf("Add table entry end. Result: %d\n", rc);
+  return NULL;
+}
+
 int main(int argc, char *argv[]) {
   if (parse_opts(argc, argv) != 0) return 1;
   char* grpc_addr = "localhost:50051";
-  void* gs = GS_connect(grpc_addr, opt_config_path, opt_p4info_path);
+  general_switch_t gs = GS_connect(grpc_addr, opt_config_path, opt_p4info_path);
 
   pthread_t thread_id;
   pthread_create(&thread_id, NULL, &query_counter, gs);
-  // pthread_join(thread_id, NULL);
+  pthread_create(&thread_id, NULL, &add_table_entry, gs);
 
   GS_run(gs);
   printf("cannot get here\n");
