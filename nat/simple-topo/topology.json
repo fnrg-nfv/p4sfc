@@ -3,7 +3,7 @@
         "h1": {
             "ip": "10.0.1.1/24",
             "mac": "08:00:00:00:01:11",
-            "dimage": "dpdk-pktgen:latest",
+            "image": "dpdk-pktgen:latest",
             "commands": [
                 "route add default gw 10.0.1.10 dev eth0",
                 "arp -i eth0 -s 10.0.1.10 08:00:00:00:01:00"
@@ -12,17 +12,31 @@
         "h2": {
             "ip": "10.0.2.2/24",
             "mac": "08:00:00:00:02:22",
-            "dimage": "dpdk-nat:latest",
-            "volumes": ["/dev/hugepages:/dev/hugepages:rw","/home/xss/p4sfc-project/nat/nat-dpdk:/root:rw"],
+            "image": "dpdk-pktgen:latest",
             "commands": [
                 "route add default gw 10.0.2.20 dev eth0",
                 "arp -i eth0 -s 10.0.2.20 08:00:00:00:02:00"
+            ]
+        },
+        "h3": {
+            "ip": "10.0.3.3/24",
+            "mac": "08:00:00:00:03:33",
+            "image": "dpdk-pktgen:latest",
+            "commands": [
+                "route add default gw 10.0.3.30 dev eth0",
+                "arp -i eth0 -s 10.0.3.30 08:00:00:00:03:00"
             ]
         }
     },
     "switches": {
         "s1": {
             "runtime_json": "simple-topo/s1-runtime.json"
+        },
+        "s2": {
+            "runtime_json": "simple-topo/s2-runtime.json"
+        },
+        "s3": {
+            "runtime_json": "simple-topo/s3-runtime.json"
         }
     },
     "links": [
@@ -31,8 +45,20 @@
             "s1-p1"
         ],
         [
+            "s1-p2",
+            "s2-p1"
+        ],
+        [
+            "s2-p2",
+            "s3-p1"
+        ],
+        [
             "h2",
-            "s1-p2"
+            "s2-p3"
+        ],
+        [
+            "h3",
+            "s3-p2"
         ]
     ]
 }
