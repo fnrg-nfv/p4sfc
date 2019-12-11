@@ -52,5 +52,10 @@ CFLAGS += -I$(SRCDIR)
 CFLAGS += -O3 $(USER_FLAGS)
 CFLAGS += $(WERROR_FLAGS)
 
+#add for p4 grpc
+LDFLAGS += -L/home/xss/p4sfc/utils/p4runtime_cpp_lib 
+LDFLAGS += -lswitch
+# CPU_LDFLAGS += -lpthread
+
 include $(RTE_SDK)/mk/rte.extapp.mk
 endif
