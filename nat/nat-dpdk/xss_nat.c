@@ -30,6 +30,7 @@
 
 #include "nat_main.h"
 #include "xss_nat.h"
+#include "../../utils/p4runtime_cpp_lib/libswitch.h"
 
 #if defined(RTE_ARCH_X86) || defined(RTE_MACHINE_CPUFLAG_CRC32)
 #define EM_HASH_CRC 1
@@ -633,6 +634,8 @@ void
 setup_hash(const int socketid)
 {
 
+	char* grpc_addr = "localhost:50051";
+  	general_switch_t gs = GS_connect(grpc_addr, "/home/xss", "/home/xss");
 	struct rte_hash_parameters nat_private_hash_params = {
 		.name = NULL,
 		.entries = NAT_HASH_ENTRIES,

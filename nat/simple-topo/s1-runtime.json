@@ -4,31 +4,31 @@
   "bmv2_json": "build/ingress.json",
   "table_entries": [
     {
-      "table": "MyIngress.port_exact",
+      "table": "MyIngress.ipv4_lpm",
       "default_action": true,
       "action_name": "MyIngress.drop",
       "action_params": { }
     },
     {
-      "table": "MyIngress.port_exact",
+      "table": "MyIngress.ipv4_lpm",
       "match": {
-        "standard_metadata.ingress_port": 1
+        "hdr.ipv4.dstAddr": ["10.0.1.1", 32]
       },
-      "action_name": "MyIngress.port_forward",
-      "action_params": {
-        "dstAddr": "08:00:00:00:02:22",
-        "port": 2
-      }
-    },
-    {
-      "table": "MyIngress.port_exact",
-      "match": {
-        "standard_metadata.ingress_port": 2
-      },
-      "action_name": "MyIngress.port_forward",
+      "action_name": "MyIngress.ipv4_forward",
       "action_params": {
         "dstAddr": "08:00:00:00:01:11",
         "port": 1
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["188.188.188.0", 24]
+      },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "08:00:00:00:02:22",
+        "port": 2
       }
     }
   ]

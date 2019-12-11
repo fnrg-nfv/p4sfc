@@ -14,18 +14,19 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    action port_forward(macAddr_t dstAddr, egressSpec_t port) {
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
-    table port_exact {
+    table ipv4_lpm {
         key = {
-            standard_metadata.ingress_port: exact;
+            hdr.ipv4.dstAddr: lpm;
         }
         actions = {
-            port_forward;
+            ipv4_forward;
             drop;
             NoAction;
         }
@@ -33,19 +34,24 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
-    action nf() {
-        if (hdr.foo.flag == 1)
-            hdr.foo.flag = 0;
-    }
-
     action change_src_addr_port(ip4Addr_t srcAddr, bit<16> srcPort) {
         hdr.ipv4.srcAddr = srcAddr;
         hdr.tcp_udp.srcPort = srcPort;
+        hdr.foo.flag = 0;
+        meta.recirculate = 1; // recirculate for sfc
+
     }
 
     action change_dst_addr_port(ip4Addr_t dstAddr, bit<16> dstPort) {
         hdr.ipv4.dstAddr = dstAddr;
         hdr.tcp_udp.dstPort = dstPort;
+        hdr.foo.flag = 0;
+        meta.recirculate = 1; // recirculate for sfc
+
+    }
+
+    action send_to_server(egressSpec_t serverPort) {
+        standard_metadata.egress_spec = serverPort;
     }
 
     table nat_exact {
@@ -59,16 +65,22 @@ control MyIngress(inout headers hdr,
         actions = {
             change_src_addr_port;
             change_dst_addr_port;
-            port_forward;
+            send_to_server;
             NoAction;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = send_to_server(3);
     }
 
     apply {
-        nat_exact.apply();
-        port_exact.apply();
+        if (hdr.foo.flag == 1) {
+            //need to nat first
+            nat_exact.apply();
+        }
+        else {
+            //nat has done. ipv4 forward
+            ipv4_lpm.apply();
+        }
     }
 }
 
@@ -79,7 +91,11 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    apply {  }
+    apply {  
+        if (meta.recirculate == 1) {
+            recirculate(standard_metadata);
+        }
+    }
 }
 
 /*************************************************************************

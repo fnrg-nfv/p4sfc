@@ -15,31 +15,34 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    action port_forward(macAddr_t dstAddr, egressSpec_t port) {
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
-    table port_exact {
+    table ipv4_lpm {
         key = {
-            standard_metadata.ingress_port: exact;
+            hdr.ipv4.dstAddr: lpm;
         }
         actions = {
-            port_forward;
+            ipv4_forward;
             drop;
             NoAction;
         }
         size = 1024;
         default_action = drop();
     }
-
+    
     action egress_remove_foo() {
+        hdr.foo.setInvalid();
         hdr.ethernet.etherType = hdr.foo.etherType;
     }
-    
+
     apply {
-        port_exact.apply();
+        ipv4_lpm.apply();
+        egress_remove_foo();
     }
 }
 
