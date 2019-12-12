@@ -30,7 +30,9 @@
 
 #include "nat_main.h"
 #include "xss_nat.h"
-#include "../../utils/p4runtime_cpp_lib/libswitch.h"
+#include "p4_client.h"
+#include "nat_common.h"
+
 
 #if defined(RTE_ARCH_X86) || defined(RTE_MACHINE_CPUFLAG_CRC32)
 #define EM_HASH_CRC 1
@@ -49,6 +51,8 @@ static uint32_t nat_static_public_ip = 0xbcbcbcbc;//188.188.188.188
 static uint64_t nat_rule_timeout_threshold = 30; //default timeout:10s
 static uint64_t statistics_show_timer_period = 10; /* default period is 10 seconds */
 static uint64_t rule_timeout_check_timer_period = 30;
+general_switch_t p4_switch;
+
 
 //per socket has a hash table ---by xss
 struct rte_hash *nat_private_lookup_struct[NB_SOCKETS];
@@ -57,19 +61,6 @@ static struct nat_rule *nat_rules_private[NAT_HASH_ENTRIES];
 static struct nat_rule *nat_rules_public[NAT_HASH_ENTRIES];
 static int port_pool[65535-1024];
 
-struct nat_rule
-{
-	uint32_t private_ip;
-	uint16_t private_port;
-	uint32_t public_ip;
-	uint16_t public_port;
-	uint8_t proto;
-	uint16_t assigned_port;
-	uint64_t last_visited;
-	//statistic data fields
-	uint32_t sum_pkts_in2out;
-	uint32_t sum_pkts_out2in;
-};
 
 struct nat_rule_hash_key {
 	uint32_t src_ip_addr;
@@ -226,6 +217,10 @@ nat_insert_new_rule(struct nat_rule_hash_key *key,struct lcore_conf *qconf)
 	key->dst_port = rule->assigned_port;
 	ret = rte_hash_add_key((const struct rte_hash *)qconf->nat_public_lookup_struct, (const void *) key);
 	nat_rules_public[ret] = rule;
+
+	//insert rules into switch
+	printf("Insert new rules into switch\n");
+	add_nat_rule(p4_switch, rule, nat_static_public_ip);
 
 	//print insert successfully message
 	char ip[32];
@@ -549,6 +544,12 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 			lcore_id, portid, queueid);
 	}
 
+	printf("Set up connection with p4 switch\n");
+	char *grpc_addr = "localhost:50052";
+	char *config_path = "../../build/nf.json";
+	char *p4info_path = "../../build/nf.p4.p4info.txt";
+	p4_switch = switch_connect(grpc_addr, config_path, p4info_path);
+
 	while (!force_quit) {
 
 		cur_tsc = rte_rdtsc();
@@ -633,9 +634,6 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 void
 setup_hash(const int socketid)
 {
-
-	char* grpc_addr = "localhost:50051";
-  	general_switch_t gs = GS_connect(grpc_addr, "/home/xss", "/home/xss");
 	struct rte_hash_parameters nat_private_hash_params = {
 		.name = NULL,
 		.entries = NAT_HASH_ENTRIES,
@@ -687,3 +685,20 @@ get_nat_public_lookup_struct(const int socketid)
 {
 	return nat_public_lookup_struct[socketid];
 }
+
+
+    // {
+    //   "table": "MyIngress.nat_exact",
+    //   "match": {
+    //     "hdr.ipv4.srcAddr": ["10.0.1.1"],
+    //     "hdr.ipv4.dstAddr": ["188.188.188.188"],
+    //     "hdr.ipv4.protocol": [6],
+    //     "hdr.tcp_udp.srcPort": [1234],
+    //     "hdr.tcp_udp.dstPort": [5678]
+    //   },
+    //   "action_name": "MyIngress.change_src_addr_port",
+    //   "action_params": {
+    //     "srcAddr": "188.188.188.188",
+    //     "srcPort": 1024
+    //   }
+    // }

@@ -81,7 +81,7 @@ nat_simple_forward(struct rte_mbuf *m, struct lcore_conf *qconf)
 		--(ipv4_hdr->time_to_live);
 		++(ipv4_hdr->hdr_checksum);
 #endif
-
+		sfc_hdr->is_handled = 0; //tell switch this pkt has been hanled.
 		send_single_packet(qconf, m, dst_port);
 	}
 	else {

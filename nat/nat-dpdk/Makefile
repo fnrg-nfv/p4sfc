@@ -5,7 +5,7 @@
 APP = xss_nat
 
 # all source are stored in SRCS-y
-SRCS-y := main.c xss_nat.c
+SRCS-y := main.c xss_nat.c p4_client.c
 
 # Build using pkg-config variables if possible
 $(shell pkg-config --exists libdpdk)
