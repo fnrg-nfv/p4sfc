@@ -30,7 +30,7 @@
 
 #include "nat_main.h"
 #include "xss_nat.h"
-#include "p4_client.h"
+#include "p4_switch_helper.h"
 #include "nat_common.h"
 
 
@@ -219,12 +219,12 @@ nat_insert_new_rule(struct nat_rule_hash_key *key,struct lcore_conf *qconf)
 	nat_rules_public[ret] = rule;
 
 	//insert rules into switch
-	printf("Insert new rules into switch\n");
+	printf("Insert new rules into switch...\n");
 	add_nat_rule(p4_switch, rule, nat_static_public_ip);
 
 	//print insert successfully message
 	char ip[32];
-	format_ip_addr(ip, rule->private_ip);printf("Insert new NAT rule for : %15s : %5d ----> ",
+	format_ip_addr(ip, rule->private_ip);printf("Configuration complete for new NAT rule: %15s : %5d ----> ",
 												ip,
 												rte_be_to_cpu_16(rule->private_port));
 												
@@ -545,10 +545,10 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 	}
 
 	printf("Set up connection with p4 switch\n");
-	char *grpc_addr = "localhost:50052";
+	char *grpc_addr = "10.149.252.27:50052";
 	char *config_path = "../../build/nf.json";
 	char *p4info_path = "../../build/nf.p4.p4info.txt";
-	p4_switch = switch_connect(grpc_addr, config_path, p4info_path);
+	p4_switch = switch_connect(grpc_addr, config_path, p4info_path, 1);
 
 	while (!force_quit) {
 
@@ -685,20 +685,3 @@ get_nat_public_lookup_struct(const int socketid)
 {
 	return nat_public_lookup_struct[socketid];
 }
-
-
-    // {
-    //   "table": "MyIngress.nat_exact",
-    //   "match": {
-    //     "hdr.ipv4.srcAddr": ["10.0.1.1"],
-    //     "hdr.ipv4.dstAddr": ["188.188.188.188"],
-    //     "hdr.ipv4.protocol": [6],
-    //     "hdr.tcp_udp.srcPort": [1234],
-    //     "hdr.tcp_udp.dstPort": [5678]
-    //   },
-    //   "action_name": "MyIngress.change_src_addr_port",
-    //   "action_params": {
-    //     "srcAddr": "188.188.188.188",
-    //     "srcPort": 1024
-    //   }
-    // }
