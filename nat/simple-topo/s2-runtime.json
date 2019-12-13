@@ -38,6 +38,21 @@
       "action_params": { 
         "serverPort": 3
       }
+    },
+    {
+      "table": "MyIngress.nat_exact",
+      "match": {
+        "hdr.ipv4.srcAddr": ["10.0.1.1"],
+        "hdr.ipv4.dstAddr": ["188.188.188.188"],
+        "hdr.ipv4.protocol": [6],
+        "hdr.tcp_udp.srcPort": [1234],
+        "hdr.tcp_udp.dstPort": [5678]
+      },
+      "action_name": "MyIngress.change_src_addr_port",
+      "action_params": {
+        "srcAddr": "188.188.188.188",
+        "srcPort": 1024
+      }
     }
   ]
 }
