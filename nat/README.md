@@ -16,7 +16,7 @@ stp
 
 xss-nat in mn.h2:
 ```bash
-vi /etc/ld.so.conf add /root/nat/nat-dpdk #for libswitch.so, can remove later.
+vi /etc/ld.so.conf add /root/nat/nat-dpdk/switch_lib #for libswitch.so, can remove later.
 /sbin/ldconfig
 
 cd /root/nat/nat-dpdk/build
@@ -25,7 +25,11 @@ cd /root/nat/nat-dpdk/build
 
 The first time you str, you will see pkt go through h2(i.e.,xss-nat). After that, pkts will be handled directly in bmv2 switch s2.
 
+## Warning
+Every time your update libswitch.so, remember to copy it into nat-dpdk/switch_lib directory!!
+
 ## Todo
 1. query counters by [DirectCounter](https://p4.org/p4runtime/spec/v1.0.0/P4Runtime-Spec.html#sec-counter-directcounter)
 2. According to counter, delete timeout rules in switch.
 3. The division of responsibilities should be more clear. I mean, which logic should be done by NF and which logic should be done by the framework?
+4. Dockerfile for dpdk-nat still need be updated when all thing have been done. Many files are constantly changing at present, so we use volumes to avoid building images repeatedly. 
