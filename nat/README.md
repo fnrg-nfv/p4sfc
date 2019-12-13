@@ -25,6 +25,11 @@ cd /root/nat/nat-dpdk/build
 
 The first time you str, you will see pkt go through h2(i.e.,xss-nat). After that, pkts will be handled directly in bmv2 switch s2.
 
+In pcaps dir, using cmd below to see pkts that have been processd by the whole system:
+```bash
+tcpdump -r s3-eth2_in.pcap
+```
+
 ## Warning
 Every time your update libswitch.so, remember to copy it into nat-dpdk/switch_lib directory!!
 
