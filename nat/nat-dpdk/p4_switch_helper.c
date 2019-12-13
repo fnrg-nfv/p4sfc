@@ -1,7 +1,7 @@
 #include "p4_switch_helper.h"
 #include <rte_malloc.h>
 
-general_switch_t switch_connect(char* grpc_addr, char* config_path, char* p4info_path, int dev_id) {
+general_switch_t switch_connect(const char* grpc_addr, const char* config_path, const char* p4info_path, int dev_id) {
     return GS_connect(grpc_addr, config_path, p4info_path, dev_id);
 }
 

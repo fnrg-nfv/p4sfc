@@ -545,9 +545,9 @@ nat_main_loop(__attribute__((unused)) void *dummy)
 	}
 
 	printf("Set up connection with p4 switch\n");
-	char *grpc_addr = "10.149.252.27:50052";
-	char *config_path = "../../build/nf.json";
-	char *p4info_path = "../../build/nf.p4.p4info.txt";
+	const char *grpc_addr = "10.149.252.27:50052";
+	const char *config_path = "../../build/nf.json";
+	const char *p4info_path = "../../build/nf.p4.p4info.txt";
 	p4_switch = switch_connect(grpc_addr, config_path, p4info_path, 1);
 
 	while (!force_quit) {

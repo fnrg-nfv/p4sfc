@@ -121,15 +121,15 @@ static void * add_table_entry(general_switch_t gs) {
     .action_para = &action_para1
   };
 
-  int rc = GS_add_table_entry_lpm(gs, &table_entry);
+  int rc = GS_add_table_entry(gs, &table_entry);
   printf("Add table entry end. Result: %d\n", rc);
   return NULL;
 }
 
 int main(int argc, char *argv[]) {
   if (parse_opts(argc, argv) != 0) return 1;
-  char* grpc_addr = "localhost:50051";
-  general_switch_t gs = GS_connect(grpc_addr, opt_config_path, opt_p4info_path);
+  const char* grpc_addr = "localhost:50051";
+  general_switch_t gs = GS_connect(grpc_addr, opt_config_path, opt_p4info_path, 0);
 
   pthread_t thread_id;
   pthread_create(&thread_id, NULL, &query_counter, gs);

@@ -14,7 +14,7 @@
 #include <thread>
 
 
-void* GS_connect(char* grpc_addr, char* config_path, char* p4info_path, int dev_id)
+void* GS_connect(const char* grpc_addr, const char* config_path, const char* p4info_path, int dev_id)
 {
   boost::asio::io_service* io_service = new boost::asio::io_service();
 
