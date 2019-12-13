@@ -57,7 +57,7 @@ void GS_query_counter(general_switch_t untyped_self,
   typed_self->query_counter(counter_name, index, packets, bytes);
 }
 
-int GS_add_table_entry_lpm(general_switch_t untyped_self, GS_table_entry_t *table_entry)
+int GS_add_table_entry(general_switch_t untyped_self, GS_table_entry_t *table_entry)
 {
   GeneralSwitch* typed_self = static_cast<GeneralSwitch*>(untyped_self);
   pi_p4info_t *p4info = typed_self->p4info;

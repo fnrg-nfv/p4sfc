@@ -46,7 +46,7 @@ void GS_run(general_switch_t self);
 
 void GS_query_counter(general_switch_t self, char* counter_name, int index, uint64_t* packets, uint64_t* bytes);
 
-int GS_add_table_entry_lpm(general_switch_t untyped_self, GS_table_entry_t *table_entry);
+int GS_add_table_entry(general_switch_t untyped_self, GS_table_entry_t *table_entry);
 
 #ifdef __cplusplus
 }
