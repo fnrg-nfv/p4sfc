@@ -45,7 +45,7 @@
 #include <cmdline_parse.h>
 #include <cmdline_parse_etheraddr.h>
 
-#include "nat_main.h"
+#include "main.h"
 
 /*
  * Configurable number of RX/TX ring descriptors

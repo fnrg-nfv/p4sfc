@@ -114,27 +114,6 @@ nat_packet_handler(struct rte_mbuf *m, struct lcore_conf *qconf) {
 		return;
 	}
 	nat_simple_forward(m, qconf);
-	// printf("Handle or not %d\n", sfc_hdr->is_handled);
-	// printf("Ether type %d\n", sfc_hdr->ether_type);
-
-	// struct ipv4_hdr *ipv4_hdr;
-	// ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
-	// 					   sizeof(struct ether_hdr) + sizeof(struct sfc_hdr));
-	// char ip[32];
-	// format_ip_addr(ip, ipv4_hdr->src_addr);
-	// printf("Src IP addr %s\n", ip);
-	// format_ip_addr(ip, ipv4_hdr->dst_addr);
-	// printf("Dst IP addr %s\n", ip);
-	// printf("Next protocol %d\n", ipv4_hdr->next_proto_id);
-
-	// uint32_t tcp;
-	// uint32_t udp;
-	// tcp = m->packet_type & RTE_PTYPE_L4_TCP;
-	// udp = m->packet_type & RTE_PTYPE_L4_UDP;
-	// if(tcp)
-	// 	printf("TCP packets!\n");
-	// if(udp)
-	// 	printf("UDP packets!\n");
 }
 
 /*

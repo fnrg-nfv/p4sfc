@@ -28,7 +28,7 @@
 #include <rte_byteorder.h>
 
 
-#include "nat_main.h"
+#include "main.h"
 #include "xss_nat.h"
 #include "p4_switch_helper.h"
 #include "nat_common.h"
