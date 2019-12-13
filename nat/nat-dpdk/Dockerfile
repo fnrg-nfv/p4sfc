@@ -2,7 +2,7 @@ FROM ubuntu:xenial
 
 WORKDIR /usr/src/dpdk
 COPY ./build/app /usr/src/dpdk
-COPY ./libswitch.so /usr/local/lib
+COPY ./p4_so_libs /usr/local/lib
 ENV PATH "$PATH:/usr/src/dpdk/app/"
 
 RUN apt update
