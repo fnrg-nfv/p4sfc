@@ -14,12 +14,11 @@
 #include <thread>
 
 
-void* GS_connect(char* grpc_addr, char* config_path, char* p4info_path)
+void* GS_connect(char* grpc_addr, char* config_path, char* p4info_path, int dev_id)
 {
   boost::asio::io_service* io_service = new boost::asio::io_service();
 
   auto channel = grpc::CreateChannel(grpc_addr, grpc::InsecureChannelCredentials());
-  int dev_id = 0;
 
   GeneralSwitch* general_switch = new GeneralSwitch(dev_id, io_service, channel);
   std::ifstream istream_config(config_path);
@@ -82,6 +81,16 @@ int GS_add_table_entry_lpm(general_switch_t untyped_self, GS_table_entry_t *tabl
     // std::cout << "match_field_lpm: " << match_field_lpm->name << "\t"
     //           << value << "\t"
     //           << match_field_lpm->plen << std::endl;
+  }
+
+  for (GS_match_field_exact_t *match_field_exact = table_entry->match_field_exact;
+       match_field_exact; match_field_exact = match_field_exact->next)
+  {
+    auto mf = match_action_entry.add_match();
+    mf->set_field_id(pi_p4info_table_match_field_id_from_name(p4info, t_id, match_field_exact->name));
+    auto mf_exact = mf->mutable_exact();
+    auto value = std::string(match_field_exact->value, match_field_exact->size);
+    mf_exact->set_value(value);
   }
 
   auto entry = match_action_entry.mutable_action();

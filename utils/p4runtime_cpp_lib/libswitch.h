@@ -15,6 +15,14 @@ struct GS_match_field_lpm_t {
 };
 typedef struct GS_match_field_lpm_t GS_match_field_lpm_t;
 
+struct GS_match_field_exact_t {
+  char* name;
+  char* value;
+  int size;
+  struct GS_match_field_exact_t *next;
+};
+typedef struct GS_match_field_exact_t GS_match_field_exact_t;
+
 struct GS_action_para_t {
   char* name;
   char* value;
@@ -27,11 +35,12 @@ struct GS_table_entry_t {
   char* table_name;
   char* action_name;
   GS_match_field_lpm_t *match_field_lpm;
+  GS_match_field_exact_t *match_field_exact;
   GS_action_para_t *action_para;
 };
 typedef struct GS_table_entry_t GS_table_entry_t;
 
-general_switch_t GS_connect(char* grpc_addr, char* config_path, char* p4info_path);
+general_switch_t GS_connect(char* grpc_addr, char* config_path, char* p4info_path, int dev_id);
 
 void GS_run(general_switch_t self);
 
