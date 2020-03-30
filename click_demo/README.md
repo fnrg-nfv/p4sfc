@@ -28,7 +28,7 @@
 
 ## 第二部分
 
-第二部分主要是自行构建click element并进行测试（之后会将第二部分融入第一部分）。目前已将utils中的libswitch加入编译与链接中，并成功编译。
+第二部分主要是自行构建click element并进行测试（之后会将第二部分融入第一部分）。目前已将utils中的libswitch加入编译与链接中，并成功编译。主要需要修改的源文件为.cc .hh， .in .ac文件为配置文件，可以模仿click内的源码构造更复杂的element。
 
 1. 进入samplepackege文件夹，构建package。（详情请看samplepackage/README）
 
