@@ -4,7 +4,7 @@
 
 ## 第一部分
 
-1. 首先使用以下命令启动p4-mininet。（注：我修改了utils中的启动代码，只要在topology.json中加入 "hostIsDocker": false，既可使用P4host作为host而不是docker作为host）
+1. 首先使用以下命令启动p4-mininet。（注：我修改了utils中的启动代码，只要在topology.json中加入 "hostIsDocker": false，即可使用P4host作为host而不是docker作为host）
 
     ```bash
     make run
