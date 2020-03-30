@@ -4,13 +4,13 @@ A Service Function Chain(SFC) project led by Fudan Future Network Research Group
 
 （以下为实验记录）
 
+## Environment Setting（containernet+bmv2+p4c+PI+docker+dpdk)
+
 ### Related Packages
 
 - protobuf
 - grpc
 - thrift: a framework for scalable cross-language services development
-
-## Environment Setting（containernet+bmv2+p4c+PI+docker+dpdk)
 
 ### First Try
 
@@ -64,7 +64,5 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 ## TODO
 
 - [CONCEPT] diff ingress & egress in v1model;
-- implement pktgen in Docker;
-- implement DPDK nfv and p4 in Docker;
 - design **state** communicaiton between docker and p4switch;
 - **sfc workflow** design.
