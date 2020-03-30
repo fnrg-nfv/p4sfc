@@ -1,7 +1,7 @@
 #ifndef SAMPLEPACKAGEELEMENT_HH
 #define SAMPLEPACKAGEELEMENT_HH
-#include <click/element.hh>
 #include "libswitch.h"
+#include <click/element.hh>
 CLICK_DECLS
 
 /*
@@ -15,15 +15,22 @@ CLICK_DECLS
  * write an element that will be placed in a package. It does nothing except
  * report that the package was successfully loaded when it initializes. */
 
-class SamplePackageElement : public Element { public:
+class SamplePackageElement : public Element {
 
-    SamplePackageElement();		// SEE sample.cc FOR CONSTRUCTOR
-    ~SamplePackageElement();		// SEE sample.cc FOR DESTRUCTOR
+public:
+  SamplePackageElement();
+  ~SamplePackageElement();
 
-    const char *class_name() const	{ return "SamplePackageElement"; }
+  const char *class_name() const { return "SamplePackageElement"; }
+  const char *port_count() const { return "1/1"; }
+  const char *processing() const { return "a/a"; }
+  const char *flow_code() const { return "x/y"; }
 
-    int initialize(ErrorHandler *errh);
+  int initialize(ErrorHandler *errh);
+  Packet *simple_action(Packet *);
 
+private:
+  int count;
 };
 
 CLICK_ENDDECLS

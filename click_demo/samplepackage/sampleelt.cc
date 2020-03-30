@@ -21,21 +21,23 @@
 
 #include "sampleelt.hh"
 #include <click/error.hh>
+
+#include <iostream>
 CLICK_DECLS
 
-SamplePackageElement::SamplePackageElement()
-{
+SamplePackageElement::SamplePackageElement() {}
+
+SamplePackageElement::~SamplePackageElement() {}
+
+int SamplePackageElement::initialize(ErrorHandler *errh) {
+  errh->message("Successfully linked with package! mjt inside");
+  count = 0;
+  return 0;
 }
 
-SamplePackageElement::~SamplePackageElement()
-{
-}
-
-int
-SamplePackageElement::initialize(ErrorHandler *errh)
-{
-    errh->message("Successfully linked with package! mjt inside");
-    return 0;
+Packet *SamplePackageElement::simple_action(Packet *p) {
+  std::cout << "count: " << ++count << std::endl;
+  return p;
 }
 
 CLICK_ENDDECLS
