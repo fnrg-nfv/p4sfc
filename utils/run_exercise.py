@@ -200,6 +200,7 @@ class ExerciseRunner:
             topo = json.load(f)
         self.hosts = topo['hosts']
         self.switches = topo['switches']
+        self.hostIsDocker = topo.get('hostIsDocker', True)
         self.links = self.parse_links(topo['links'])
 
         # Ensure all the needed directories exist and are directories
@@ -281,13 +282,15 @@ class ExerciseRunner:
         self.topo = ExerciseTopo(
             self.hosts, self.switches, self.links, self.log_dir, self.bmv2_exe, self.pcap_dir)
 
-        defaultHostClass = configureDockerHost(
-            dimage='dpdk-pktgen:latest',
-            volumes=["/dev/hugepages:/dev/hugepages:rw"])
+        if self.hostIsDocker:
+            defaultHostClass = configureDockerHost(
+                dimage='dpdk-pktgen:latest',
+                volumes=["/dev/hugepages:/dev/hugepages:rw"])
+        else:
+            defaultHostClass = P4Host
 
         self.net = Containernet(topo=self.topo,
                                 link=TCLink,
-                                # host=P4Host,
                                 host=defaultHostClass,
                                 switch=defaultSwitchClass,
                                 controller=None)
