@@ -3,7 +3,9 @@
 #include <v1model.p4>
 
 const bit<16> TYPE_IPV4 = 0x800;
-
+const bit<16> TYPE_TCP = 0x0006;
+const bit<16> TYPW_UDP = 0x0007;
+const bit<16> DROP_PORT = 511;
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -33,6 +35,11 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
+header tcp_udp_t {
+    bit<16>     srcPort;
+    bit<16>     dstPort;
+}
+
 struct metadata {
     /* empty */
 }
@@ -40,6 +47,7 @@ struct metadata {
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
+    tcp_udp_t    tcp_udp;
 }
 
 /*************************************************************************
@@ -65,6 +73,15 @@ parser MyParser(packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
+        transition select((bit<16>)hdr.ipv4.protocol) {
+            TYPE_TCP: parse_tcp_udp;
+            TYPE_UDP: parse_tcp_udp;
+            default: accept;
+        }
+    }
+
+    state parse_tcp_udp {
+        packet.extract(hdr.tcp_udp);
         transition accept;
     }
 
@@ -87,18 +104,53 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    counter(8, CounterType.packets_and_bytes) myCounter;
-
     action drop() {
         mark_to_drop(standard_metadata);
     }
     
+    action change_src_addr_and_port(ip4Addr_t srcAddr, bit<16> srcPort) {
+        hdr.ipv4.srcAddr = srcAddr;
+        hdr.tcp_udp.srcPort = srcPort;
+        // hdr.foo.flag = 0;
+        // meta.recirculate = 1; // recirculate for sfc
+
+    }
+
+    action change_dst_addr_and_port(ip4Addr_t dstAddr, bit<16> dstPort) {
+        hdr.ipv4.dstAddr = dstAddr;
+        hdr.tcp_udp.dstPort = dstPort;
+        // hdr.foo.flag = 0;
+        // meta.recirculate = 1; // recirculate for sfc
+
+    }
+
+    action send_to_server(egressSpec_t serverPort) {
+        standard_metadata.egress_spec = serverPort;
+    }
+
+    table classifier_exact {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.protocol: exact;
+            hdr.tcp_udp.srcPort: exact;
+            hdr.tcp_udp.dstPort: exact;
+        }
+        actions = {
+            change_src_addr_and_port;
+            change_dst_addr_and_port;
+            send_to_server;
+            drop;
+        }
+        size = 1024;
+        default_action = drop();
+    }
+
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-        myCounter.count((bit<32>)0);
     }
     
     table ipv4_lpm {
@@ -108,14 +160,17 @@ control MyIngress(inout headers hdr,
         actions = {
             ipv4_forward;
             drop;
-            NoAction;
         }
         size = 1024;
         default_action = drop();
     }
     
     apply {
-        if (hdr.ipv4.isValid()) {
+        //模板就是两步，首先过一个classifier
+        classifier_exact.apply();
+        //然后再过一个转发action
+        // if we decide to drop this packet, no forward action is needed.
+        if(standard_metadata.egress_spec != DROP_PORT) {
             ipv4_lpm.apply();
         }
     }
