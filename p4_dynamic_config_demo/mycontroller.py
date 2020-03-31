@@ -11,27 +11,23 @@ import p4runtime_lib.bmv2
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
 import p4runtime_lib.helper
 
-def printCounter(p4info_helper, sw, counter_name, index):
-    for response in sw.ReadCounters(p4info_helper.get_counters_id(counter_name), index):
-        for entity in response.entities:
-            counter = entity.counter_entry
-            print "%s %s %d: %d packets (%d bytes))" % (
-                sw.name, counter_name, index,
-                counter.data.packet_count, counter.data.byte_count
-            )
-
-def readTableRules(p4info_helper, sw):
-    """
-    Reads the table entries from all tables on the switch.
-
-    :param p4info_helper: the P4Info helper
-    :param sw: the switch connection
-    """
-    print '\n----- Reading tables rules for %s -----' % sw.name
-    for response in sw.ReadTableEntries():
-        for entity in response.entities:
-            entry = entity.table_entry
-            print entry
+def config_classifier(p4info_helper, sw):
+    table_entry = p4info_helper.buildTableEntry(
+        table_name="MyIngress.classifier_exact",
+        match_fields={
+            "hdr.ipv4.srcAddr": ("10.0.1.1"),
+            "hdr.ipv4.dstAddr": ("10.0.2.2"),
+            "hdr.ipv4.protocol": (6),
+            "hdr.tcp_udp.srcPort": (5678),
+            "hdr.tcp_udp.dstPort": (1234),
+        },
+        action_name="MyIngress.change_src_addr_and_port",
+        action_params={
+            "srcAddr": 0x13212121,
+            "srcPort": 8888,
+        }
+    )
+    sw.WriteTableEntry(table_entry)
 
 def main(p4info_file_path, bmv2_file_path):
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
@@ -45,12 +41,9 @@ def main(p4info_file_path, bmv2_file_path):
 
     s.MasterArbitrationUpdate()
 
-    # s.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
-    #                               bmv2_json_file_path=bmv2_file_path)
+    config_classifier(p4info_helper, s)
 
-    readTableRules(p4info_helper, s)
 
-    printCounter(p4info_helper, s, "MyIngress.myCounter", 0)
 
 if __name__ == '__main__':
     main('./build/basic.p4.p4info.txt','./build/basic.json')
