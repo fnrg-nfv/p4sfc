@@ -1,7 +1,10 @@
 /* -*- P4_16 -*- */
 #include <core.p4>
 #include <v1model.p4>
-#include "header.p4h"
+#include "include/headers.p4"
+#include "include/metadata.p4"
+#include "include/parser.p4"
+#include "include/checksum.p4"
 
 
 /*************************************************************************
