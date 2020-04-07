@@ -5,17 +5,22 @@
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+#define MAX_SFC_LENGTH 10
+
+header sfc_t {
+    bit<16> chainId;
+    bit<8>  chainLength;
+}
+
+header nf_t {
+    bit<15> nfId;
+    bit<1>  isLast;  
+}
 
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
-}
-
-header foo_t {
-    bit<1>      flag;
-    bit<15>     offset;
-    bit<16>     etherType;
 }
 
 header ipv4_t {
@@ -39,8 +44,9 @@ header tcp_udp_t {
 }
 
 struct headers {
+    sfc_t sfc;
+    nf_t[MAX_SFC_LENGTH] nfs;
     ethernet_t  ethernet;
-    foo_t       foo;
     ipv4_t      ipv4;
     tcp_udp_t   tcp_udp;
 }

@@ -4,32 +4,10 @@
   "bmv2_json": "build/nf.json",
   "table_entries": [
     {
-      "table": "MyIngress.port_exact",
+      "table": "MyIngress.hdr_ternary",
       "default_action": true,
       "action_name": "MyIngress.drop",
       "action_params": { }
-    },
-    {
-      "table": "MyIngress.port_exact",
-      "match": {
-        "standard_metadata.ingress_port": 1
-      },
-      "action_name": "MyIngress.port_forward",
-      "action_params": {
-        "dstAddr": "08:00:00:00:03:00",
-        "port": 2
-      }
-    },
-    {
-      "table": "MyIngress.port_exact",
-      "match": {
-        "standard_metadata.ingress_port": 2
-      },
-      "action_name": "MyIngress.port_forward",
-      "action_params": {
-        "dstAddr": "08:00:00:00:01:00",
-        "port": 1
-      }
     }
   ]
 }

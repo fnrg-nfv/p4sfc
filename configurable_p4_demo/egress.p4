@@ -36,10 +36,6 @@ control MyIngress(inout headers hdr,
         size = 1024;
         default_action = drop();
     }
-
-    action egress_remove_foo() {
-        hdr.ethernet.etherType = hdr.foo.etherType;
-    }
     
     apply {
         port_exact.apply();
