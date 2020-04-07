@@ -1,5 +1,5 @@
 dnl -*- mode: shell-script -*-
-dnl 'configure.ac' file for a sample Click package
+dnl 'configure.ac' file for p4sfc Click package
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl Permission is hereby granted, free of charge, to any person obtaining a
@@ -16,10 +16,10 @@ dnl
 dnl the usual 'configure.ac' boilerplate
 dnl
 
-AC_INIT(click-samplepackage, 1.7.0)
+AC_INIT(click-p4sfc, 1.7.0)
 AC_SUBST(ac_configure_args)
 
-CLICKPACKAGENAME=sample
+CLICKPACKAGENAME=p4sfc
 AC_SUBST(CLICKPACKAGENAME)
 
 

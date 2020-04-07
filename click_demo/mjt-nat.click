@@ -1,11 +1,12 @@
 // NAT composed by click elements led by mjt
 
 src :: FromDevice(eth0);
+// TODO
 // out :: ToDevice(eth0);
 
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
-  extern	66.66.66.66	66.66.66.66/24,
+  extern	66.66.66.66,
 );
 
 ip :: IPClassifier(src net intern and dst net intern,
@@ -21,6 +22,7 @@ rw :: IPRewriter(// internal traffic to outside world
          // if no mapping, pass to dropping port
 		 pass 1);
 
+// TODO
 out :: IPPrint(ok)
     -> Discard;
 

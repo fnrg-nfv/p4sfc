@@ -15,7 +15,7 @@ config.h
 config.log
 config.status
 configure
-elementmap-sample.xml
+elementmap-p4sfc.xml
 kelements.conf
 kelements.mk
 kpackage.cc
