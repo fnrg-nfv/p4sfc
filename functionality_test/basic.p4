@@ -82,6 +82,41 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
+control anotherControl(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+    counter(8, CounterType.packets_and_bytes) myCounter;
+
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+    
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        myCounter.count((bit<32>)0);
+    }
+    
+    table ipv4_lpm {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            ipv4_forward;
+            drop;
+            NoAction;
+        }
+        size = 1024;
+        default_action = drop();
+    }
+    
+    apply {
+        ipv4_lpm.apply();
+    }
+}
+
 
 control MyIngress(inout headers hdr,
                   inout metadata meta,
@@ -114,9 +149,11 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
     
+    anotherControl() a;
+    
     apply {
         if (hdr.ipv4.isValid()) {
-            ipv4_lpm.apply();
+            a.apply(hdr, meta, standard_metadata);
         }
     }
 }
