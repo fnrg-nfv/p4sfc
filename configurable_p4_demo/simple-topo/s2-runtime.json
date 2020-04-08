@@ -1,5 +1,5 @@
 {
   "target": "bmv2",
-  "p4info": "build/nf.p4.p4info.txt",
-  "bmv2_json": "build/nf.json"
+  "p4info": "build/p4sfc_template.p4.p4info.txt",
+  "bmv2_json": "build/p4sfc_template.json"
 }

@@ -10,16 +10,6 @@
 *********************** P A R S E R  ***********************************
 *************************************************************************/
 
-// ethernet type
-const bit<16> TYPE_IPV4 = 0x800;
-
-
-// ipv4 protocol
-const bit<16> PROTOCOL_ICMP = 0x0001;
-const bit<16> PROTOCOL_TCP = 0x0006;
-const bit<16> PROTOCOL_UDP = 0x0007;
-
-
 parser MyParser(packet_in packet,
                 out headers hdr,
                 inout metadata meta,

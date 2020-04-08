@@ -1,11 +1,7 @@
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
-
-typedef bit<9>  egressSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-#define MAX_SFC_LENGTH 10
+#include "define.p4"
 
 header sfc_t {
     bit<16> chainId;
