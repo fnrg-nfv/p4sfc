@@ -3,5 +3,6 @@
 *************************************************************************/
 
 struct metadata {
-    /* empty */
+    bit<8> curElement;
+    bit<1> hasNextElement;
 }

@@ -1,13 +1,5 @@
 {
   "target": "bmv2",
   "p4info": "build/nf.p4.p4info.txt",
-  "bmv2_json": "build/nf.json",
-  "table_entries": [
-    {
-      "table": "MyIngress.hdr_ternary",
-      "default_action": true,
-      "action_name": "MyIngress.drop",
-      "action_params": { }
-    }
-  ]
+  "bmv2_json": "build/nf.json"
 }
