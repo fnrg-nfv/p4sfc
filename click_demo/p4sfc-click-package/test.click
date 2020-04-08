@@ -1,6 +1,7 @@
-require(package "sample");
+require(package "p4sfc");
 
 test :: SamplePackageElement;
+rw :: P4IPRewriter(drop);
 
 src :: InfiniteSource(
 DATA \<00 00 00 00 00 00 00 00 00 00 00 00 08 00 
@@ -10,6 +11,10 @@ DATA \<00 00 00 00 00 00 00 00 00 00 00 00 08 00
 00 00 00 00>,
 LIMIT 5, STOP true);
 
+out :: IPPrint(ok)
+    -> Discard;
+
 src -> test 
-    -> IPPrint(ok)
-    -> Discard; 
+    -> rw
+    -> out;
+
