@@ -2,7 +2,7 @@
 *********************** E L E M E N T S  *********************************
 *************************************************************************/
 
-control IPRewriter(inout headers hdr,
+control IpRewriter(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
@@ -20,7 +20,7 @@ control IPRewriter(inout headers hdr,
         hdr.tcp_udp.dstPort = dstPort;
     }
 
-    table IPRewriter_exact {
+    table IpRewriter_exact {
         key = {
             hdr.sfc.chainId: exact;
             hdr.ipv4.srcAddr: exact;
@@ -38,10 +38,11 @@ control IPRewriter(inout headers hdr,
         default_action = drop();
         const entries = {
             (1, 0x0a000101, 0x0a000303, 0x06, 0x162e, 0x04d2): change_src_addr_and_port(0x0a0a0a0a, 0x1a0a);
+            (1, 0x0a0a0a0a, 0x0a000303, 0x06, 0x1a0a, 0x04d2): change_src_addr_and_port(0x0b0b0b0b, 0x7777);
         }
     }
 
     apply{
-        IPRewriter_exact.apply();
+        IpRewriter_exact.apply();
     }
 }

@@ -25,11 +25,11 @@ control ElementControl(inout headers hdr,
         default_action = drop;
 
         const entries = {
-            (1): set_control_data(1, 0);
+            (1): set_control_data(1, 1);
         }
     }
 
-    IPRewriter() ipRewriter;
+    IpRewriter() ipRewriter;
     apply {
         chainId_exact.apply();
         if(meta.curElement == ELEMENT_IPREWRITER) {
