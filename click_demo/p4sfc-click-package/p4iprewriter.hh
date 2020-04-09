@@ -32,6 +32,8 @@ public:
   int rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid,
                      const HashContainer<P4IPRewriterEntry> &reply_map);
 
+  void unparse(StringAccum &sa) const;
+
 private:
   IPAddress _saddr;
   int _sport; // net byte order
@@ -47,10 +49,9 @@ private:
 
   int _refcount;
 
-  P4IPRewriterPattern(const P4IPRewriterPattern &);
-  P4IPRewriterPattern &operator=(const P4IPRewriterPattern &);
+  // P4IPRewriterPattern(const P4IPRewriterPattern &);
+  // P4IPRewriterPattern &operator=(const P4IPRewriterPattern &);
 };
-
 class P4IPRewriterEntry {
 
 public:

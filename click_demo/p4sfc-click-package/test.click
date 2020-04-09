@@ -1,7 +1,8 @@
 require(package "p4sfc");
 
 test :: SamplePackageElement;
-rw :: P4IPRewriter(drop);
+
+rw :: P4IPRewriter(pattern 66.66.66.66 10000-65535 - - 0 0);
 
 src :: InfiniteSource(
 DATA \<00 00 00 00 00 00 00 00 00 00 00 00 08 00 
@@ -17,4 +18,3 @@ out :: IPPrint(ok)
 src -> test 
     -> rw
     -> out;
-
