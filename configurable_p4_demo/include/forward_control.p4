@@ -1,4 +1,8 @@
-control RouteControl(inout headers hdr,
+/**
+    Control how packets are forwarded according to sfc_id.
+*/
+
+control ForwardControl(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     action drop() {

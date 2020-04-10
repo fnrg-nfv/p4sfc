@@ -1,3 +1,7 @@
+/**
+    Perform the necessary operations after each element completes its own logic.
+*/ 
+
 control ElementCompleteControl(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {

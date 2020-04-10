@@ -1,3 +1,7 @@
+/**
+    Control which element should be executed
+*/
+
 #include "elements.p4"
 #include "define.p4"
 

@@ -8,7 +8,7 @@
 #include "include/deparser.p4"
 #include "include/element_control.p4"
 #include "include/element_complete_control.p4"
-#include "include/route_control.p4"
+#include "include/forward_control.p4"
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -28,7 +28,7 @@ control MyIngress(inout headers hdr,
     ElementCompleteControl() elementCompleteControl_3;
     ElementControl() elementControl_4;
     ElementCompleteControl() elementCompleteControl_4;
-    RouteControl() routeControl;
+    ForwardControl() forwardControl;
     apply {
 
         elementControl_0.apply(hdr, meta, standard_metadata);
@@ -59,7 +59,7 @@ control MyIngress(inout headers hdr,
             recirculate(meta);
         }
         else { //otherwise, route the packet
-            routeControl.apply(hdr, meta, standard_metadata);
+            forwardControl.apply(hdr, meta, standard_metadata);
         }
     }
 }
