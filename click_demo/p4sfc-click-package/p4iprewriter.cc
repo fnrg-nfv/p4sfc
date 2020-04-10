@@ -23,18 +23,15 @@
 #include <click/args.hh>
 #include <click/error.hh>
 #include <click/straccum.hh>
+#include <clicknet/udp.h>
 #include <iostream>
+#include <stdio.h>
 
 CLICK_DECLS
 
 P4IPRewriter::P4IPRewriter() {}
 
 P4IPRewriter::~P4IPRewriter() {}
-
-int P4IPRewriter::initialize(ErrorHandler *errh) {
-  errh->message("Successfully linked with P4IPRewriter!");
-  return 0;
-}
 
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
   std::cout << "Specs Len: " << conf.size() << std::endl;
@@ -84,25 +81,87 @@ int P4IPRewriter::parse_input_spec(const String &line, P4IPRewriterInput &is,
   return 0;
 }
 
-void P4IPRewriter::push(int port, Packet *p) {
-  // 1. check in map;
+void P4IPRewriter::push(int port, Packet *p_in) {
+
+  WritablePacket *p = p_in->uniqueify();
+  click_ip *iph = p->ip_header();
+
+  if ((iph->ip_p != IP_PROTO_TCP && iph->ip_p != IP_PROTO_UDP) ||
+      !IP_FIRSTFRAG(iph) || p->transport_length() < 8) {
+    p->kill();
+    return;
+  }
+
+  IPFlowID flowid(p);
+
+  // 1. check in map
+  P4IPRewriterEntry *entry = _map.get(flowid);
 
   // 2. if not in map, inputspec.output
+  if (!entry) {
+    P4IPRewriterInput &is = _input_specs.at_u(port);
+    IPFlowID rewritten_flowid = IPFlowID::uninitialized_t();
+    int result = is.rewrite_flowid(flowid, rewritten_flowid);
+    if (result == rw_addmap) {
+      entry = P4IPRewriter::add_flow(flowid, rewritten_flowid, port);
+      if (!entry) {
+        checked_output_push(port, p);
+        return;
+      }
+    } else if (result == rw_drop)
+      return;
+  }
 
-  output(port).push(p);
+  // update the header
+  entry->apply(p);
+
+  output(entry->output()).push(p);
+}
+
+P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid,
+                                          const IPFlowID &rewritten_flowid,
+                                          int input) {
+  P4IPRewriterEntry *e = new P4IPRewriterEntry();
+  e->initialize(flowid, rewritten_flowid, _input_specs[input].foutput);
+  _map.set(e);
+
+  // not perfect
+  P4IPRewriterEntry *e_reverse = new P4IPRewriterEntry();
+  e_reverse->initialize(rewritten_flowid, flowid, _input_specs[input].routput);
+  _map.set(e_reverse);
+
+  return e;
+}
+
+int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid,
+                                      IPFlowID &rewritten_flowid) {
+  int i;
+  switch (kind) {
+  case i_pattern: {
+    i = pattern->rewrite_flowid(flowid, rewritten_flowid, owner->_map);
+    if (i == P4IPRewriter::rw_drop)
+      ++failures;
+    return i;
+  }
+  case i_drop:
+  default:
+    return P4IPRewriter::rw_drop;
+  }
 }
 
 void P4IPRewriterInput::unparse(StringAccum &sa) const {
+  sa << "{";
   if (kind == i_drop)
-    sa << "kind: drop";
+    sa << "kind: drop, ";
   else if (kind == i_pattern) {
-    sa << "kind: pattern";
-    sa << " foutput: " << foutput;
-    sa << " routput: " << routput;
+    sa << "kind: pattern, ";
+    sa << "foutput: " << foutput << ", ";
+    sa << "routput: " << routput << ", ";
     pattern->unparse(sa);
   }
-  sa << " count: " << count;
-  sa << " failures: " << failures;
+  sa << "count: " << count << ", ";
+  sa << "failures: " << failures;
+  sa << "}";
 }
 
 void P4IPRewriterPattern::unparse(StringAccum &sa) const {
@@ -111,7 +170,6 @@ void P4IPRewriterPattern::unparse(StringAccum &sa) const {
      << ntohs(_dport) << "),";
   sa << " _variation_top: " << _variation_top << ",";
   sa << " _next_variation: " << _next_variation << ",";
-  sa << " _is_napt: " << _is_napt << ",";
   sa << " _sequential: " << _sequential << ",";
   sa << " _same_first: " << _same_first << ",";
   sa << " _refcount: " << _refcount << ",";
@@ -120,11 +178,11 @@ void P4IPRewriterPattern::unparse(StringAccum &sa) const {
 
 P4IPRewriterPattern::P4IPRewriterPattern(const IPAddress &saddr, int sport,
                                          const IPAddress &daddr, int dport,
-                                         bool is_napt, bool sequential,
-                                         bool same_first, uint32_t variation)
+                                         bool sequential, bool same_first,
+                                         uint32_t variation)
     : _saddr(saddr), _sport(sport), _daddr(daddr), _dport(dport),
-      _variation_top(variation), _next_variation(0), _is_napt(is_napt),
-      _sequential(sequential), _same_first(same_first), _refcount(0) {}
+      _variation_top(variation), _next_variation(0), _sequential(sequential),
+      _same_first(same_first), _refcount(0) {}
 
 enum { PE_SYNTAX, PE_NOPATTERN, PE_SADDR, PE_SPORT, PE_DADDR, PE_DPORT };
 static const char *const pe_messages[] = {
@@ -143,42 +201,6 @@ static bool parse_ports(const Vector<String> &words, P4IPRewriterInput *input,
     return true;
   else
     return errh->error("bad reply port"), false;
-}
-
-static bool ip_address_variation(const String &str, IPAddress *addr,
-                                 int32_t *variation, bool *sequential,
-                                 bool *same_first, Element *context) {
-  const char *end = str.end();
-  if (end > str.begin() && end[-1] == '#')
-    *sequential = true, *same_first = false, --end;
-  else if (end > str.begin() && end[-1] == '?')
-    *same_first = false, --end;
-  const char *dash = find(str.begin(), end, '-');
-  IPAddress addr2;
-
-  if (dash != end &&
-      IPAddressArg().parse(str.substring(str.begin(), dash), *addr, context) &&
-      IPAddressArg().parse(str.substring(dash + 1, end), addr2, context) &&
-      ntohl(addr2.addr()) >= ntohl(addr->addr())) {
-    *variation = ntohl(addr2.addr()) - ntohl(addr->addr());
-    return true;
-  } else if (dash == end &&
-             IPPrefixArg(true).parse(str.substring(str.begin(), end), *addr,
-                                     addr2, context) &&
-             *addr && addr2 && addr2.mask_to_prefix_len() >= 0) {
-    if (addr2.addr() == 0xFFFFFFFFU)
-      *variation = 0;
-    else if (addr2.addr() == htonl(0xFFFFFFFEU)) {
-      *addr &= addr2;
-      *variation = 1;
-    } else {
-      // don't count PREFIX.0 and PREFIX.255
-      *addr = (*addr & addr2) | IPAddress(htonl(1));
-      *variation = ~ntohl(addr2.addr()) - 2;
-    }
-    return true;
-  } else
-    return false;
 }
 
 static bool port_variation(const String &str, int32_t *port, int32_t *variation,
@@ -226,9 +248,7 @@ bool P4IPRewriterPattern::parse_with_ports(const String &str,
   // source address
   int i = 0;
   if (!(words[i].equals("-", 1) ||
-        IPAddressArg().parse(words[i], saddr, context) ||
-        ip_address_variation(words[i], &saddr, &variation, &sequential,
-                             &same_first, context)))
+        IPAddressArg().parse(words[i], saddr, context)))
     return pattern_error(PE_SADDR, errh);
 
   // source port
@@ -256,10 +276,78 @@ bool P4IPRewriterPattern::parse_with_ports(const String &str,
       return pattern_error(PE_DPORT, errh);
   }
 
-  input->pattern = new P4IPRewriterPattern(saddr, htons(sport), daddr,
-                                           htons(dport), words.size() >= 3,
-                                           sequential, same_first, variation);
+  input->pattern =
+      new P4IPRewriterPattern(saddr, htons(sport), daddr, htons(dport),
+                              sequential, same_first, variation);
   return true;
+}
+int P4IPRewriterPattern::rewrite_flowid(
+    const IPFlowID &flowid, IPFlowID &rewritten_flowid,
+    const HashContainer<P4IPRewriterEntry> &map) {
+
+  rewritten_flowid = flowid;
+  if (_saddr)
+    rewritten_flowid.set_saddr(_saddr);
+  if (_sport)
+    rewritten_flowid.set_sport(_sport);
+  if (_daddr)
+    rewritten_flowid.set_daddr(_daddr);
+  if (_dport)
+    rewritten_flowid.set_dport(_dport);
+
+  if (!_variation_top)
+    return P4IPRewriter::rw_addmap;
+  else {
+    IPFlowID lookup = rewritten_flowid.reverse();
+    uint32_t base = ntohs(_sport);
+
+    uint32_t val;
+    if (_same_first && (val = ntohs(flowid.sport()) - base) <= _variation_top) {
+      lookup.set_sport(flowid.sport());
+      if (!map.find(lookup)) {
+        rewritten_flowid.set_sport(lookup.sport());
+        return P4IPRewriter::rw_addmap;
+      }
+    }
+
+    if (_sequential)
+      val = (_next_variation > _variation_top ? 0 : _next_variation);
+    else
+      val = click_random(0, _variation_top);
+
+    for (uint32_t count = 0; count <= _variation_top;
+         ++count, val = (val == _variation_top ? 0 : val + 1)) {
+      lookup.set_sport(htons(base + val));
+      if (!map.find(lookup)) {
+        rewritten_flowid.set_sport(lookup.dport());
+        _next_variation = val + 1;
+        return P4IPRewriter::rw_addmap;
+      }
+    }
+
+    return P4IPRewriter::rw_drop;
+  }
+}
+
+// TODO: cksm needs to be applied;
+void P4IPRewriterEntry::apply(WritablePacket *p) {
+  assert(p->has_network_header());
+  click_ip *iph = p->ip_header();
+
+  // IP header
+  iph->ip_src = _rw_flowid.saddr();
+  iph->ip_dst = _rw_flowid.daddr();
+
+  // click_update_in_cksum(&iph->ip_sum, 0, 0);
+  // update_csum(, direction, _ip_csum_delta);
+
+  // end if not first fragment
+  if (!IP_FIRSTFRAG(iph))
+    return;
+
+  click_udp *udph = p->udp_header(); // TCP ports in the same place
+  udph->uh_sport = _rw_flowid.sport();
+  udph->uh_dport = _rw_flowid.dport();
 }
 
 CLICK_ENDDECLS

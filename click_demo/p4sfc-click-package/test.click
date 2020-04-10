@@ -1,8 +1,6 @@
 require(package "p4sfc");
 
-test :: SamplePackageElement;
-
-rw :: P4IPRewriter(pattern 66.66.66.66 10000-65535 - - 0 0);
+rw :: P4IPRewriter(pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 
 src :: InfiniteSource(
 DATA \<00 00 00 00 00 00 00 00 00 00 00 00 08 00 
@@ -15,6 +13,24 @@ LIMIT 5, STOP true);
 out :: IPPrint(ok)
     -> Discard;
 
-src -> test 
-    -> rw
-    -> out;
+AddressInfo(
+  intern 	10.0.0.1	10.0.0.0/8,
+  extern	66.66.66.66,
+);
+
+ip :: IPClassifier(src net intern and dst net intern,
+                   src net intern,
+                   dst host extern,
+                   -);
+
+src -> Strip(14)
+    -> CheckIPHeader
+    -> IPPrint(src)
+    -> ip; 
+
+ip[0] -> out;
+ip[1] -> [0]rw;
+ip[2] -> [1]rw;
+ip[3] -> [1]rw;
+
+rw[0] -> out;

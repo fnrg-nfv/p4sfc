@@ -15,7 +15,7 @@ class P4IPRewriter;
 class P4IPRewriterPattern {
 public:
   P4IPRewriterPattern(const IPAddress &saddr, int sport, const IPAddress &daddr,
-                      int dport, bool is_napt, bool sequential, bool same_first,
+                      int dport, bool sequential, bool same_first,
                       uint32_t variation);
   static bool parse_with_ports(const String &str, P4IPRewriterInput *input,
                                Element *context, ErrorHandler *errh);
@@ -43,7 +43,6 @@ private:
   uint32_t _variation_top;
   uint32_t _next_variation;
 
-  bool _is_napt;
   bool _sequential;
   bool _same_first;
 
@@ -52,17 +51,38 @@ private:
   // P4IPRewriterPattern(const P4IPRewriterPattern &);
   // P4IPRewriterPattern &operator=(const P4IPRewriterPattern &);
 };
+
 class P4IPRewriterEntry {
 
 public:
   typedef IPFlowID key_type;
   typedef const IPFlowID &key_const_reference;
 
-  P4IPRewriterEntry();
-  P4IPRewriterEntry(IPFlowID &f) : flow(f) {}
+  P4IPRewriterEntry() {}
+  P4IPRewriterEntry(IPFlowID &flowid, IPFlowID &rw_flowid)
+      : _flowid(flowid), _rw_flowid(rw_flowid) {}
+
+  void initialize(const IPFlowID &flowid, const IPFlowID &rw_flowid,
+                  uint32_t output) {
+    assert(output <= 0xFFFFFF);
+    _flowid = flowid;
+    _rw_flowid = rw_flowid;
+    _output = output;
+  }
+
+  key_const_reference hashkey() const { return _flowid; }
+
+  int output() const { return _output; }
+
+  void apply(WritablePacket *p);
 
 private:
-  IPFlowID flow;
+  IPFlowID _flowid;
+  IPFlowID _rw_flowid;
+  uint32_t _output : 24;
+  P4IPRewriterEntry *_hashnext;
+
+  friend class HashContainer_adapter<P4IPRewriterEntry>;
 };
 
 class P4IPRewriterInput {
@@ -83,8 +103,7 @@ public:
     pattern = 0;
   }
 
-  int rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid,
-                     Packet *p);
+  int rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid);
 
   void unparse(StringAccum &sa) const;
 };
@@ -92,6 +111,8 @@ public:
 class P4IPRewriter : public Element {
 
 public:
+  // rw result
+  enum { rw_drop = -1, rw_addmap = -2 };
   class P4IPRewriterFlow {};
 
   P4IPRewriter();
@@ -102,19 +123,17 @@ public:
   const char *processing() const { return PUSH; }
   const char *flow_code() const { return "x/y"; }
 
-  int initialize(ErrorHandler *errh);
-
   int configure(Vector<String> &conf, ErrorHandler *errh);
 
   void push(int, Packet *);
 
-  // inline P4IPRewriterEntry *get_entry(int ip_p, const IPFlowID &flowid,
-  //                                     int input);
-  // P4IPRewriterEntry *add_flow(int ip_p, const IPFlowID &flowid,
-  //                             const IPFlowID &rewritten_flowid, int input);
-  // void destroy_flow(P4IPRewriterFlow *flow);
+  inline P4IPRewriterEntry *get_entry(const IPFlowID &flowid, int input);
+  P4IPRewriterEntry *add_flow(const IPFlowID &flowid,
+                              const IPFlowID &rewritten_flowid, int input);
+  void destroy_flow(P4IPRewriterFlow *flow);
 
-  // void add_handlers();
+  friend int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid,
+                                               IPFlowID &rewritten_flowid);
 
 protected:
   HashContainer<P4IPRewriterEntry> _map;
