@@ -74,7 +74,7 @@ control MyIngress(inout headers hdr,
 
     action add_p4sfc_headers() {
         hdr.sfc.setValid();
-        hdr.sfc.chainId = 1;
+        hdr.sfc.chainId = 0;
         hdr.sfc.chainLength = 0;
     }
     

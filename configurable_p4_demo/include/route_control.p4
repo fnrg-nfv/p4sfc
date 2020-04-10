@@ -20,7 +20,7 @@ control RouteControl(inout headers hdr,
         // size = 1024;
         default_action = drop;
         const entries = {
-            (1): set_output_port(2);
+            (0): set_output_port(2);
         }
     }
 
