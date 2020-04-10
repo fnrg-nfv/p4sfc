@@ -33,8 +33,13 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
+struct resubmit_t {
+    bit<8> a;
+    bit<8> b;
+}
+
 struct metadata {
-    /* empty */
+    resubmit_t re;
 }
 
 struct headers {
@@ -82,21 +87,19 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
-control anotherControl(inout headers hdr,
+
+control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-    counter(8, CounterType.packets_and_bytes) myCounter;
 
     action drop() {
         mark_to_drop(standard_metadata);
     }
     
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-        standard_metadata.egress_spec = port;
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = dstAddr;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-        myCounter.count((bit<32>)0);
+    action resubmit_action(bit<32> dstAddr) {
+        hdr.ipv4.dstAddr = dstAddr;
+        // resubmit(meta);
+        recirculate(meta);
     }
     
     table ipv4_lpm {
@@ -104,7 +107,7 @@ control anotherControl(inout headers hdr,
             hdr.ipv4.dstAddr: lpm;
         }
         actions = {
-            ipv4_forward;
+            resubmit_action;
             drop;
             NoAction;
         }
@@ -114,47 +117,6 @@ control anotherControl(inout headers hdr,
     
     apply {
         ipv4_lpm.apply();
-    }
-}
-
-
-control MyIngress(inout headers hdr,
-                  inout metadata meta,
-                  inout standard_metadata_t standard_metadata) {
-
-    counter(8, CounterType.packets_and_bytes) myCounter;
-
-    action drop() {
-        mark_to_drop(standard_metadata);
-    }
-    
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-        standard_metadata.egress_spec = port;
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = dstAddr;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-        myCounter.count((bit<32>)0);
-    }
-    
-    table ipv4_lpm {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            ipv4_forward;
-            drop;
-            NoAction;
-        }
-        size = 1024;
-        default_action = drop();
-    }
-    
-    anotherControl() a;
-    
-    apply {
-        if (hdr.ipv4.isValid()) {
-            a.apply(hdr, meta, standard_metadata);
-        }
     }
 }
 
