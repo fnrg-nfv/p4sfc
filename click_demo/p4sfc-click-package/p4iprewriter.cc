@@ -29,10 +29,6 @@
 
 CLICK_DECLS
 
-P4IPRewriter::P4IPRewriter() {}
-
-P4IPRewriter::~P4IPRewriter() {}
-
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
   std::cout << "Specs Len: " << conf.size() << std::endl;
   for (int i = 0; i < conf.size(); ++i) {
@@ -122,12 +118,12 @@ P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid,
                                           const IPFlowID &rewritten_flowid,
                                           int input) {
   P4IPRewriterEntry *e = new P4IPRewriterEntry();
-  e->initialize(flowid, rewritten_flowid, _input_specs[input].foutput);
-  _map.set(e);
-
-  // not perfect
   P4IPRewriterEntry *e_reverse = new P4IPRewriterEntry();
-  e_reverse->initialize(rewritten_flowid, flowid, _input_specs[input].routput);
+
+  e->initialize(flowid, e_reverse, _input_specs[input].foutput);
+  e_reverse->initialize(rewritten_flowid, e, _input_specs[input].routput);
+
+  _map.set(e);
   _map.set(e_reverse);
 
   return e;
@@ -333,10 +329,11 @@ int P4IPRewriterPattern::rewrite_flowid(
 void P4IPRewriterEntry::apply(WritablePacket *p) {
   assert(p->has_network_header());
   click_ip *iph = p->ip_header();
+  IPFlowID rw_flowid = _rw_entry->_flowid;
 
   // IP header
-  iph->ip_src = _rw_flowid.saddr();
-  iph->ip_dst = _rw_flowid.daddr();
+  iph->ip_src = rw_flowid.saddr();
+  iph->ip_dst = rw_flowid.daddr();
 
   // click_update_in_cksum(&iph->ip_sum, 0, 0);
   // update_csum(, direction, _ip_csum_delta);
@@ -346,8 +343,8 @@ void P4IPRewriterEntry::apply(WritablePacket *p) {
     return;
 
   click_udp *udph = p->udp_header(); // TCP ports in the same place
-  udph->uh_sport = _rw_flowid.sport();
-  udph->uh_dport = _rw_flowid.dport();
+  udph->uh_sport = rw_flowid.sport();
+  udph->uh_dport = rw_flowid.dport();
 }
 
 CLICK_ENDDECLS

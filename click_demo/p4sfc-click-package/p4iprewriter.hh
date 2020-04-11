@@ -53,20 +53,15 @@ private:
 };
 
 class P4IPRewriterEntry {
-
 public:
   typedef IPFlowID key_type;
   typedef const IPFlowID &key_const_reference;
 
   P4IPRewriterEntry() {}
-  P4IPRewriterEntry(IPFlowID &flowid, IPFlowID &rw_flowid)
-      : _flowid(flowid), _rw_flowid(rw_flowid) {}
-
-  void initialize(const IPFlowID &flowid, const IPFlowID &rw_flowid,
+  void initialize(const IPFlowID &flowid, P4IPRewriterEntry *rw_entry,
                   uint32_t output) {
-    assert(output <= 0xFFFFFF);
     _flowid = flowid;
-    _rw_flowid = rw_flowid;
+    _rw_entry = rw_entry;
     _output = output;
   }
 
@@ -78,7 +73,7 @@ public:
 
 private:
   IPFlowID _flowid;
-  IPFlowID _rw_flowid;
+  P4IPRewriterEntry *_rw_entry;
   uint32_t _output : 24;
   P4IPRewriterEntry *_hashnext;
 
@@ -109,14 +104,11 @@ public:
 };
 
 class P4IPRewriter : public Element {
-
 public:
-  // rw result
-  enum { rw_drop = -1, rw_addmap = -2 };
-  class P4IPRewriterFlow {};
+  enum { rw_drop = -1, rw_addmap = -2 }; // rw result
 
-  P4IPRewriter();
-  ~P4IPRewriter();
+  P4IPRewriter() {}
+  ~P4IPRewriter() {}
 
   const char *class_name() const { return "P4IPRewriter"; }
   const char *port_count() const { return "1-/1-"; }
@@ -125,12 +117,12 @@ public:
 
   int configure(Vector<String> &conf, ErrorHandler *errh);
 
-  void push(int, Packet *);
-
-  inline P4IPRewriterEntry *get_entry(const IPFlowID &flowid, int input);
+  // inline P4IPRewriterEntry *get_entry(const IPFlowID &flowid, int input);
   P4IPRewriterEntry *add_flow(const IPFlowID &flowid,
                               const IPFlowID &rewritten_flowid, int input);
-  void destroy_flow(P4IPRewriterFlow *flow);
+  // void destroy_flow(P4IPRewriterFlow *flow);
+
+  void push(int, Packet *);
 
   friend int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid,
                                                IPFlowID &rewritten_flowid);
