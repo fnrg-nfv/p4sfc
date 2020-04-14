@@ -1,8 +1,9 @@
 from flask import Flask
-
+import argparse
 import os
 import sys
 from p4_controller import P4Controller
+
 sys.path.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)),
                  './include/'))
@@ -18,17 +19,6 @@ def get_chain_id(instance_id):
 def get_stage_id(instance_id):
     return instance_id & 0x0000ffff
 
-def init(p4info_path):
-    global p4_controller 
-    p4_controller = P4Controller(p4info_path)
-    
-    # test logic
-    # instance_id = (0 << 16) + 3
-    # global instance_id_to_element
-    # instance_id_to_element[instance_id] = p4sfc_element_utils.IPRewriter
-    print 'P4SFC server daemon init succesfully...'
-
-
 @app.route('/test')
 def test():
     return "Hello World!"
@@ -40,15 +30,17 @@ def insert_new_entry(instance_id, entry_info):
     element = instance_id_to_element[instance_id]
     p4_controller.insert_entry(chain_id, stage_id, element, entry_info)
 
-
-if __name__ == '__main__':
-    # daemon start logic
-    p4info_path = '../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt'
-    init(p4info_path)
-    app.run(host="0.0.0.0", port=8090, debug=True)
+def main(p4info_file_path, server_port):
+    global p4_controller
+    p4_controller = P4Controller(p4info_file_path)
+    print 'P4SFC server daemon init succesfully...'
+    app.run(host="0.0.0.0", port=server_port)
 
     # test logic
     # instance_id = (0 << 16) + 3
+    # global instance_id_to_element
+    # instance_id_to_element[instance_id] = p4sfc_element_utils.IPRewriter
+
     # entry_info = {
     #     "table_name": "IpRewriter_exact",
     #     "match_fields": {
@@ -65,3 +57,12 @@ if __name__ == '__main__':
     #     }
     # }
     # insert_new_entry(instance_id, entry_info)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='P4SFC Server Daemon')
+    parser.add_argument('--p4info', help='p4info proto in text format from p4c',
+                        type=str, action="store", required=False,
+                        default='../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
+    parser.add_argument('--server-port', help='port for RESTful API', type=str, action="store", required=False, default=8090)
+    args = parser.parse_args()
+    main(args.p4info, args.server_port)
