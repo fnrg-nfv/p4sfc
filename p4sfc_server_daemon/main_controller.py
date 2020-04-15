@@ -35,9 +35,27 @@ def main(p4info_file_path, server_port):
     # app.run(host="0.0.0.0", port=server_port)
 
     # test logic
+    # entry_info is used to mock message from element
+    # entry_info's pattern should be element specific
+    instance_id = (0 << 16) + 0
+    entry_info = {
+        "table_name": "monitor.Monitor_exact",
+        "action_name": "monitor.count_packet",
+    }
+    insert_new_entry(instance_id, entry_info)
+
+    # instance_id = (0 << 16) + 1
+    # entry_info = {
+    #     "table_name": "firewall.Firewall_ternary",
+    #     "match_fields": {
+    #         "hdr.ipv4.dstAddr": (0x0a000303, 0xffffffff),
+    #     },
+    #     "action_name": "firewall.drop",
+    #     "priority": 1
+    # }
+    # insert_new_entry(instance_id, entry_info)
+
     instance_id = (0 << 16) + 2
-    # mock message from element
-    # pattern should be element specific!!!
     entry_info = {
         "table_name": "ipRewriter.IpRewriter_exact",
         "match_fields": {
@@ -55,12 +73,6 @@ def main(p4info_file_path, server_port):
     }
     insert_new_entry(instance_id, entry_info)
 
-    instance_id = (0 << 16) + 0
-    entry_info = {
-        "table_name": "monitor.Monitor_exact",
-        "action_name": "monitor.count_packet",
-    }
-    insert_new_entry(instance_id, entry_info)
 
 
 if __name__ == '__main__':

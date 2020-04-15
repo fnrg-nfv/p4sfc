@@ -106,9 +106,10 @@ control Firewall(inout headers hdr,
             drop;
         }
         default_action = NoAction();
-        const entries = {
-            (0, 1, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
-        }
+        size = 1024;
+        // const entries = {
+        //     (0, 1, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+        // }
     }
     
     apply{

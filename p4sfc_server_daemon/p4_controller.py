@@ -44,14 +44,17 @@ class P4Controller(object):
 
         action_params = entry_info.get('action_params', {})
 
+        priority = entry_info.get('priority')
+
         table_entry = self.p4info_helper.buildTableEntry(
             table_name=full_table_name,
             match_fields=match_fields,
             action_name=full_action_name,
-            action_params=action_params
+            action_params=action_params,
+            priority=priority
         )
         self.switch_connection.WriteTableEntry(table_entry)
-        print "New entry installed successfully in Table %s with Action %s" % (
+        print "New entry installed successfully...\n Table [%s]\n Action [%s]\n" % (
             full_table_name, full_action_name)
 
 
