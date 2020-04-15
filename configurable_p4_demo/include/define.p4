@@ -7,6 +7,8 @@ typedef bit<32> ip4Addr_t;
 typedef bit<1>  boolean_t;
 typedef bit<16> transport_port_t;
 
+const bit<9> DROP_PORT = 511;
+
 // support ethernet type
 const bit<16> TYPE_IPV4 = 0x800;
 
@@ -19,5 +21,7 @@ const bit<16> PROTOCOL_UDP = 0x0007;
 
 // support elements
 #define ELEMENT_IPREWRITER 0
+#define ELEMENT_MONITOR 1
+#define ELEMENT_FIREWALL 2
 
 #endif
