@@ -8,15 +8,10 @@ import sys
 sys.path.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)),
                  '../utils/'))
-import p4runtime_lib.helper
-from p4runtime_lib.switch import ShutdownAllSwitchConnections
-from p4runtime_lib.error_utils import printGrpcError
 import p4runtime_lib.bmv2
-
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                 './include/'))
-import p4sfc_element_utils
+from p4runtime_lib.error_utils import printGrpcError
+from p4runtime_lib.switch import ShutdownAllSwitchConnections
+import p4runtime_lib.helper
 
 
 class P4Controller(object):
@@ -35,16 +30,29 @@ class P4Controller(object):
     def __get_prefix(self, stege_id):
         return "MyIngress.elementControl_%d" % (stege_id % 5)
 
-    def insert_entry(self, chain_id, stage_id, element, entry_info):
-        entry_info['chain_id'] = chain_id
-        entry_info['stage_id'] = stage_id
-        entry_info['table_name'] = "%s.%s.%s" % (self.__get_prefix(
-            stage_id), element.get_element_name(), entry_info['table_name'])
-        entry_info['action_name'] = "%s.%s.%s" % (self.__get_prefix(
-            stage_id), element.get_element_name(), entry_info['action_name'])
-        table_entry = element.build_new_entry(self.p4info_helper, entry_info)
+    def insert_entry(self, chain_id, stage_id, entry_info):
+        # add prefix to table_name and action_name according to stage_id
+        full_table_name = "%s.%s" % (self.__get_prefix(
+            stage_id), entry_info['table_name'])
+        full_action_name = "%s.%s" % (self.__get_prefix(
+            stage_id), entry_info['action_name'])
+
+        # each entry should match chain_id and stage_id
+        match_fields = entry_info.get('match_fields', {})
+        match_fields['hdr.sfc.chainId'] = chain_id
+        match_fields['meta.stageId'] = stage_id
+
+        action_params = entry_info.get('action_params', {})
+
+        table_entry = self.p4info_helper.buildTableEntry(
+            table_name=full_table_name,
+            match_fields=match_fields,
+            action_name=full_action_name,
+            action_params=action_params
+        )
         self.switch_connection.WriteTableEntry(table_entry)
-        print "New entry installed successfully..."
+        print "New entry installed successfully in Table %s with Action %s" % (
+            full_table_name, full_action_name)
 
 
 if __name__ == '__main__':
@@ -52,21 +60,20 @@ if __name__ == '__main__':
         '../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
 
     chain_id = 0
-    stage_id = 3
-    element = p4sfc_element_utils.IPRewriter
+    stage_id = 2
     entry_info = {
-        "table_name": "IpRewriter_exact",
+        "table_name": "ipRewriter.IpRewriter_exact",
         "match_fields": {
-            "src_addr": 0x0c0c0c0c,
-            "dst_addr": 0x0a000303,
-            "protocol": 0x06,
-            "src_port": 0x2222,
-            "dst_port": 0x04d2,
+            "hdr.ipv4.srcAddr": 0x0a000101,
+            "hdr.ipv4.dstAddr": 0x0a000304,
+            "hdr.ipv4.protocol": 0x06,
+            "hdr.tcp_udp.srcPort": 0x162E,
+            "hdr.tcp_udp.dstPort": 0x04d2,
         },
-        "action_name": "change_src_addr_and_port",
+        "action_name": "ipRewriter.change_src_addr_and_port",
         "action_params": {
-            "src_addr": 0x0d0d0d0d,
-            "src_port": 0x3333,
+            "srcAddr": 0x0c0c0c0c,
+            "srcPort": 0x2222,
         }
     }
-    p4Controller.insert_entry(chain_id, stage_id, element, entry_info)
+    p4Controller.insert_entry(chain_id, stage_id, entry_info)
