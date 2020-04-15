@@ -59,7 +59,9 @@ control MyIngress(inout headers hdr,
             recirculate(meta);
         }
         else { //otherwise, route the packet
-            forwardControl.apply(hdr, meta, standard_metadata);
+            if(standard_metadata.egress_spec != DROP_PORT) {
+               forwardControl.apply(hdr, meta, standard_metadata);
+            }
         }
     }
 }

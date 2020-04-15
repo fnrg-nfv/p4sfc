@@ -32,20 +32,25 @@ control ElementControl(inout headers hdr,
         default_action = drop;
 
         const entries = {
-            (0, 0): set_control_data(0, 1, 0);
-            (0, 1): set_control_data(0, 1, 0);
-            (0, 2): set_control_data(0, 1, 0);
-            (0, 3): set_control_data(0, 1, 0);
-            (0, 4): set_control_data(0, 1, 0);
-            (0, 5): set_control_data(0, 0, 0);
+            (0, 0): set_control_data(1, 1, 1);
+            (0, 1): set_control_data(2, 1, 1);
+            (0, 2): set_control_data(0, 0, 1);
         }
     }
 
-    IpRewriter() ipRewriter;
+    IpRewriter()  ipRewriter;
+    Monitor()     monitor;
+    Firewall()    firewall;
     apply {
         chainId_stageId_exact.apply();
         if(meta.curElement == ELEMENT_IPREWRITER) {
             ipRewriter.apply(hdr, meta, standard_metadata);
+        }
+        else if (meta.curElement == ELEMENT_MONITOR) {
+            monitor.apply(hdr, meta, standard_metadata);
+        }
+        else if(meta.curElement == ELEMENT_FIREWALL) {
+            firewall.apply(hdr, meta, standard_metadata);
         }
     }
 }

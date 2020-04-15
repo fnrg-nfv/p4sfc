@@ -75,7 +75,19 @@ control MyIngress(inout headers hdr,
     action add_p4sfc_headers() {
         hdr.sfc.setValid();
         hdr.sfc.chainId = 0;
-        hdr.sfc.chainLength = 0;
+        hdr.sfc.chainLength = 3;
+        
+        hdr.nfs[0].setValid();
+        hdr.nfs[0].nfId = 16;
+        hdr.nfs[0].isLast = 0;
+    
+        hdr.nfs[1].setValid();
+        hdr.nfs[1].nfId = 184;
+        hdr.nfs[1].isLast = 0;
+        
+        hdr.nfs[2].setValid();
+        hdr.nfs[2].nfId = 1646;
+        hdr.nfs[2].isLast = 1;
     }
     
     apply {

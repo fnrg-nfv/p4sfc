@@ -37,19 +37,80 @@ control IpRewriter(inout headers hdr,
             change_dst_addr_and_port;
             drop;
         }
-        size = 1024;
+        // size = 1024;
         default_action = drop();
-        // const entries = {
-        //     (0, 0, 0x0a000101, 0x0a000303, 0x06, 0x162e, 0x04d2): change_src_addr_and_port(0x0a0a0a0a, 0x1a0a);
-        //     (0, 1, 0x0a0a0a0a, 0x0a000303, 0x06, 0x1a0a, 0x04d2): change_src_addr_and_port(0x0b0b0b0b, 0x7777);
-        //     (0, 2, 0x0b0b0b0b, 0x0a000303, 0x06, 0x7777, 0x04d2): change_src_addr_and_port(0x0c0c0c0c, 0x2222);
-        //     (0, 3, 0x0c0c0c0c, 0x0a000303, 0x06, 0x2222, 0x04d2): change_src_addr_and_port(0x0d0d0d0d, 0x3333);
-        //     (0, 4, 0x0d0d0d0d, 0x0a000303, 0x06, 0x3333, 0x04d2): change_src_addr_and_port(0x0e0e0e0e, 0x4444);
-        //     (0, 5, 0x0e0e0e0e, 0x0a000303, 0x06, 0x4444, 0x04d2): change_src_addr_and_port(0x0f0f0f0f, 0x9999);
-        // }
+        const entries = {
+            (0, 2, 0x0a000101, 0x0a000304, 0x06, 0x162E, 0x04d2): change_src_addr_and_port(0x0c0c0c0c, 0x2222);
+        }
     }
 
     apply{
         IpRewriter_exact.apply();
+    }
+}
+
+
+control Monitor(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+
+    counter(128, CounterType.packets) total_packets;
+
+    action count_packet() {
+        bit<32> counter_index = ((bit<32>)hdr.sfc.chainId) << 16;
+        counter_index = counter_index + (bit<32>) meta.stageId;
+        total_packets.count(counter_index);
+    }
+
+    table Monitor_exact {
+        key = {
+            hdr.sfc.chainId: exact;
+            meta.stageId: exact;
+        }
+        actions = {
+            NoAction;
+            count_packet;
+        }
+        default_action = NoAction();
+        const entries = {
+            (0, 0): count_packet();
+        }
+    }
+    
+    apply{
+        Monitor_exact.apply();
+    }
+}
+
+control Firewall(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+    
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    table Firewall_ternary {
+        key = {
+            hdr.sfc.chainId: exact;
+            meta.stageId: exact;
+            hdr.ipv4.srcAddr: ternary;
+            hdr.ipv4.dstAddr: ternary;
+            hdr.ipv4.protocol: ternary;
+            hdr.tcp_udp.srcPort: ternary;
+            hdr.tcp_udp.dstPort: ternary;
+        }
+        actions = {
+            NoAction;
+            drop;
+        }
+        default_action = NoAction();
+        const entries = {
+            (0, 1, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+        }
+    }
+    
+    apply{
+        Firewall_ternary.apply();
     }
 }
