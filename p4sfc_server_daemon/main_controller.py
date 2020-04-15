@@ -33,30 +33,40 @@ def insert_new_entry(instance_id, entry_info):
 def main(p4info_file_path, server_port):
     global p4_controller
     p4_controller = P4Controller(p4info_file_path)
-    print 'P4SFC server daemon init succesfully...'
-    app.run(host="0.0.0.0", port=server_port)
+    print 'P4SFC server daemon init successfully...'
+    # app.run(host="0.0.0.0", port=server_port)
 
     # test logic
-    # instance_id = (0 << 16) + 3
-    # global instance_id_to_element
-    # instance_id_to_element[instance_id] = p4sfc_element_utils.IPRewriter
+    instance_id = (0 << 16) + 2
+    global instance_id_to_element
+    instance_id_to_element[instance_id] = p4sfc_element_utils.IPRewriter
 
-    # entry_info = {
-    #     "table_name": "IpRewriter_exact",
-    #     "match_fields": {
-    #         "src_addr": 0x0c0c0c0c,
-    #         "dst_addr": 0x0a000303,
-    #         "protocol": 0x06,
-    #         "src_port": 0x2222,
-    #         "dst_port": 0x04d2,
-    #     },
-    #     "action_name": "change_src_addr_and_port",
-    #     "action_params": {
-    #         "src_addr": 0x0d0d0d0d,
-    #         "src_port": 0x3333,
-    #     }
-    # }
-    # insert_new_entry(instance_id, entry_info)
+    entry_info = {
+        "table_name": "IpRewriter_exact",
+        "match_fields": {
+            "src_addr": 0x0a000101,
+            "dst_addr": 0x0a000304,
+            "protocol": 0x06,
+            "src_port": 0x162E,
+            "dst_port": 0x04d2,
+        },
+        "action_name": "change_src_addr_and_port",
+        "action_params": {
+            "src_addr": 0x0c0c0c0c,
+            "src_port": 0x2222,
+        }
+    }
+    insert_new_entry(instance_id, entry_info)
+
+    instance_id = (0 << 16) + 0
+    instance_id_to_element[instance_id] = p4sfc_element_utils.Monitor
+
+    entry_info = {
+        "table_name": "Monitor_exact",
+        "action_name": "count_packet",
+    }
+    insert_new_entry(instance_id, entry_info)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='P4SFC Server Daemon')
