@@ -1,37 +1,63 @@
 #ifndef STATE_HH
 #define STATE_HH
-#include "libswitch.h"
-#include <click/bitvector.hh>
 #include <click/element.hh>
-#include <click/hashtable.hh>
 #include <click/ipflowid.hh>
-#include <click/timer.hh>
+#include <iostream>
+#include <iterator>
+#include <string>
+#include <unordered_map>
+
+using namespace std;
 
 template <class K, class V> class P4StateMap {
-
 public:
-  class P4StateEntry {
-  public:
-    typedef K key_type;
-    typedef const K &key_const_reference;
+  enum { found, not_found };
+  inline void add(const K &k, const V v) {
+    _umap[k] = v; // TODO: add P4 part
+  }
+  inline void destroy(const K &k) {
+    _umap.erase(k); // TODO: add P4 part
+  }
+  inline int find(const K &k, V *v_p) {
+    auto search = _umap.find(k);
+    if (search != _umap.end()) {
+      *v_p = search->second;
+      return found;
+    }
+    return not_found;
+  }
 
-    P4StateEntry() {}
-    key_const_reference hashkey() const { return k; }
-
-  private:
-    K k;
-    V *v;
-    P4StateEntry *_hashnext;
-
-    friend class HashContainer_adapter<P4StateEntry>;
-  };
-
-  void add(const K &k, const V *v);
-  void destroy(const K &k);
-  void lookup(const K &k, const V **v_p);
+  virtual char *table_name();
+  virtual char *match_field(const K &k);
+  virtual char *action_name();
+  virtual char *action_params(const V &v);
+  virtual void apply(WritablePacket *p, const V &v);
 
 protected:
-  HashContainer<P4StateEntry> _map;
+  unordered_map<K, V> _umap;
+};
+
+class P4BasicEntry {
+public:
+  P4BasicEntry() {}
+  virtual char *table_name() const;
+  virtual char *match_field() const;
+  virtual char *action_name() const;
+  virtual char *action_params() const;
+  virtual void apply(WritablePacket *p);
+
+  inline void p4add() {
+    cout << table_name() << "\n"
+         << match_field() << "\n"
+         << action_name() << "\n"
+         << action_params() << "\n";
+  }
+  inline void p4remove() {
+    cout << table_name() << "\n"
+         << match_field() << "\n"
+         << action_name() << "\n"
+         << action_params() << "\n";
+  }
 };
 
 #endif

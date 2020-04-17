@@ -1,6 +1,5 @@
 #ifndef P4IPREWRITER_HH
 #define P4IPREWRITER_HH
-#include "libswitch.h"
 #include <click/bitvector.hh>
 #include <click/element.hh>
 #include <click/hashtable.hh>
@@ -53,7 +52,7 @@ private:
   // P4IPRewriterPattern &operator=(const P4IPRewriterPattern &);
 };
 
-class P4IPRewriterEntry {
+class P4IPRewriterEntry: P4BasicEntry {
 public:
   typedef IPFlowID key_type;
   typedef const IPFlowID &key_const_reference;
