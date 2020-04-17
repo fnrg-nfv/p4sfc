@@ -57,6 +57,20 @@ class P4Controller(object):
         print "New entry installed successfully...\n Table [%s]\n Action [%s]\n" % (
             full_table_name, full_action_name)
     
+    def delete_entry(self, chain_id, stage_id, entry_info):
+        full_table_name = "%s.%s" % (self.__get_prefix(
+            stage_id), entry_info['table_name'])
+        match_fields = entry_info.get('match_fields', {})
+        match_fields['hdr.sfc.chainId'] = chain_id
+        match_fields['meta.stageId'] = stage_id
+        table_entry = self.p4info_helper.buildTableEntry(
+            table_name=full_table_name,
+            match_fields=match_fields,
+            priority=entry_info['priority']
+        )
+        self.switch_connection.DeleteTableEntry(table_entry)
+        print "Delete entry successfully...\n Table [%s]\n" % (full_table_name)
+    
     def read_counter(self, chain_id, stage_id, counter_info):
         full_counter_name = "%s.%s" % (self.__get_prefix(stage_id), counter_info['counter_name'])
         counter_id = self.p4info_helper.get_counters_id(full_counter_name)
@@ -75,20 +89,16 @@ if __name__ == '__main__':
         '../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
 
     chain_id = 0
-    stage_id = 2
+    stage_id = 1
     entry_info = {
-        "table_name": "ipRewriter.IpRewriter_exact",
+        "table_name": "firewall.Firewall_ternary",
         "match_fields": {
-            "hdr.ipv4.srcAddr": 0x0a000101,
-            "hdr.ipv4.dstAddr": 0x0a000304,
-            "hdr.ipv4.protocol": 0x06,
-            "hdr.tcp_udp.srcPort": 0x162E,
-            "hdr.tcp_udp.dstPort": 0x04d2,
+            # "hdr.ipv4.srcAddr": (0x00000000, 0x00000000),
+            "hdr.ipv4.dstAddr": (0x0a000303, 0xffffffff),
+            # "hdr.ipv4.protocol": (0x00, 0x00),
+            # "hdr.tcp_udp.srcPort": (0x0000, 0x0000),
+            # "hdr.tcp_udp.dstPort": (0x0000, 0x0000)
         },
-        "action_name": "ipRewriter.change_src_addr_and_port",
-        "action_params": {
-            "srcAddr": 0x0c0c0c0c,
-            "srcPort": 0x2222,
-        }
+        "priority": 1
     }
-    p4Controller.insert_entry(chain_id, stage_id, entry_info)
+    p4Controller.delete_entry(chain_id, stage_id, entry_info)

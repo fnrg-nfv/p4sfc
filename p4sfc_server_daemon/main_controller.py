@@ -26,13 +26,6 @@ def insert_entry():
     instance_id = data.get("instance_id")
     chain_id = get_chain_id(instance_id)
     stage_id = get_stage_id(instance_id)
-    # match_fields = data.get("match_fields")
-    # for match_field_name, value in match_fields.iteritems():
-    #     if len(value) == 1:
-    #         match_fields[match_field_name] = value[0].encode("utf-8")
-    #     else:
-    #         match_fields[match_field_name] = (value[0], value[1].encode("utf-8"))
-    # print match_fields
 
     entry_info = {
         "table_name": data.get("table_name"),
@@ -44,6 +37,19 @@ def insert_entry():
     p4_controller.insert_entry(chain_id, stage_id, entry_info)
     return "OK"
 
+@app.route('/delete_entry', methods = ["POST"])
+def delete_entry():
+    data = request.get_json()
+    instance_id = data.get("instance_id")
+    chain_id = get_chain_id(instance_id)
+    stage_id = get_stage_id(instance_id)
+    entry_info = {
+        "table_name": data.get("table_name"),
+        "match_fields": data.get("match_fields"),
+        "priority": data.get("priority")
+    }
+    p4_controller.delete_entry(chain_id, stage_id, entry_info)
+    return "OK"
 
 @app.route('/read_counter', methods = ["GET"])
 def read_counter():
