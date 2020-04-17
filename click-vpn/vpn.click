@@ -5,6 +5,7 @@
 // zwolle's side
 
 // 18.26.4.0 -> zeus -> IPSec Tunnel -> redlab -> 18.26.4.200
+// 18.26.4.0 -> 10.0.0.1 -> IPSec Tunnel -> 10.0.0.2 -> 18.26.4.200
 //
 // IPSec Security Policy Database
 //
@@ -12,13 +13,23 @@
 // 1. Tunnel packets from redlab to us
 // 2. ARP packets
 
+src :: InfiniteSource(
+DATA \<00 00 00 00 00 00 00 00 00
+00 00 00 08 00 45 00 00 2E 00 00 40
+00 40 11 0D C4 12 1A 04 00 12 1A 04
+C8 5B 25 22 B8 00 1A 54 E1 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00>,
+LIMIT 5, STOP true);
+
+
 spd :: Classifier(12/0800 30/121a04c8,
               12/0800 30/121a0461 26/121a040a,
               12/0806 20/0002,
               -);
 
-FromBPF(de0) -> [0]spd;
-outq :: Queue(20) -> ToBPF(de0);
+src -> [0]spd;
+outq :: Queue(20) -> Print(out)-> Discard;
 
 //
 // IPSec Incoming SAD (Security Association Database)
@@ -48,27 +59,34 @@ arpq[0] -> outq;
 
 
 isad[0] -> Strip(20)
-        -> Des(1, FFFFFFFFFFFFFFFF, 0123456789abcdef)
-        -> DeEsp
+        -> IPsecDES(ENCRYPT 1)
+        -> IPsecESPUnencap
         -> Print(rtun)
         -> GetIPAddress(16)
-        -> StaticIPLookup(18.26.4.22 18.26.4.22)
+        // -> StaticIPLookup(18.26.4.22 18.26.4.22)
 	-> [0]arpq;
 
 isad[1] -> Discard;
 
-isad[2] -> Print(Not in SAD)
+isad[2] -> Print(Not_in_SAD)
         -> Discard;
 
-
 osad[0] -> Print(tun)
-        -> Annotate
-        -> Esp(0x00000001, 8)
-        -> Des(0, FFFFFFFFFFFFFFFF, 0123456789abcdef)
-        -> IPEncap(50, 18.26.4.97, 18.26.4.10)
-        -> GetIPAddress(16)
-        -> StaticIPLookup(18.26.4.10 18.26.4.10)
+        -> IPsecESPEncap()
+        -> IPsecAuthHMACSHA1(0)
+        -> IPsecAES(1)
+        -> IPsecEncap(50)
         -> [0]arpq;
+
+// osad[0] -> Print(tun)
+//         // -> Annotation
+//         // -> IPsecESPEncap() //(0x00000001, 8)
+//         -> Print(tun)
+//         -> IPsecDES(ENCRYPT 0)
+//         -> IPEncap(50, 18.26.4.97, 18.26.4.10)
+//         -> GetIPAddress(16)
+//         // -> StaticIPLookup(18.26.4.10 18.26.4.10)
+//         -> [0]arpq;
 
 osad[1] -> Print("How'd we get here?")
         -> Discard;
@@ -78,7 +96,7 @@ spd[0] -> Strip(14)
        -> [0]osad;
 spd[1] -> Strip(14)
        -> [0]isad;
-spd[3] -> Discard;
+spd[3] -> outq;
 
 
 

@@ -6,6 +6,7 @@
 #include <click/hashtable.hh>
 #include <click/ipflowid.hh>
 #include <click/timer.hh>
+#include "state.hh"
 CLICK_DECLS
 
 class P4IPRewriterInput;
