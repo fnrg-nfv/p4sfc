@@ -56,6 +56,18 @@ class P4Controller(object):
         self.switch_connection.WriteTableEntry(table_entry)
         print "New entry installed successfully...\n Table [%s]\n Action [%s]\n" % (
             full_table_name, full_action_name)
+    
+    def read_counter(self, chain_id, stage_id, counter_info):
+        full_counter_name = "%s.%s" % (self.__get_prefix(stage_id), counter_info['counter_name'])
+        counter_id = self.p4info_helper.get_counters_id(full_counter_name)
+        for response in self.switch_connection.ReadCounters(counter_id, counter_info['counter_index']):
+            for entity in response.entities:
+                counter = entity.counter_entry
+                # print "%s %d: %d packets (%d bytes))" % (
+                #     counter_info['counter_name'], counter_info['counter_index'],
+                #     counter.data.packet_count, counter.data.byte_count
+                # )
+                return {"packet_count": counter.data.packet_count, "byte_count": counter.data.byte_count}
 
 
 if __name__ == '__main__':
