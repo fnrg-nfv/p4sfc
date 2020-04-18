@@ -33,11 +33,11 @@ control IpRewriter(inout headers hdr,
             drop;
         }
         default_action = drop();
-        // size = 1024;
-        const entries = {
-            (0, 2, 0x0a000101, 0x0a000304, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
-            (0, 2, 0x0a000101, 0x0a000303, 0x162E, 0x04d2): rewrite(0x0c0c0c0c, 0x0d0d0d0d, 0x3333, 0x4444);
-        }
+        size = 1024;
+        // const entries = {
+        //     (0, 2, 0x0a000101, 0x0a000304, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
+        //     (0, 2, 0x0a000101, 0x0a000303, 0x162E, 0x04d2): rewrite(0x0c0c0c0c, 0x0d0d0d0d, 0x3333, 0x4444);
+        // }
     }
 
     apply{
