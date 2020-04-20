@@ -23,5 +23,6 @@ const bit<16> PROTOCOL_UDP = 0x0007;
 #define ELEMENT_IPREWRITER 0
 #define ELEMENT_MONITOR 1
 #define ELEMENT_FIREWALL 2
+#define ELEMENT_NONE 255
 
 #endif

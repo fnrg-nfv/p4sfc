@@ -17,6 +17,9 @@ control ElementCompleteControl(inout headers hdr,
             if (meta.isNFcomplete == 1) {
                 hdr.nfs.pop_front(1); // remove completed nf
                 hdr.sfc.chainLength = hdr.sfc.chainLength - 1;
+                if(hdr.sfc.chainLength != 0) {
+                    meta.curNfInstanceId = (bit<16>) hdr.nfs[0].nfInstanceId;
+                }
             }
         }
     }

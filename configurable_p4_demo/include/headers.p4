@@ -9,8 +9,8 @@ header sfc_t {
 }
 
 header nf_t {
-    bit<15> nfId;
-    bit<1>  isLast;  
+    bit<15> nfInstanceId;
+    bit<1>  isLast;
 }
 
 header ethernet_t {

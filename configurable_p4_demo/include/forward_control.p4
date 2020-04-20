@@ -16,6 +16,7 @@ control ForwardControl(inout headers hdr,
     table chainId_exact {
         key = {
             hdr.sfc.chainId: exact;
+            hdr.sfc.chainLength: exact;
         }
         actions = {
             set_output_port;
@@ -24,7 +25,7 @@ control ForwardControl(inout headers hdr,
         // size = 1024;
         default_action = drop;
         const entries = {
-            (0): set_output_port(2);
+            (0, 0): set_output_port(2);
         }
     }
 

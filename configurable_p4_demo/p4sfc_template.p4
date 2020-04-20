@@ -30,37 +30,42 @@ control MyIngress(inout headers hdr,
     ElementCompleteControl() elementCompleteControl_4;
     ForwardControl() forwardControl;
     apply {
-
-        elementControl_0.apply(hdr, meta, standard_metadata);
-        elementCompleteControl_0.apply(hdr, meta, standard_metadata);
-
-        if(meta.hasNextElement == 1) {
-            elementControl_1.apply(hdr, meta, standard_metadata);
-            elementCompleteControl_1.apply(hdr, meta, standard_metadata);
+        if(hdr.sfc.chainLength == 0) {
+            forwardControl.apply(hdr, meta, standard_metadata);
         }
+        else {
+            meta.curNfInstanceId = (bit<16>) hdr.nfs[0].nfInstanceId;
+            elementControl_0.apply(hdr, meta, standard_metadata);
+            elementCompleteControl_0.apply(hdr, meta, standard_metadata);
 
-        if(meta.hasNextElement == 1) {
-            elementControl_2.apply(hdr, meta, standard_metadata);
-            elementCompleteControl_2.apply(hdr, meta, standard_metadata);
-        }
+            if(meta.hasNextElement == 1) {
+                elementControl_1.apply(hdr, meta, standard_metadata);
+                elementCompleteControl_1.apply(hdr, meta, standard_metadata);
+            }
 
-        if(meta.hasNextElement == 1) {
-            elementControl_3.apply(hdr, meta, standard_metadata);
-            elementCompleteControl_3.apply(hdr, meta, standard_metadata);
-        }
+            if(meta.hasNextElement == 1) {
+                elementControl_2.apply(hdr, meta, standard_metadata);
+                elementCompleteControl_2.apply(hdr, meta, standard_metadata);
+            }
 
-        if(meta.hasNextElement == 1) {
-            elementControl_4.apply(hdr, meta, standard_metadata);
-            elementCompleteControl_4.apply(hdr, meta, standard_metadata);
-        }
+            if(meta.hasNextElement == 1) {
+                elementControl_3.apply(hdr, meta, standard_metadata);
+                elementCompleteControl_3.apply(hdr, meta, standard_metadata);
+            }
 
-        // if more elements need to be execute, recirculate the packet
-        if(meta.hasNextElement == 1) {
-            recirculate(meta);
-        }
-        else { //otherwise, route the packet
-            if(standard_metadata.egress_spec != DROP_PORT) {
-               forwardControl.apply(hdr, meta, standard_metadata);
+            if(meta.hasNextElement == 1) {
+                elementControl_4.apply(hdr, meta, standard_metadata);
+                elementCompleteControl_4.apply(hdr, meta, standard_metadata);
+            }
+
+            // if more elements need to be execute, recirculate the packet
+            if(meta.hasNextElement == 1) {
+                recirculate(meta);
+            }
+            else { //otherwise, route the packet
+                if(standard_metadata.egress_spec != DROP_PORT) {
+                   forwardControl.apply(hdr, meta, standard_metadata);
+                }
             }
         }
     }

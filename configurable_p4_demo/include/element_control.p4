@@ -22,6 +22,7 @@ control ElementControl(inout headers hdr,
     table chainId_stageId_exact {
         key = {
             hdr.sfc.chainId: exact;
+            meta.curNfInstanceId: exact;
             meta.stageId: exact;
         }
         actions = {
@@ -32,9 +33,9 @@ control ElementControl(inout headers hdr,
         default_action = drop;
 
         const entries = {
-            (0, 0): set_control_data(1, 1, 1);
-            (0, 1): set_control_data(2, 1, 1);
-            (0, 2): set_control_data(0, 0, 1);
+            (0, 0, 0): set_control_data(1, 1, 1);
+            (0, 1, 1): set_control_data(2, 1, 1);
+            (0, 2, 2): set_control_data(0, 0, 1);
         }
     }
 
@@ -43,7 +44,10 @@ control ElementControl(inout headers hdr,
     Firewall()    firewall;
     apply {
         chainId_stageId_exact.apply();
-        if(meta.curElement == ELEMENT_IPREWRITER) {
+        if(meta.curElement == ELEMENT_NONE) {
+            NoAction();
+        }
+        else if(meta.curElement == ELEMENT_IPREWRITER) {
             ipRewriter.apply(hdr, meta, standard_metadata);
         }
         else if (meta.curElement == ELEMENT_MONITOR) {
