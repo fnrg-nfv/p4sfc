@@ -12,13 +12,10 @@ control IpRewriter(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    action change_src_addr_and_port(ip4Addr_t srcAddr, transport_port_t srcPort) {
+    action rewrite(ip4Addr_t srcAddr, ip4Addr_t dstAddr, transport_port_t srcPort, transport_port_t dstPort) {
         hdr.ipv4.srcAddr = srcAddr;
-        hdr.tcp_udp.srcPort = srcPort;
-    }
-
-    action change_dst_addr_and_port(ip4Addr_t dstAddr, transport_port_t dstPort) {
         hdr.ipv4.dstAddr = dstAddr;
+        hdr.tcp_udp.srcPort = srcPort;
         hdr.tcp_udp.dstPort = dstPort;
     }
 
@@ -28,21 +25,19 @@ control IpRewriter(inout headers hdr,
             meta.stageId: exact;
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
-            hdr.ipv4.protocol: exact;
             hdr.tcp_udp.srcPort: exact;
             hdr.tcp_udp.dstPort: exact;
         }
         actions = {
-            change_src_addr_and_port;
-            change_dst_addr_and_port;
+            rewrite;
             drop;
         }
         default_action = drop();
-        // size = 1024;
-        const entries = {
-            (0, 2, 0x0a000101, 0x0a000304, 0x06, 0x162E, 0x04d2): change_src_addr_and_port(0x0c0c0c0c, 0x2222);
-            (0, 2, 0x0a000101, 0x0a000303, 0x06, 0x162E, 0x04d2): change_src_addr_and_port(0x0c0c0c0c, 0x2222);
-        }
+        size = 1024;
+        // const entries = {
+        //     (0, 2, 0x0a000101, 0x0a000304, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
+        //     (0, 2, 0x0a000101, 0x0a000303, 0x162E, 0x04d2): rewrite(0x0c0c0c0c, 0x0d0d0d0d, 0x3333, 0x4444);
+        // }
     }
 
     apply{

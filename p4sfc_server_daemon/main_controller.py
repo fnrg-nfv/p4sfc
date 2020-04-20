@@ -26,6 +26,8 @@ def insert_entry():
     instance_id = data.get("instance_id")
     chain_id = get_chain_id(instance_id)
     stage_id = get_stage_id(instance_id)
+    print chain_id
+    print stage_id
 
     entry_info = {
         "table_name": data.get("table_name"),
@@ -34,6 +36,7 @@ def insert_entry():
         "action_params": data.get("action_params"),
         "priority": data.get("priority")
     }
+    print entry_info
     p4_controller.insert_entry(chain_id, stage_id, entry_info)
     return "OK"
 
