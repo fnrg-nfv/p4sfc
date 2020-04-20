@@ -5,7 +5,6 @@
 #include <click/hashtable.hh>
 #include <click/ipflowid.hh>
 #include <click/timer.hh>
-#include "state.hh"
 CLICK_DECLS
 
 class P4IPRewriterInput;
@@ -52,7 +51,7 @@ private:
   // P4IPRewriterPattern &operator=(const P4IPRewriterPattern &);
 };
 
-class P4IPRewriterEntry: P4BasicEntry {
+class P4IPRewriterEntry {
 public:
   typedef IPFlowID key_type;
   typedef const IPFlowID &key_const_reference;
@@ -70,6 +69,8 @@ public:
   int output() const { return _output; }
 
   void apply(WritablePacket *p);
+
+  void p4add();
 
 private:
   IPFlowID _flowid;
