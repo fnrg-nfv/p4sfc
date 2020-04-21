@@ -10,7 +10,7 @@ ec :: P4SFCEncap();
 // 00 01 4D 4D 4D 4D 22 B8 5B 25 00 1A DD 41
 // 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 // 00 00 00 00>, LIMIT 2, STOP true)
-src :: FromDevice(eth0);
+src :: FromDevice(h1-eth0);
 // src :: FromDevice(ens33);
 
 AddressInfo(
@@ -30,9 +30,10 @@ out :: IPPrint(out_ip)
     -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
     -> [1]ec;
 ec[1] -> Print(out)
-      // -> ToDevice(eth0);
+      -> Queue(1024)
+      -> ToDevice(h1-eth0);
       // -> ToDevice(ens33);
-      -> Discard;
+      // -> Discard;
 ec[0] -> Strip(14)
       -> CheckIPHeader
       -> IPPrint(in_ip)

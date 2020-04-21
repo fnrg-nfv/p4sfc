@@ -1,10 +1,12 @@
 // software-NAT composed by click elements led by mjt
 
-src :: FromDevice(eth0);
+src :: FromDevice(h1-eth0);
 // TODO
-// out :: ToDevice(eth0);
 out :: IPPrint(ok)
-    -> Discard;
+    -> Queue(1024)
+    -> ToDevice(h1-eth0);
+// out :: IPPrint(ok)
+//     -> Discard;
 
 drop :: IPPrint(drop)
      -> Discard;
