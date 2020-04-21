@@ -24,7 +24,7 @@ ip :: IPClassifier(src net intern and dst net intern,
                    dst host extern,
                    -);
 
-src -> Print(ip)
+src -> Print(in)
     -> [0]ec;
 out :: IPPrint(out_ip)
     -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)

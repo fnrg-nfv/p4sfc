@@ -32,6 +32,7 @@ typedef struct {
 
 class P4SFCEncap : public Element {
 public:
+  enum { pull_success, pull_fail };
   P4SFCEncap() {}
   ~P4SFCEncap() {}
 
@@ -46,7 +47,7 @@ protected:
   std::queue<p4sfc_header_t *> _psh_queue;
 
 private:
-  void pull_p4sfc_header(Packet *, p4sfc_header_t *);
+  int pull_p4sfc_header(Packet *, p4sfc_header_t *);
   Packet *push_p4sfc_header(Packet *, p4sfc_header_t *);
 };
 

@@ -27,7 +27,11 @@ void P4SFCEncap::push(int input, Packet *p) {
   p4sfc_header_t *psh;
   if (input == 0) {
     psh = (p4sfc_header_t *)malloc(sizeof(p4sfc_header_t));
-    pull_p4sfc_header(p, psh);
+    int result = pull_p4sfc_header(p, psh);
+    if (result == pull_fail) {
+      p->kill();
+      return;
+    }
     _psh_queue.push(psh);
   } else if (input == 1) {
     assert(!_psh_queue.empty());
@@ -39,15 +43,17 @@ void P4SFCEncap::push(int input, Packet *p) {
   output(input).push(p);
 }
 
-void P4SFCEncap::pull_p4sfc_header(Packet *p, p4sfc_header_t *psh) {
+int P4SFCEncap::pull_p4sfc_header(Packet *p, p4sfc_header_t *psh) {
   const unsigned char *pdata = p->data();
   psh->id = ntohs(*(const uint16_t *)pdata);
   psh->len = ntohs(*(const uint16_t *)(pdata + 2));
   psh->nfs = (nf_header_t *)malloc(sizeof(nf_header_t) * psh->len);
   pdata += P4SFCHEADERSIZE;
 
-  assert(psh->len > 0);
-  assert(psh->len < 100);
+  if (psh->len == 0 || psh->len > 100) {
+    std::cout << "drop" << std::endl;
+    return pull_fail;
+  }
 
   for (int i = 0; i < psh->len; i++, pdata += NFHEADERSIZE) {
     nf_header_t *nf = psh->nfs + i;
@@ -58,6 +64,7 @@ void P4SFCEncap::pull_p4sfc_header(Packet *p, p4sfc_header_t *psh) {
 
   size_t pull_size = pdata - p->data();
   p->pull(pull_size);
+  return pull_success;
 }
 
 Packet *P4SFCEncap::push_p4sfc_header(Packet *p, p4sfc_header_t *psh) {
