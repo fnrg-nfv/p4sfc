@@ -33,7 +33,10 @@ control MyIngress(inout headers hdr,
         key = {
             meta.curNfInstanceId: exact;
         }
-        size = 1024;
+        // size = 1024;
+        const entries = {
+            (0): sent_to_nf_instance(2);
+        }
         default_action = send_to_switch;
     }
 

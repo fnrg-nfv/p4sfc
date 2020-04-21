@@ -10,7 +10,7 @@ ec :: P4SFCEncap();
 // 00 01 4D 4D 4D 4D 22 B8 5B 25 00 1A DD 41
 // 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 // 00 00 00 00>, LIMIT 2, STOP true)
-src :: FromDevice(h1-eth0);
+src :: FromDevice(ens32:0);
 // src :: FromDevice(ens33);
 
 AddressInfo(
@@ -31,7 +31,7 @@ out :: IPPrint(out_ip)
     -> [1]ec;
 ec[1] -> Print(out)
       -> Queue(1024)
-      -> ToDevice(h1-eth0);
+      -> ToDevice(ens32:0);
       // -> ToDevice(ens33);
       // -> Discard;
 ec[0] -> Strip(14)
