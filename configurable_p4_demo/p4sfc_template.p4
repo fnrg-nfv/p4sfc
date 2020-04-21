@@ -68,7 +68,7 @@ control MyIngress(inout headers hdr,
             }
 
             // if more elements need to be execute, recirculate the packet
-            if(meta.nextStage >= 0) {
+            if(meta.nextStage != NO_STAGE) {
                 recirculate(meta);
             }
             else { //otherwise, route the packet

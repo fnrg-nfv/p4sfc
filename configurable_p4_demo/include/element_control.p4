@@ -34,8 +34,8 @@ control ElementControl(inout headers hdr,
 
         const entries = {
             (0, 0, 0): set_control_data(1, 1, 1);
-            (0, 1, 1): set_control_data(2, 1, 1);
-            (0, 2, 2): set_control_data(0, 0, 1);
+            (0, 1, 1): set_control_data(2, 2, 1);
+            (0, 2, 2): set_control_data(0, 255, 1);
         }
     }
 

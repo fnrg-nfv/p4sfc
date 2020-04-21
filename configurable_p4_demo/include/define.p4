@@ -8,6 +8,8 @@ typedef bit<1>  boolean_t;
 typedef bit<16> transport_port_t;
 
 const bit<9> DROP_PORT = 511;
+const bit<8> NO_STAGE = 255;
+
 
 // support ethernet type
 const bit<16> TYPE_IPV4 = 0x800;
