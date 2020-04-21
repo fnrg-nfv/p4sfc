@@ -1,7 +1,6 @@
 require(package "p4sfc");
 
 rw :: P4IPRewriter(pattern 66.66.66.66 10000-65535 - - 0 0, drop);
-ec :: P4SFCEncap();
 
 // src :: InfiniteSource(
 // DATA \< 00 00 00 03 00 20 01 70 0C DD
@@ -25,19 +24,15 @@ ip :: IPClassifier(src net intern and dst net intern,
                    -);
 
 src -> Print(ip)
-    -> [0]ec;
+    -> Strip(14)
+    -> CheckIPHeader
+    -> IPPrint(in_ip)
+    -> ip; 
 out :: IPPrint(out_ip)
     -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
-    -> [1]ec;
-ec[1] -> Print(out)
-      -> Queue(1024)
-      -> ToDevice(ens33);
-      // -> ToDevice(ens33);
-      // -> Discard;
-ec[0] -> Strip(14)
-      -> CheckIPHeader
-      -> IPPrint(in_ip)
-      -> ip; 
+    -> Print(out)
+    -> Queue(1024)
+    -> ToDevice(ens33);
 
 ip[0] -> out;
 ip[1] -> [0]rw;
