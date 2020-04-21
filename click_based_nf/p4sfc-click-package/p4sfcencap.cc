@@ -23,52 +23,62 @@
 
 CLICK_DECLS
 
-int P4SFCEncap::initialize(ErrorHandler *) {
-  std::cout << "MJT TEST: " << std::endl;
-  std::cout << sizeof(p4sfc_header_t) << std::endl;
-  std::cout << sizeof(nf_header_t) << std::endl;
-
-  nf_header_t nf;
-  nf.nfId = 0x7fff;
-  nf.isLast = 0;
-  printf("%x\n", *reinterpret_cast<uint16_t *>(&nf));
-
-  p4sfc_header_t sfc;
-  sfc.chainId = 0;
-  sfc.chainLength = 3;
-  printf("%x\n", *reinterpret_cast<uint32_t *>(&sfc));
-}
-
 void P4SFCEncap::push(int input, Packet *p) {
-  p4sfc_header_t *p4sfc_header =
-      (p4sfc_header_t *)malloc(sizeof(p4sfc_header_t));
-  extract_p4sfc_header(p, p4sfc_header);
-  // TODO:
+  p4sfc_header_t *psh;
+  if (input == 0) {
+    psh = (p4sfc_header_t *)malloc(sizeof(p4sfc_header_t));
+    pull_p4sfc_header(p, psh);
+    _psh_queue.push(psh);
+  } else if (input == 1) {
+    assert(!_psh_queue.empty());
+    psh = _psh_queue.front();
+    _psh_queue.pop();
+    p = push_p4sfc_header(p, psh);
+  }
 
   output(input).push(p);
 }
 
-void P4SFCEncap::extract_p4sfc_header(Packet *p, p4sfc_header_t *p4sfc_header) {
+void P4SFCEncap::pull_p4sfc_header(Packet *p, p4sfc_header_t *psh) {
   const unsigned char *pdata = p->data();
-  uint16_t id = ntohs(*(const uint16_t *)pdata);
-  uint16_t size = ntohs(*(const uint16_t *)(pdata + 2));
+  psh->id = ntohs(*(const uint16_t *)pdata);
+  psh->len = ntohs(*(const uint16_t *)(pdata + 2));
+  psh->nfs = (nf_header_t *)malloc(sizeof(nf_header_t) * psh->len);
+  pdata += P4SFCHEADERSIZE;
 
-  for (int i = 0; i < size; i++) {
-    nf_header_t *nf = (nf_header_t *)malloc(sizeof(nf_header_t));
-    uint16_t id = ntohs(*(const uint16_t *)pdata + 3 + 2 * i);
-    // uint16_t = ntohs(*(const uint16_t *)(pdata + 2));
+  assert(psh->len > 0);
+  assert(psh->len < 100);
+
+  for (int i = 0; i < psh->len; i++, pdata += NFHEADERSIZE) {
+    nf_header_t *nf = psh->nfs + i;
+    uint16_t data = ntohs(*(const uint16_t *)pdata);
+    nf->id = (data >> 1) & 0x7fff;
+    nf->isLast = data & 0x1;
   }
 
-  //   printf("%d %d\n", id, len);
-  //   p4sfc_header.chainId = id;
-
-  // for (int i = 0; i < p4sfc_header->chainLength; i++)
-  //   printf("%x %d %d\n", *reinterpret_cast<uint16_t
-  //   *>(&p4sfc_header->nfs[i]),
-  //          p4sfc_header->nfs[i].nfId, p4sfc_header->nfs[i].isLast);
+  size_t pull_size = pdata - p->data();
+  p->pull(pull_size);
 }
 
-unsigned char *P4SFCEncap::encode_p4sfc_header(p4sfc_header_t *) {}
+Packet *P4SFCEncap::push_p4sfc_header(Packet *p, p4sfc_header_t *psh) {
+  size_t push_size = P4SFCHEADERSIZE + (psh->len - 1) * NFHEADERSIZE;
+  WritablePacket *wp = p->push(push_size);
+  const unsigned char *pdata = p->data();
+
+  *(uint16_t *)pdata = htons(psh->id);
+  pdata += 2;
+
+  *(uint16_t *)pdata = htons(psh->len - 1);
+  pdata += 2;
+
+  for (int i = 1; i < psh->len; i++, pdata += NFHEADERSIZE) {
+    nf_header_t *nf = psh->nfs + i;
+    uint16_t data = (nf->id << 1) | nf->isLast;
+    *(uint16_t *)pdata = htons(data);
+  }
+
+  return wp;
+}
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4SFCEncap)
