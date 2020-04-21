@@ -109,10 +109,10 @@ control Firewall(inout headers hdr,
             NoAction;
             drop;
         }
-        default_action = NoAction();
+        default_action = drop();
         // size = 1024;
         const entries = {
-            (0, 1, 1, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+            (1, 0, 0, 0x00000000 &&& 0x00000000, 0x0a000300 &&& 0xffffff00, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): NoAction();
         }
     }
     
