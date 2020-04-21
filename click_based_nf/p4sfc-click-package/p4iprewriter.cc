@@ -35,18 +35,18 @@
 CLICK_DECLS
 
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
-  std::cout << "Specs Len: " << conf.size() << std::endl;
+  // std::cout << "Specs Len: " << conf.size() << std::endl;
   for (int i = 0; i < conf.size(); ++i) {
     P4IPRewriterInput is;
     if (parse_input_spec(conf[i], is, i, errh) >= 0)
       _input_specs.push_back(is);
 
-#ifndef NODEBUG
-    StringAccum sa;
-    is.unparse(sa);
-    std::cout << i << ": " << conf[i].c_str() << "\tUNPARSE: " << sa.c_str()
-              << std::endl;
-#endif
+// #ifndef NODEBUG
+//     StringAccum sa;
+//     is.unparse(sa);
+//     std::cout << i << ": " << conf[i].c_str() << "\tUNPARSE: " << sa.c_str()
+//               << std::endl;
+// #endif
   }
 
   return _input_specs.size() == ninputs() ? 0 : -1;
@@ -230,7 +230,7 @@ bool P4IPRewriterPattern::parse_with_ports(const String &str,
                                            P4IPRewriterInput *input,
                                            Element *context,
                                            ErrorHandler *errh) {
-  std::cout << str.c_str() << std::endl;
+  // std::cout << str.c_str() << std::endl;
 
   Vector<String> words, port_words;
   cp_spacevec(str, words);
@@ -375,7 +375,6 @@ void P4IPRewriterEntry::p4add() {
      << "\"dstPort\":" << ntohs(_rw_flow.dport()) << " }}";
 
   std::string data = os.str(); // .str() returns temporary
-  std::cout << data << std::endl;
 
   CURL *curl;
   CURLcode res;
@@ -390,9 +389,7 @@ void P4IPRewriterEntry::p4add() {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
     res = curl_easy_perform(curl);
-#ifndef NODEBUG
-    std::cout << curl_easy_strerror(res) << std::endl;
-#endif
+    // std::cout << curl_easy_strerror(res) << std::endl;
   }
   curl_easy_cleanup(curl);
 }
