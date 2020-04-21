@@ -33,10 +33,19 @@ KVERSIONFLAGS = --gpl
 DEFS = @DEFS@ $(CLICKDEFS)
 INCLUDES = -I. -I$(top_builddir) -I$(srcdir) $(CLICKINCLUDES) 
 
-# MJT added :: p4 grpc library
-INCLUDES += -I../../utils/p4runtime_cpp_lib/
-LDFLAGS = -L../../utils/p4runtime_cpp_lib -shared 
-LIBS = -lswitch
+# MJT added ============================================ 
+# for p4 grpc library
+# INCLUDES += -I../../utils/p4runtime_cpp_lib/
+# LDFLAGS = -L../../utils/p4runtime_cpp_lib -shared 
+# LIBS = -lswitch
+
+# libcurl
+PACKAGE_LIBS = -lcurl
+
+# for http requests
+# INCLUDES += -I../../third_party/cpp-httplib
+# CXXFLAGS += -std=c++11
+# MJT added ============================================ 
 
 # Set this variable to force 'click-elem2package' to include a header,
 # such as your package's '<config.h>', if necessary.

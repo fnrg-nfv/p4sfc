@@ -1,7 +1,7 @@
 {
   "target": "bmv2",
-  "p4info": "build/basic.p4.p4info.txt",
-  "bmv2_json": "build/basic.json",
+  "p4info": "build/ingress.p4.p4info.txt",
+  "bmv2_json": "build/ingress.json",
   "table_entries": [
     {
       "table": "MyIngress.port_exact",

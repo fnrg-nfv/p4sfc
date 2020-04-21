@@ -19,13 +19,18 @@
 // ALWAYS INCLUDE <click/config.h> FIRST
 #include <click/config.h>
 
-#include "p4iprewriter.hh"
 #include <click/args.hh>
 #include <click/error.hh>
 #include <click/straccum.hh>
 #include <clicknet/udp.h>
 #include <iostream>
+#include <sstream>
 #include <stdio.h>
+#include <string>
+
+#include <curl/curl.h>
+
+#include "p4iprewriter.hh"
 
 CLICK_DECLS
 
@@ -125,6 +130,9 @@ P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid,
 
   _map.set(e);
   _map.set(e_reverse);
+
+  e->p4add();
+  e_reverse->p4add();
 
   return e;
 }
@@ -345,6 +353,48 @@ void P4IPRewriterEntry::apply(WritablePacket *p) {
   click_udp *udph = p->udp_header(); // TCP ports in the same place
   udph->uh_sport = rw_flowid.sport();
   udph->uh_dport = rw_flowid.dport();
+}
+
+void P4IPRewriterEntry::p4add() {
+  IPFlowID _rw_flow = _rw_entry->_flowid;
+  std::ostringstream os;
+  os << "{\"instance_id\": 2,"
+        "\"table_name\": \"ipRewriter.IpRewriter_exact\","
+        "\"match_fields\": {"
+        "\"hdr.ipv4.srcAddr\": "
+     << ntohl(_flowid.saddr().addr()) << ","
+     << "\"hdr.ipv4.dstAddr\": " << ntohl(_flowid.daddr().addr()) << ","
+     << "\"hdr.tcp_udp.srcPort\": " << ntohs(_flowid.sport()) << ","
+     << "\"hdr.tcp_udp.dstPort\": " << ntohs(_flowid.dport())
+     << "}, \"action_name\":  \"ipRewriter.rewrite\","
+        "\"action_params\": { "
+        "\"srcAddr\":"
+     << ntohl(_rw_flow.saddr().addr()) << ","
+     << "\"dstAddr\":" << ntohl(_rw_flow.daddr().addr()) << ","
+     << "\"srcPort\":" << ntohs(_rw_flow.sport()) << ","
+     << "\"dstPort\":" << ntohs(_rw_flow.dport()) << " }}";
+
+  std::string data = os.str(); // .str() returns temporary
+  std::cout << data << std::endl;
+
+  CURL *curl;
+  CURLcode res;
+  curl = curl_easy_init();
+  if (curl) {
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8090/insert_entry");
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "https");
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    res = curl_easy_perform(curl);
+#ifndef NODEBUG
+    std::cout << curl_easy_strerror(res) << std::endl;
+#endif
+  }
+  curl_easy_cleanup(curl);
 }
 
 CLICK_ENDDECLS

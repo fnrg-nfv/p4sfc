@@ -1,12 +1,10 @@
 #ifndef P4IPREWRITER_HH
 #define P4IPREWRITER_HH
-#include "libswitch.h"
 #include <click/bitvector.hh>
 #include <click/element.hh>
 #include <click/hashtable.hh>
 #include <click/ipflowid.hh>
 #include <click/timer.hh>
-#include "state.hh"
 CLICK_DECLS
 
 class P4IPRewriterInput;
@@ -71,6 +69,8 @@ public:
   int output() const { return _output; }
 
   void apply(WritablePacket *p);
+
+  void p4add();
 
 private:
   IPFlowID _flowid;
