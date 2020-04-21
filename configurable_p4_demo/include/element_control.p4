@@ -13,10 +13,10 @@ control ElementControl(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    action set_control_data(bit<8> elementId, boolean_t hasNextElement, boolean_t isNFcomplete) {
+    action set_control_data(bit<8> elementId, bit<8> nextStage, boolean_t isNFcomplete) {
         meta.curElement = elementId;
         meta.isNFcomplete = isNFcomplete;
-        meta.hasNextElement = hasNextElement;
+        meta.nextStage = nextStage;
     }
 
     table chainId_stageId_exact {
