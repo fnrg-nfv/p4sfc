@@ -5,7 +5,7 @@
 
 header sfc_t {
     bit<16> chainId;
-    bit<8>  chainLength;
+    bit<16>  chainLength;
 }
 
 header nf_t {
