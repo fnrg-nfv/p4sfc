@@ -8,7 +8,7 @@
 // 00 00 00 00>,
 // LIMIT 1, STOP true);
 
-src :: FromDevice(h1-eth0)
+src :: FromDevice(s4-eth2)
 src -> Print(host) -> Queue(1024)
-    -> ToDevice(h1-eth0);
+    -> ToDevice(s4-eth2);
     // -> Discard;

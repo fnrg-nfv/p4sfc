@@ -10,7 +10,7 @@ struct metadata {
 #include "include/deparser.p4"
 
 
-#define SWITCH_PORT 1
+#define SWITCH_PORT 0
 
 
 control MyIngress(inout headers hdr,
@@ -33,7 +33,10 @@ control MyIngress(inout headers hdr,
         key = {
             meta.curNfInstanceId: exact;
         }
-        size = 1024;
+        // size = 1024;
+        const entries = {
+            (0): sent_to_nf_instance(1);
+        }
         default_action = send_to_switch;
     }
 

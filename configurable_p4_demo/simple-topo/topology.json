@@ -43,9 +43,6 @@
         },
         "s3": {
             "runtime_json": "simple-topo/s3-runtime.json"
-        },
-        "s4": {
-            "runtime_json": "simple-topo/s4-runtime.json"
         }
     },
     "links": [
@@ -66,16 +63,12 @@
             "s2-p3"
         ],
         [
-            "s2-p4",
-            "s4-p1"
+            "h4",
+            "s2-p4"
         ],
         [
             "h3",
             "s3-p2"
-        ],
-        [
-            "h4",
-            "s4-p2"
         ]
     ]
 }
