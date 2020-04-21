@@ -5,12 +5,12 @@
 
 header sfc_t {
     bit<16> chainId;
-    bit<8>  chainLength;
+    bit<16>  chainLength;
 }
 
 header nf_t {
-    bit<15> nfId;
-    bit<1>  isLast;  
+    bit<15> nfInstanceId;
+    bit<1>  isLast;
 }
 
 header ethernet_t {
