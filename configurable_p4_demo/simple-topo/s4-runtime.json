@@ -1,6 +1,0 @@
-{
-    "target": "bmv2",
-    "p4info": "build/p4sfc_server.p4.p4info.txt",
-    "bmv2_json": "build/p4sfc_server.json"
-}
-  

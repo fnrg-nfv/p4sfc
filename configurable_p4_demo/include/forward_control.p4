@@ -25,7 +25,7 @@ control ForwardControl(inout headers hdr,
         // size = 1024;
         default_action = drop;
         const entries = {
-            (1, 0): set_output_port(2);
+            (0, 0): set_output_port(2);
         }
     }
 

@@ -22,7 +22,7 @@ control StageControl(inout headers hdr,
         }
         // size = 1024;
         const entries = {
-            (1, 0): set_stage(0);
+            (0, 0): set_stage(0);
         }
         default_action = no_stage();
     }
