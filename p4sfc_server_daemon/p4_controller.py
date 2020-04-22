@@ -40,7 +40,9 @@ class P4Controller(object):
         # each entry should match chain_id and stage_id
         match_fields = entry_info.get('match_fields', {})
         match_fields['hdr.sfc.chainId'] = chain_id
+        match_fields['meta.curNfInstanceId'] = 0
         match_fields['meta.stageId'] = stage_id
+        
 
         action_params = entry_info.get('action_params', {})
 

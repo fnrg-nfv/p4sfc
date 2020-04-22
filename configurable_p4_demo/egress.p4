@@ -38,12 +38,7 @@ control MyIngress(inout headers hdr,
     }
     
     apply {
-        if(hdr.tcp_udp.srcPort == 5678){
-            port_exact.apply();
-        }
-        else {
-            drop();
-        }
+        port_exact.apply();
     }
 }
 

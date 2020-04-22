@@ -91,13 +91,13 @@ control MyIngress(inout headers hdr,
     }
     
     apply {
-        if(hdr.tcp_udp.srcPort == 5678) {
+        // if(hdr.tcp_udp.srcPort == 5678) {
             add_p4sfc_headers();
             port_exact.apply();
-        }
-        else{
-            drop();
-        }
+        // }
+        // else{
+        //     drop();
+        // }
     }
 }
 
