@@ -31,11 +31,12 @@ control MyIngress(inout headers hdr,
             send_to_switch;
         }
         key = {
+            hdr.sfc.chainId: exact;
             meta.curNfInstanceId: exact;
         }
         // size = 1024;
         const entries = {
-            (0): sent_to_nf_instance(1);
+            (0, 0): sent_to_nf_instance(1);
         }
         default_action = send_to_switch;
     }

@@ -27,8 +27,8 @@ class P4Controller(object):
         )
         self.switch_connection.MasterArbitrationUpdate()
 
-    def __get_prefix(self, stege_id):
-        return "MyIngress.elementControl_%d" % (stege_id % 5)
+    def __get_prefix(self, stage_id):
+        return "MyIngress.elementControl_%d" % (stage_id % 5)
 
     def insert_entry(self, chain_id, stage_id, entry_info):
         # add prefix to table_name and action_name according to stage_id

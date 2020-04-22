@@ -37,7 +37,7 @@ control MyIngress(inout headers hdr,
         }
         else {
             meta.curNfInstanceId = (bit<16>) hdr.nfs[0].nfInstanceId;
-            if(meta.stageId == 0) {
+            if(meta.isRecirculatePkt == 0) {
                 // only new packet need to decide which stage to start
                 stageControl.apply(hdr, meta, standard_metadata);
             }
@@ -69,6 +69,7 @@ control MyIngress(inout headers hdr,
 
             // if more elements need to be execute, recirculate the packet
             if(meta.nextStage != NO_STAGE) {
+                meta.isRecirculatePkt = 1;
                 recirculate(meta);
             }
             else { //otherwise, route the packet

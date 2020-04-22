@@ -8,4 +8,5 @@ struct metadata {
     bit<8> nextStage;
     bit<16> curNfInstanceId;
     bit<8> stageId;
+    bit<1> isRecirculatePkt;
 }
