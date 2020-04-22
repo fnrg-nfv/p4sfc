@@ -11,6 +11,11 @@ class P4IPRewriterInput;
 class P4IPRewriterEntry;
 class P4IPRewriter;
 
+class P4Element : public Element {
+protected:
+  int _instance_id;
+};
+
 class P4IPRewriterPattern {
 public:
   P4IPRewriterPattern(const IPAddress &saddr, int sport, const IPAddress &daddr,
@@ -70,7 +75,7 @@ public:
 
   void apply(WritablePacket *p);
 
-  void p4add();
+  void p4add(int);
 
 private:
   IPFlowID _flowid;
@@ -104,7 +109,7 @@ public:
   void unparse(StringAccum &sa) const;
 };
 
-class P4IPRewriter : public Element {
+class P4IPRewriter : public P4Element {
 public:
   enum { rw_drop = -1, rw_addmap = -2 }; // rw result
 

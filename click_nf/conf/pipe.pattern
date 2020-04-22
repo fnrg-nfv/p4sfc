@@ -1,0 +1,3 @@
+FromDevice($1) -> Print(in&out)
+                  -> Queue(1024)
+                  -> ToDevice($1);

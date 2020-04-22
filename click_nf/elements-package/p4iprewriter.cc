@@ -36,7 +36,10 @@ CLICK_DECLS
 
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
   // std::cout << "Specs Len: " << conf.size() << std::endl;
-  for (int i = 0; i < conf.size(); ++i) {
+
+  _instance_id = atoi(conf[0].c_str()); 
+
+  for (int i = 1; i < conf.size(); ++i) {
     P4IPRewriterInput is;
     if (parse_input_spec(conf[i], is, i, errh) >= 0)
       _input_specs.push_back(is);
@@ -131,8 +134,8 @@ P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid,
   _map.set(e);
   _map.set(e_reverse);
 
-  e->p4add();
-  e_reverse->p4add();
+  e->p4add(_instance_id);
+  e_reverse->p4add(_instance_id);
 
   return e;
 }
@@ -355,10 +358,10 @@ void P4IPRewriterEntry::apply(WritablePacket *p) {
   udph->uh_dport = rw_flowid.dport();
 }
 
-void P4IPRewriterEntry::p4add() {
+void P4IPRewriterEntry::p4add(int instance_id) {
   IPFlowID _rw_flow = _rw_entry->_flowid;
   std::ostringstream os;
-  os << "{\"instance_id\": 2,"
+  os << "{\"instance_id\": "<< instance_id <<","
         "\"table_name\": \"ipRewriter.IpRewriter_exact\","
         "\"match_fields\": {"
         "\"hdr.ipv4.srcAddr\": "
