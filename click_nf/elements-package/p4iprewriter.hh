@@ -7,6 +7,10 @@
 #include <click/timer.hh>
 CLICK_DECLS
 
+/*
+ * configure(id, [input_specs+])
+ */
+
 class P4IPRewriterInput;
 class P4IPRewriterEntry;
 class P4IPRewriter;
@@ -51,9 +55,6 @@ private:
   bool _same_first;
 
   int _refcount;
-
-  // P4IPRewriterPattern(const P4IPRewriterPattern &);
-  // P4IPRewriterPattern &operator=(const P4IPRewriterPattern &);
 };
 
 class P4IPRewriterEntry {
