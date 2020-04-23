@@ -3,6 +3,8 @@ import grpc
 import os
 import sys
 
+from chain_logic_config import generate_server_pkt_distribution_rules, generate_element_control_rules, generate_stage_control_rules, generate_forward_control_rules
+
 # Import P4Runtime lib from parent utils dir
 # Probably there's a better way of doing this.
 sys.path.append(
@@ -17,15 +19,25 @@ import p4runtime_lib.helper
 class P4Controller(object):
 
     def __init__(self, p4info_file_path):
-        self.p4info_helper = p4runtime_lib.helper.P4InfoHelper(
+        self.network_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
             p4info_file_path)
-        self.switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
+        self.network_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
             name='s2',
             address='127.0.0.1:50052',
             device_id=1,
             proto_dump_file='../configurable_p4_demo/logs/s2-p4runtime-requests.txt'
         )
-        self.switch_connection.MasterArbitrationUpdate()
+        self.network_switch_connection.MasterArbitrationUpdate()
+
+        self.server_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
+            '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
+        self.server_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
+            name='s4',
+            address='127.0.0.1:50054',
+            device_id=3,
+            proto_dump_file='../configurable_p4_demo/logs/s4-p4runtime-requests.txt'
+        )
+        self.server_switch_connection.MasterArbitrationUpdate()
 
     def __get_prefix(self, stage_id):
         return "MyIngress.elementControl_%d" % (stage_id % 5)
@@ -48,14 +60,14 @@ class P4Controller(object):
 
         priority = entry_info.get('priority')
 
-        table_entry = self.p4info_helper.buildTableEntry(
+        table_entry = self.network_switch_p4info_helper.buildTableEntry(
             table_name=full_table_name,
             match_fields=match_fields,
             action_name=full_action_name,
             action_params=action_params,
             priority=priority
         )
-        self.switch_connection.WriteTableEntry(table_entry)
+        self.network_switch_connection.WriteTableEntry(table_entry)
         print "New entry installed successfully...\n Table [%s]\n Action [%s]\n" % (
             full_table_name, full_action_name)
     
@@ -65,18 +77,18 @@ class P4Controller(object):
         match_fields = entry_info.get('match_fields', {})
         match_fields['hdr.sfc.chainId'] = chain_id
         match_fields['meta.stageId'] = stage_id
-        table_entry = self.p4info_helper.buildTableEntry(
+        table_entry = self.network_switch_p4info_helper.buildTableEntry(
             table_name=full_table_name,
             match_fields=match_fields,
             priority=entry_info['priority']
         )
-        self.switch_connection.DeleteTableEntry(table_entry)
+        self.network_switch_connection.DeleteTableEntry(table_entry)
         print "Delete entry successfully...\n Table [%s]\n" % (full_table_name)
     
     def read_counter(self, chain_id, stage_id, counter_info):
         full_counter_name = "%s.%s" % (self.__get_prefix(stage_id), counter_info['counter_name'])
-        counter_id = self.p4info_helper.get_counters_id(full_counter_name)
-        for response in self.switch_connection.ReadCounters(counter_id, counter_info['counter_index']):
+        counter_id = self.network_switch_p4info_helper.get_counters_id(full_counter_name)
+        for response in self.network_switch_connection.ReadCounters(counter_id, counter_info['counter_index']):
             for entity in response.entities:
                 counter = entity.counter_entry
                 # print "%s %d: %d packets (%d bytes))" % (
@@ -84,6 +96,27 @@ class P4Controller(object):
                 #     counter.data.packet_count, counter.data.byte_count
                 # )
                 return {"packet_count": counter.data.packet_count, "byte_count": counter.data.byte_count}
+
+    
+    def config_pipeline(self, sfc):
+        server_switch_entries = generate_server_pkt_distribution_rules(sfc.chain_head, sfc.id, self.server_switch_p4info_helper)
+        for entry in server_switch_entries:
+            self.server_switch_connection.WriteTableEntry(entry)
+        print 'Server switch config successfully for chain %d.' % sfc.id
+
+        network_switch_entries = []
+        network_switch_entries.extend(generate_element_control_rules(sfc.pre_host_chain_head, sfc.pre_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
+        network_switch_entries.extend(generate_element_control_rules(sfc.post_host_chain_head, sfc.post_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
+    
+        network_switch_entries.extend(generate_stage_control_rules(sfc.pre_host_chain_head, sfc.pre_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
+        network_switch_entries.extend(generate_stage_control_rules(sfc.post_host_chain_head, sfc.post_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
+
+        network_switch_entries.append(generate_forward_control_rules(sfc.chain_head, sfc.id, sfc.chain_length, self.network_switch_p4info_helper))
+
+        for entry in network_switch_entries:
+            self.network_switch_connection.WriteTableEntry(entry)
+
+        print 'Network switch config successfully for chain %d.' % sfc.id
 
 
 if __name__ == '__main__':

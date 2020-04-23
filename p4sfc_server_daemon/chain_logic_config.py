@@ -53,10 +53,11 @@ class NF:
 
 
 class SFC:
-    def __init__(self, chain_id, NFs):
+    def __init__(self, chain_id, chain_length, NFs):
         self.id = chain_id
+        self.chain_length = chain_length
         self.chain_head = self.build_SFC(NFs)
-        self.parse_chain()
+        self.divide_chain()
         if self.pre_host_chain_head is not None:
             print "pre_host_chain head is %s" % self.pre_host_chain_head.name
         else:
@@ -79,7 +80,7 @@ class SFC:
                         nf_dict['running_port'], nf_dict['click_config'], cur_nf)
         return cur_nf
 
-    def parse_chain(self):
+    def divide_chain(self):
         """ Divide chain into three parts:
         pre_host_chain: NFs that before the first un-offloaedable NF in the chain
         host_chain: NFs between the first un-offloaedable NF and the last un-offloaedable NF in the chain
@@ -113,37 +114,7 @@ class SFC:
         self.post_host_chain_tail = None
 
 
-def config_pre_host_chain(chain):
-    """ Config the process logic of pre_host_chain
-    Config stageControl and elementControl for chain
-    For each partial-offloadable/un-offloadable NF, config p4sfc_server.p4
-    For each (partial-offloadable, offloadable) pair, config stageControl
-    """
-    if chain is None:
-        return
-    pre_NF_offloadability = const.OFFLOADABLE
-
-
-def config_host_chain(chain):
-    """Config p4sfc_server.p4.
-    Map each NF to a output port.
-    """
-    if chain is None:
-        return
-
-
-def config_post_host_chain(chain):
-    """ Config the process logic of pre_host_chain
-    Config stageControl and elementControl for chain
-    For each partial-offloadable/un-offloadable NF, config p4sfc_server.p4
-    For each (partial-offloadable, offloadable) pair, config stageControl
-    """
-    if chain is None:
-        return
-    pre_NF_offloadability = const.PARTIAL_OFFLOADABLE
-
-
-
+# To be tested
 def generate_server_pkt_distribution_rules(head_nf, chain_id, p4info_helper):
     """Generate pkt distribution rules for bmv2 switch running in server.
     Correspongding p4 file is p4sfc_server_pkt_distribution.p4 
@@ -265,13 +236,37 @@ def generate_stage_control_rules(head_nf, tail_nf, chain_id, p4info_helper):
     print "Generate stage control rules successfully...\n  Rules sum: %d" % len(stage_control_rules)
     return stage_control_rules
 
-def generate_forward_control_rules():
-    pass
+# To be tested
+def generate_forward_control_rules(chain_head, chain_id, chain_length, p4info_helper):
+    """Generate the forward rules for p4 switch in the network
+    Only need one rule: when pre host chain has completed, send the pkt to server
+    """
+    cur_nf = chain_head
+    while cur_nf is not None:
+        if cur_nf.offloadability == const.OFFLOADABLE or cur_nf.offloadability == const.PARTIAL_OFFLOADABLE:
+            chain_length = chain_length - 1
+        else:
+            break
+        cur_nf = cur_nf.next_nf
 
+    if cur_nf is not None:
+        table_entry = p4info_helper.buildTableEntry (
+            table_name="MyIngress.forwardControl.chainId_exact",
+            match_fields={
+                "hdr.sfc.chainId": chain_id,
+                "hdr.sfc.chainLength": chain_length,
+            },
+            action_name= "MyIngress.stageControl.send_to_server"
+        )
+
+        return table_entry
+    else:
+        return None # all NFs are offloaded, no rule need to be added.
 
 if __name__ == '__main__':
     chain_id = 0
-    user_input = [
+    chain_length = 3
+    user_chain = [
         {
             "nf_name": "Monitor",
             "nf_id": 0,
@@ -300,7 +295,7 @@ if __name__ == '__main__':
             "running_port": 1
         }
     ]
-    sfc = SFC(chain_id, user_input)
+    sfc = SFC(chain_id, chain_length, user_chain)
 
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(
             '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
@@ -308,6 +303,7 @@ if __name__ == '__main__':
 
     
     
+    # Below test is OK!
 
     p4info_helper = p4runtime_lib.helper.P4InfoHelper(
             '../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
