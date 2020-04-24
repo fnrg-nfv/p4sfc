@@ -1,16 +1,13 @@
-class _const:
-    class ConstError(TypeError):
-        pass
+import os
+import sys
 
-    def __setattr__(self, name, value):
-        if name in self.__dict__:
-            raise self.ConstError("Can't rebind const (%s)" % name)
-        self.__dict__[name] = value
+# Import P4Runtime lib from parent utils dir
+# Probably there's a better way of doing this.
+sys.path.append(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                 '../utils/'))
+import const
 
-const = _const()
-const.OFFLOADABLE = 0
-const.PARTIAL_OFFLOADABLE = 1
-const.UN_OFFLOADABLE = 2
 
 free_switch_port = [
     {
@@ -23,12 +20,14 @@ free_switch_port = [
     }
 ]
 
+
 def start_click_nf(nf):
     global free_switch_port
     switch_port = free_switch_port.pop(0)
     nic_to_bind = switch_port['vnic_name']
     click_id = nf.id + nf.stage_index
     return switch_port['switch_port']
+
 
 def start_nfs(nfs):
     cur_nf = nfs
