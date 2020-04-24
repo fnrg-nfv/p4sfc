@@ -37,7 +37,7 @@ CLICK_DECLS
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
   // std::cout << "Specs Len: " << conf.size() << std::endl;
 
-  _instance_id = atoi(conf[0].c_str()); 
+  _instance_id = atoi(conf[0].c_str());
 
   for (int i = 1; i < conf.size(); ++i) {
     P4IPRewriterInput is;
@@ -361,7 +361,9 @@ void P4IPRewriterEntry::apply(WritablePacket *p) {
 void P4IPRewriterEntry::p4add(int instance_id) {
   IPFlowID _rw_flow = _rw_entry->_flowid;
   std::ostringstream os;
-  os << "{\"instance_id\": "<< instance_id <<","
+
+  os << "{\"instance_id\": " << instance_id
+     << ","
         "\"table_name\": \"ipRewriter.IpRewriter_exact\","
         "\"match_fields\": {"
         "\"hdr.ipv4.srcAddr\": "
@@ -390,6 +392,7 @@ void P4IPRewriterEntry::p4add(int instance_id) {
     struct curl_slist *headers = NULL;
     headers = curl_slist_append(headers, "Content-Type: application/json");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    printf("curl: %s\n", data.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
     res = curl_easy_perform(curl);
     // std::cout << curl_easy_strerror(res) << std::endl;

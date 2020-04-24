@@ -1,4 +1,4 @@
-
+// $1: port
 
 //
 // Virtual Private Networking using IPSec
@@ -24,7 +24,7 @@
 // 00 00 00 00 00 00 00>,
 // LIMIT 5, STOP true);
 
-src :: FromDevice(vethm0);
+src :: FromDevice($1)
 
 
 spd :: Classifier(12/0800 30/121a04c8,
