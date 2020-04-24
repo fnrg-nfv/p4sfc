@@ -3,6 +3,7 @@ build/
 pcaps/
 logs/
 
+switch.log
 *.swp
 *.pyc
 *.pcap
