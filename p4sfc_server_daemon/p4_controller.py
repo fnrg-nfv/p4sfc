@@ -86,8 +86,7 @@ class P4Controller(object):
         self.network_switch_connection.DeleteTableEntry(table_entry)
         print "Delete entry successfully...\n Table [%s]\n" % (full_table_name)
 
-    # TODO: see nf_id
-    def read_counter(self, chain_id, nf_id, stage_index, counter_info):
+    def read_counter(self, stage_index, counter_info):
         full_counter_name = "%s.%s" % (self.__get_prefix(
             stage_index), counter_info['counter_name'])
         counter_id = self.network_switch_p4info_helper.get_counters_id(

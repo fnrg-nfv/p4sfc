@@ -39,10 +39,6 @@ nf_offlodability = {
 }
 
 
-def get_nf_id(nf_id):
-    global chain_id
-    return (chain_id << 16) + (nf_id << 8)
-
 
 def parse_chain(chain_desc):
     """Parse user input chain
@@ -56,7 +52,7 @@ def parse_chain(chain_desc):
     nf_groups = {}
     for nf in chain_desc:
         # assign id first
-        nf['id'] = get_nf_id(nf_id)
+        nf['id'] = nf_id
         nf_id = nf_id + 1
 
         # assgin offloadability

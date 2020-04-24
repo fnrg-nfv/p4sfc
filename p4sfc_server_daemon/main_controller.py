@@ -13,7 +13,7 @@ def get_chain_id(instance_id):
 
 
 def get_nf_id(instance_id):
-    return instance_id & 0xffffff00
+    return (instance_id >> 8) & 0x000000ff
 
 
 def get_stage_index(instance_id):
@@ -34,11 +34,10 @@ def deploy_chain():
 
     # construct sfc
     sfc = SFC(chain_id, chain_length, nfs)
-    print "chain_finish"
 
     # start nfs in the server
-    start_nfs(sfc.chain_head)
-    print "start finish"
+    start_nfs(sfc.chain_head, chain_id)
+
     # config pkt process logic
     global p4_controller
     p4_controller.config_pipeline(sfc)
@@ -51,7 +50,7 @@ def insert_entry():
     instance_id = data.get("instance_id")
     chain_id = get_chain_id(instance_id)
     nf_id = get_nf_id(instance_id)
-    stage_inext = get_stage_index(instance_id)
+    stage_index = get_stage_index(instance_id)
 
     entry_info = {
         "table_name": data.get("table_name"),
@@ -87,13 +86,12 @@ def read_counter():
     counter_name = request.args.get("counter_name")
     counter_index = int(request.args.get("counter_index").encode("utf-8"))
 
-    chain_id = get_chain_id(instance_id)
-    stage_id = get_stage_id(instance_id)
+    stage_index = get_stage_index(instance_id)
     counter_info = {
         "counter_name": counter_name,
         "counter_index": counter_index
     }
-    return p4_controller.read_counter(chain_id, stage_id, counter_info)
+    return p4_controller.read_counter(stage_index, counter_info)
 
 
 def main(p4info_file_path, server_port):
