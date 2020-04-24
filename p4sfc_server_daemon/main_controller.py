@@ -3,6 +3,8 @@ import argparse
 import os
 import sys
 from p4_controller import P4Controller
+from chain_logic_config import SFC
+from click_nf_runner import start_nfs
 
 app = Flask(__name__)
 p4_controller = None
@@ -11,23 +13,43 @@ p4_controller = None
 def get_chain_id(instance_id):
     return instance_id >> 16
 
+def get_nf_id(instance_id):
+    return instance_id & 0xffffff00
 
-def get_stage_id(instance_id):
-    return instance_id & 0x0000ffff
+def get_stage_index(instance_id):
+    return instance_id & 0x000000ff
 
 
 @app.route('/test')
 def test():
     return "Hello World!"
 
+@app.route('/deploy_chain', methods = ["POST"])
+def deploy_chain():
+    data = request.get_json()
+    chain_id = data.get("chain_id")
+    chain_length = data.get("chain_length")
+    nfs = data.get("nfs")
+
+    # construct sfc
+    sfc = SFC(chain_id, chain_length, nfs)
+    print "chain_finish"
+
+    # start nfs in the server
+    start_nfs(sfc.chain_head)
+    print "start finish"
+    # config pkt process logic
+    global p4_controller
+    p4_controller.config_pipeline(sfc)
+    return "OK"
+
 @app.route('/insert_entry', methods = ["POST"])
 def insert_entry():
     data = request.get_json()
     instance_id = data.get("instance_id")
     chain_id = get_chain_id(instance_id)
-    stage_id = get_stage_id(instance_id)
-    print chain_id
-    print stage_id
+    nf_id = get_nf_id(instance_id)
+    stage_inext = get_stage_index(instance_id)
 
     entry_info = {
         "table_name": data.get("table_name"),
@@ -37,7 +59,7 @@ def insert_entry():
         "priority": data.get("priority")
     }
     print entry_info
-    p4_controller.insert_entry(chain_id, stage_id, entry_info)
+    p4_controller.insert_entry(chain_id, nf_id, stage_index, entry_info)
     return "OK"
 
 @app.route('/delete_entry', methods = ["POST"])
@@ -45,13 +67,14 @@ def delete_entry():
     data = request.get_json()
     instance_id = data.get("instance_id")
     chain_id = get_chain_id(instance_id)
-    stage_id = get_stage_id(instance_id)
+    nf_id = get_nf_id(instance_id)
+    stage_index = get_stage_index(instance_id)
     entry_info = {
         "table_name": data.get("table_name"),
         "match_fields": data.get("match_fields"),
         "priority": data.get("priority")
     }
-    p4_controller.delete_entry(chain_id, stage_id, entry_info)
+    p4_controller.delete_entry(chain_id, nf_id, stage_index, entry_info)
     return "OK"
 
 @app.route('/read_counter', methods = ["GET"])

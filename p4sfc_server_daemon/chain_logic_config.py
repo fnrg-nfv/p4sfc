@@ -38,12 +38,11 @@ const.No_STAGE = 255
 
 
 class NF:
-    def __init__(self, nf_name, nf_id, offloadability, running_port, click_config, next_nf=None):
+    def __init__(self, nf_name, nf_id, offloadability, click_config, next_nf=None):
         self.name = nf_name
         self.id = nf_id
         self.offloadability = offloadability
         self.click_config = click_config
-        self.running_port = running_port
         self.next_nf = next_nf
 
     def set_next_nf(self, next_nf):
@@ -73,11 +72,13 @@ class SFC:
         else:
             print "post_host_chain is None"
 
+        self.assign_stage_index()
+
     def build_SFC(self, NFs):
         cur_nf = None
-        for nf_dict in NFs[::-1]:
-            cur_nf = NF(nf_dict['nf_name'], nf_dict['nf_id'], nf_dict['offloadability'],
-                        nf_dict['running_port'], nf_dict['click_config'], cur_nf)
+        for nf in NFs[::-1]:
+            cur_nf = NF(nf['name'], nf['id'], nf['offloadability'],
+                         nf['click_config'], cur_nf)
         return cur_nf
 
     def divide_chain(self):
@@ -112,6 +113,27 @@ class SFC:
             self.post_host_chain_head = self.host_chain_tail.next_nf
 
         self.post_host_chain_tail = None
+    
+    def assign_stage_index(self):
+        """Assign stage index to pre_host_chain and post_host_chain
+        By using stage_index, we can now which stage to config when operating on table entry
+        """
+        if self.pre_host_chain_head is not None:
+            stage_index = 0
+            cur_nf = self.pre_host_chain_head
+            while cur_nf != self.pre_host_chain_tail:
+                cur_nf.stage_index = stage_index
+                stage_index = stage_index + 1
+                cur_nf = cur_nf.next_nf
+            cur_nf.stage_index = stage_index
+        
+        if self.post_host_chain_head is not None:
+            stage_index = 0
+            cur_nf = self.pre_host_chain_head
+            while cur_nf is not None:
+                cur_nf.stage_index = stage_index
+                stage_index = stage_index + 1
+                cur_nf = cur_nf.next_nf
 
 
 # To be tested
@@ -259,9 +281,9 @@ def generate_forward_control_rules(chain_head, chain_id, chain_length, p4info_he
             action_name= "MyIngress.stageControl.send_to_server"
         )
 
-        return table_entry
+        return [table_entry]
     else:
-        return None # all NFs are offloaded, no rule need to be added.
+        return [] # all NFs are offloaded, no rule need to be added.
 
 if __name__ == '__main__':
     chain_id = 0

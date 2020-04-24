@@ -29,31 +29,31 @@ class P4Controller(object):
         )
         self.network_switch_connection.MasterArbitrationUpdate()
 
-        self.server_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
-            '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
-        self.server_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
-            name='s4',
-            address='127.0.0.1:50054',
-            device_id=3,
-            proto_dump_file='../configurable_p4_demo/logs/s4-p4runtime-requests.txt'
-        )
-        self.server_switch_connection.MasterArbitrationUpdate()
+        # self.server_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
+        #     '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
+        # self.server_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
+        #     name='s4',
+        #     address='127.0.0.1:50054',
+        #     device_id=3,
+        #     proto_dump_file='../configurable_p4_demo/logs/s4-p4runtime-requests.txt'
+        # )
+        # self.server_switch_connection.MasterArbitrationUpdate()
 
     def __get_prefix(self, stage_id):
         return "MyIngress.elementControl_%d" % (stage_id % 5)
 
-    def insert_entry(self, chain_id, stage_id, entry_info):
+    def insert_entry(self, chain_id, nf_id, stage_index, entry_info):
         # add prefix to table_name and action_name according to stage_id
         full_table_name = "%s.%s" % (self.__get_prefix(
-            stage_id), entry_info['table_name'])
+            stage_index), entry_info['table_name'])
         full_action_name = "%s.%s" % (self.__get_prefix(
-            stage_id), entry_info['action_name'])
+            stage_index), entry_info['action_name'])
 
         # each entry should match chain_id and stage_id
         match_fields = entry_info.get('match_fields', {})
         match_fields['hdr.sfc.chainId'] = chain_id
-        match_fields['meta.curNfInstanceId'] = 0
-        match_fields['meta.stageId'] = stage_id
+        match_fields['meta.curNfInstanceId'] = nf_id
+        match_fields['meta.stageId'] = 0 # hard-code because one nf implemented as one p4 element
         
 
         action_params = entry_info.get('action_params', {})
@@ -71,12 +71,13 @@ class P4Controller(object):
         print "New entry installed successfully...\n Table [%s]\n Action [%s]\n" % (
             full_table_name, full_action_name)
     
-    def delete_entry(self, chain_id, stage_id, entry_info):
+    def delete_entry(self, chain_id, nf_id, stage_index, entry_info):
         full_table_name = "%s.%s" % (self.__get_prefix(
-            stage_id), entry_info['table_name'])
+            stage_index), entry_info['table_name'])
         match_fields = entry_info.get('match_fields', {})
         match_fields['hdr.sfc.chainId'] = chain_id
-        match_fields['meta.stageId'] = stage_id
+        match_fields['meta.curNfInstanceId'] = nf_id
+        match_fields['meta.stageId'] = 0 # hard code
         table_entry = self.network_switch_p4info_helper.buildTableEntry(
             table_name=full_table_name,
             match_fields=match_fields,
@@ -85,8 +86,9 @@ class P4Controller(object):
         self.network_switch_connection.DeleteTableEntry(table_entry)
         print "Delete entry successfully...\n Table [%s]\n" % (full_table_name)
     
-    def read_counter(self, chain_id, stage_id, counter_info):
-        full_counter_name = "%s.%s" % (self.__get_prefix(stage_id), counter_info['counter_name'])
+    # TODO: see nf_id
+    def read_counter(self, chain_id, nf_id, stage_index, counter_info):
+        full_counter_name = "%s.%s" % (self.__get_prefix(stage_index), counter_info['counter_name'])
         counter_id = self.network_switch_p4info_helper.get_counters_id(full_counter_name)
         for response in self.network_switch_connection.ReadCounters(counter_id, counter_info['counter_index']):
             for entity in response.entities:
@@ -99,10 +101,10 @@ class P4Controller(object):
 
     
     def config_pipeline(self, sfc):
-        server_switch_entries = generate_server_pkt_distribution_rules(sfc.chain_head, sfc.id, self.server_switch_p4info_helper)
-        for entry in server_switch_entries:
-            self.server_switch_connection.WriteTableEntry(entry)
-        print 'Server switch config successfully for chain %d.' % sfc.id
+        # server_switch_entries = generate_server_pkt_distribution_rules(sfc.chain_head, sfc.id, self.server_switch_p4info_helper)
+        # for entry in server_switch_entries:
+        #     self.server_switch_connection.WriteTableEntry(entry)
+        # print 'Server switch config successfully for chain %d.' % sfc.id
 
         network_switch_entries = []
         network_switch_entries.extend(generate_element_control_rules(sfc.pre_host_chain_head, sfc.pre_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
@@ -111,7 +113,7 @@ class P4Controller(object):
         network_switch_entries.extend(generate_stage_control_rules(sfc.pre_host_chain_head, sfc.pre_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
         network_switch_entries.extend(generate_stage_control_rules(sfc.post_host_chain_head, sfc.post_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
 
-        network_switch_entries.append(generate_forward_control_rules(sfc.chain_head, sfc.id, sfc.chain_length, self.network_switch_p4info_helper))
+        network_switch_entries.extend(generate_forward_control_rules(sfc.chain_head, sfc.id, sfc.chain_length, self.network_switch_p4info_helper))
 
         for entry in network_switch_entries:
             self.network_switch_connection.WriteTableEntry(entry)
