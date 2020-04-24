@@ -47,7 +47,10 @@ def deploy_chain():
 @app.route('/insert_entry', methods=["POST"])
 def insert_entry():
     data = request.get_json()
+    if data.get("key") is None:
+        return "Bad packet"
     instance_id = data.get("instance_id")
+    print 'instance_id %d\n' % instance_id
     chain_id = get_chain_id(instance_id)
     nf_id = get_nf_id(instance_id)
     stage_index = get_stage_index(instance_id)

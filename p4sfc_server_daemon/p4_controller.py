@@ -14,6 +14,7 @@ import p4runtime_lib.helper
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
 from p4runtime_lib.error_utils import printGrpcError
 import p4runtime_lib.bmv2
+import p4runtime_lib.simple_controller
 
 
 class P4Controller(object):
@@ -38,6 +39,10 @@ class P4Controller(object):
         #     proto_dump_file='../configurable_p4_demo/logs/s4-p4runtime-requests.txt'
         # )
         # self.server_switch_connection.MasterArbitrationUpdate()
+
+        # self.server_switch_connection.SetForwardingPipelineConfig(p4info=self.server_switch_p4info_helper.p4info,
+        #                                bmv2_json_file_path="../configurable_p4_demo/build/p4sfc_server_pkt_distribution.json")
+        # print 'Server switch config successfully...\n'
 
     def __get_prefix(self, stage_id):
         return "MyIngress.elementControl_%d" % (stage_id % 5)
@@ -101,10 +106,10 @@ class P4Controller(object):
                 return {"packet_count": counter.data.packet_count, "byte_count": counter.data.byte_count}
 
     def config_pipeline(self, sfc):
-        # server_switch_entries = generate_server_pkt_distribution_rules(sfc.chain_head, sfc.id, self.server_switch_p4info_helper)
-        # for entry in server_switch_entries:
-        #     self.server_switch_connection.WriteTableEntry(entry)
-        # print 'Server switch config successfully for chain %d.' % sfc.id
+        server_switch_entries = generate_server_pkt_distribution_rules(sfc.chain_head, sfc.id, self.server_switch_p4info_helper)
+        for entry in server_switch_entries:
+            self.server_switch_connection.WriteTableEntry(entry)
+        print 'Server switch config successfully for chain %d.' % sfc.id
 
         network_switch_entries = []
         network_switch_entries.extend(generate_element_control_rules(

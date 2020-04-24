@@ -11,8 +11,8 @@ import const
 
 free_switch_port = [
     {
-        "vnic_name": "veth10",
-        "port_id": 10
+        "vnic_name": "veth1",
+        "port_id": 1
     },
     {
         "vnic_name": "veth12",
@@ -28,6 +28,9 @@ def start_click_nf(nf, chain_id):
     switch_port = free_switch_port.pop(0)
     nic_to_bind = switch_port['vnic_name']
     click_id = get_click_instance_id(chain_id, nf.id, nf.stage_index)
+    print 'click id give to element %d\n' % click_id
+    start_command = "sudo ../click_nf/conf/run.py -i %d ../click_nf/conf/%s.pattern %s >logs/%s.log 2>&1 &" % (click_id, nf.click_file_name, nic_to_bind, nf.click_file_name)
+    os.system(start_command)
     return switch_port['port_id']
 
 
@@ -39,3 +42,10 @@ def start_nfs(chain_head, chain_id):
         else:
             cur_nf.running_port = -1
         cur_nf = cur_nf.next_nf
+
+if __name__ == '__main__':
+    switch_port = free_switch_port.pop(0)
+    nic_to_bind = switch_port['vnic_name']
+    click_id = get_click_instance_id(0, 2, 2)
+    start_command = "sudo ../click_nf/conf/run.py -i %d ../click_nf/conf/%s.pattern %s >logs/%s.log 2>&1 &" % (click_id, "nat-p4-encap", "veth1", "nat-p4-encap")
+    os.system(start_command)

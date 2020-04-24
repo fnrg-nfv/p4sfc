@@ -24,10 +24,11 @@ element_p4_id = {
 
 
 class NF:
-    def __init__(self, nf_name, nf_id, offloadability, click_config, next_nf=None):
+    def __init__(self, nf_name, nf_id, offloadability, click_file_name, click_config, next_nf=None):
         self.name = nf_name
         self.id = nf_id
         self.offloadability = offloadability
+        self.click_file_name = click_file_name
         self.click_config = click_config
         self.next_nf = next_nf
 
@@ -64,7 +65,7 @@ class SFC:
         cur_nf = None
         for nf in NFs[::-1]:
             cur_nf = NF(nf['name'], nf['id'], nf['offloadability'],
-                        nf['click_config'], cur_nf)
+                        nf.get('click_file_name'), nf['click_config'], cur_nf)
         return cur_nf
 
     def divide_chain(self):
