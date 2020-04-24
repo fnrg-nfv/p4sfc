@@ -1,9 +1,7 @@
 from flask import Flask, request
 import argparse
-import os
-import sys
 from p4_controller import P4Controller
-from chain_logic_config import SFC
+from control_rule_generator import SFC
 from click_nf_runner import start_nfs
 
 app = Flask(__name__)
@@ -13,8 +11,10 @@ p4_controller = None
 def get_chain_id(instance_id):
     return instance_id >> 16
 
+
 def get_nf_id(instance_id):
-    return instance_id & 0xffffff00
+    return (instance_id >> 8) & 0x000000ff
+
 
 def get_stage_index(instance_id):
     return instance_id & 0x000000ff
@@ -24,7 +24,8 @@ def get_stage_index(instance_id):
 def test():
     return "Hello World!"
 
-@app.route('/deploy_chain', methods = ["POST"])
+
+@app.route('/deploy_chain', methods=["POST"])
 def deploy_chain():
     data = request.get_json()
     chain_id = data.get("chain_id")
@@ -33,23 +34,26 @@ def deploy_chain():
 
     # construct sfc
     sfc = SFC(chain_id, chain_length, nfs)
-    print "chain_finish"
 
     # start nfs in the server
-    start_nfs(sfc.chain_head)
-    print "start finish"
+    start_nfs(sfc.chain_head, chain_id)
+
     # config pkt process logic
     global p4_controller
     p4_controller.config_pipeline(sfc)
     return "OK"
 
-@app.route('/insert_entry', methods = ["POST"])
+
+@app.route('/insert_entry', methods=["POST"])
 def insert_entry():
     data = request.get_json()
+    if data.get("key") is None:
+        return "Bad packet"
     instance_id = data.get("instance_id")
+    print 'instance_id %d\n' % instance_id
     chain_id = get_chain_id(instance_id)
     nf_id = get_nf_id(instance_id)
-    stage_inext = get_stage_index(instance_id)
+    stage_index = get_stage_index(instance_id)
 
     entry_info = {
         "table_name": data.get("table_name"),
@@ -62,7 +66,8 @@ def insert_entry():
     p4_controller.insert_entry(chain_id, nf_id, stage_index, entry_info)
     return "OK"
 
-@app.route('/delete_entry', methods = ["POST"])
+
+@app.route('/delete_entry', methods=["POST"])
 def delete_entry():
     data = request.get_json()
     instance_id = data.get("instance_id")
@@ -77,20 +82,19 @@ def delete_entry():
     p4_controller.delete_entry(chain_id, nf_id, stage_index, entry_info)
     return "OK"
 
-@app.route('/read_counter', methods = ["GET"])
+
+@app.route('/read_counter', methods=["GET"])
 def read_counter():
     instance_id = int(request.args.get("instance_id").encode("utf-8"))
     counter_name = request.args.get("counter_name")
     counter_index = int(request.args.get("counter_index").encode("utf-8"))
 
-    chain_id = get_chain_id(instance_id)
-    stage_id = get_stage_id(instance_id)
+    stage_index = get_stage_index(instance_id)
     counter_info = {
         "counter_name": counter_name,
         "counter_index": counter_index
     }
-    return p4_controller.read_counter(chain_id, stage_id, counter_info)
-
+    return p4_controller.read_counter(stage_index, counter_info)
 
 
 def main(p4info_file_path, server_port):
@@ -98,7 +102,6 @@ def main(p4info_file_path, server_port):
     p4_controller = P4Controller(p4info_file_path)
     print 'P4SFC server daemon init successfully...'
     app.run(host="0.0.0.0", port=server_port)
-
 
 
 if __name__ == '__main__':

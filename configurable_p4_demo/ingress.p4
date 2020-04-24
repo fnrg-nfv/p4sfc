@@ -82,11 +82,11 @@ control MyIngress(inout headers hdr,
         hdr.nfs[0].isLast = 0;
     
         hdr.nfs[1].setValid();
-        hdr.nfs[1].nfInstanceId = 256;
+        hdr.nfs[1].nfInstanceId = 1;
         hdr.nfs[1].isLast = 0;
         
         hdr.nfs[2].setValid();
-        hdr.nfs[2].nfInstanceId = 512;
+        hdr.nfs[2].nfInstanceId = 2;
         hdr.nfs[2].isLast = 1;
     }
     
