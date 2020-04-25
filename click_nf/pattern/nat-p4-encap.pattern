@@ -25,7 +25,7 @@ out :: IPPrint(out_ip)
     -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
     -> [1]ec;
 ec[1] -> Print(out)
-      -> Queue(1024)
+      -> Queue(20)
       -> ToDevice($1);
 ec[0] -> Strip(14)
       -> CheckIPHeader
