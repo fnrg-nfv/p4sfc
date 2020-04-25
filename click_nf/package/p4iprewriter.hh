@@ -100,10 +100,7 @@ public:
   int routput;
   P4IPRewriterPattern *pattern;
 
-  P4IPRewriterInput()
-      : kind(i_drop), foutput(-1), routput(-1), count(0), failures(0) {
-    pattern = 0;
-  }
+  P4IPRewriterInput();
 
   int rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid);
 
