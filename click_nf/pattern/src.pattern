@@ -10,5 +10,5 @@ InfiniteSource( DATA \<
 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 00 00 00 00>, LIMIT 1, STOP true) 
-    -> Queue(1024)
+    -> Queue(20)
     -> ToDevice($1);
