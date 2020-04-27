@@ -44,12 +44,13 @@ int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
     if (parse_input_spec(conf[i], is, i, errh) >= 0)
       _input_specs.push_back(is);
 
-// #ifndef NODEBUG
-//     StringAccum sa;
-//     is.unparse(sa);
-//     std::cout << i << ": " << conf[i].c_str() << "\tUNPARSE: " << sa.c_str()
-//               << std::endl;
-// #endif
+    // #ifndef NODEBUG
+    //     StringAccum sa;
+    //     is.unparse(sa);
+    //     std::cout << i << ": " << conf[i].c_str() << "\tUNPARSE: " <<
+    //     sa.c_str()
+    //               << std::endl;
+    // #endif
   }
 
   return _input_specs.size() == ninputs() ? 0 : -1;
@@ -103,7 +104,7 @@ void P4IPRewriter::push(int port, Packet *p_in) {
 
   // 2. if not in map, inputspec.output
   if (!entry) {
-    P4IPRewriterInput &is = _input_specs.at_u(port);
+    P4IPRewriterInput &is = _input_specs.at(port);
     IPFlowID rewritten_flowid = IPFlowID::uninitialized_t();
     int result = is.rewrite_flowid(flowid, rewritten_flowid);
     if (result == rw_addmap) {
@@ -138,6 +139,11 @@ P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid,
   e_reverse->p4add(_instance_id);
 
   return e;
+}
+
+P4IPRewriterInput::P4IPRewriterInput()
+    : kind(i_drop), count(0), failures(0), foutput(-1), routput(-1) {
+  pattern = 0;
 }
 
 int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid,
@@ -362,7 +368,7 @@ void P4IPRewriterEntry::p4add(int instance_id) {
   IPFlowID _rw_flow = _rw_entry->_flowid;
   std::ostringstream os;
 
-  os << "{\"instance_id\": " << instance_id
+  os << "{\"magic\": \"sonic-fnrg\", \"instance_id\": " << instance_id
      << ","
         "\"table_name\": \"ipRewriter.IpRewriter_exact\","
         "\"match_fields\": {"
@@ -382,7 +388,7 @@ void P4IPRewriterEntry::p4add(int instance_id) {
   std::string data = os.str(); // .str() returns temporary
 
   CURL *curl;
-  CURLcode res;
+  // CURLcode res;
   curl = curl_easy_init();
   if (curl) {
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
@@ -394,7 +400,8 @@ void P4IPRewriterEntry::p4add(int instance_id) {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     printf("curl: %s\n", data.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-    res = curl_easy_perform(curl);
+    curl_easy_perform(curl);
+    // res = curl_easy_perform(curl);
     // std::cout << curl_easy_strerror(res) << std::endl;
   }
   curl_easy_cleanup(curl);
