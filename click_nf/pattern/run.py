@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 import argparse
 import os
+import sys
+import subprocess
 
 
 def getargs():
@@ -32,6 +34,11 @@ if __name__ == "__main__":
     if args.debug:
         print(cmd)
 
-    os.system(cmd)
-    # result = os.popen(cmd).read()
-    # print(result)
+    try:
+        retcode = subprocess.call(cmd, shell=True)
+        if retcode < 0:
+            print("Child was terminated by signal", retcode, file=sys.stderr)
+        else:
+            print("Child returned", retcode, file=sys.stderr)
+    except OSError as e:
+        print("Execution failed:", e, file=sys.stderr)
