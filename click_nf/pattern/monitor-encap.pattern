@@ -1,0 +1,12 @@
+// $1 : port
+require(package "p4sfc");
+
+mn :: SampleMonitor();
+ec :: P4SFCEncap();
+
+FromDevice($1) -> [0]ec;
+
+ec[0] -> mn 
+      -> [1]ec
+
+ec[1] -> Discard;
