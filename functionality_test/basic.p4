@@ -93,9 +93,7 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     action drop() {
-        if(meta.re.a == 0) {
-            mark_to_drop(standard_metadata);
-        }
+	mark_to_drop(standard_metadata);
     }
     
     action resubmit_action(bit<32> dstAddr) {
