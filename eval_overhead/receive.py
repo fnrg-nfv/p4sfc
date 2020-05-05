@@ -4,9 +4,9 @@ import struct
 import os
 
 from scapy.all import sniff, sendp, hexdump, get_if_list, get_if_hwaddr
-from scapy.all import Packet, IPOption
+from scapy.all import Packet, IPOption, bind_layers
 from scapy.all import ShortField, IntField, LongField, BitField, FieldListField, FieldLenField
-from scapy.all import IP, TCP, UDP, Raw
+from scapy.all import IP, TCP, UDP, Raw, Ether
 from scapy.layers.inet import _IPOption_HDR
 
 def get_if():
@@ -15,7 +15,7 @@ def get_if():
     for i in get_if_list():
         if "eth0" in i:
             iface=i
-            break;
+            break
     if not iface:
         print "Cannot find eth0 interface"
         exit(1)
@@ -33,14 +33,28 @@ class IPOption_MRI(IPOption):
                                    [],
                                    IntField("", 0),
                                    length_from=lambda pkt:pkt.count*4) ]
+
+class sfc(Packet):
+    fields_desc = [ BitField("chainId", 0, 16),
+                    BitField("chainLength", 0, 16)]
+
+
+class nfs(sfc):
+   fields_desc = [ BitField("nfInstanceId", 0, 15),
+                    BitField("isLast", 0, 1)]
+
+
+bind_layers(sfc, nfs, chainLength=3)
+bind_layers(nfs, nfs, isLast=0)
+bind_layers(nfs, Ether, isLast=1)
+
 def handle_pkt(pkt):
     print "got a packet"
-    print pkt
+    print pkt.show2()
     if TCP in pkt:
         pkt.show2()
     #    hexdump(pkt)
         sys.stdout.flush()
-
 
 def main():
     ifaces = filter(lambda i: 's1-eth2' in i, os.listdir('/sys/class/net/'))
