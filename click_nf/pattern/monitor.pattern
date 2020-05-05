@@ -1,0 +1,8 @@
+// $1 : port
+require(package "p4sfc");
+
+mn :: SampleMonitor();
+
+FromDevice($1)
+    -> mn 
+    -> Discard;

@@ -16,7 +16,7 @@ src -> Print(in)
 rt[0] -> outq;
 
 rt[1] 
-    // -> IPsecESPEncap(FFFFFFFF) 
+    -> IPsecESPEncap(FFFFFFFF) 
     // -> IPsecAuthHMACSHA1(0)
     // -> IPsecAES(1)
     // -> IPsecEncap(50)
