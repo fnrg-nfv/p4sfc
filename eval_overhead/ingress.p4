@@ -2,15 +2,34 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<16> TYPE_IPV4 = 0x800;
 
-/*************************************************************************
-*********************** H E A D E R S  ***********************************
-*************************************************************************/
 
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<16> transport_port_t;
+
+// support ethernet type
+const bit<16> TYPE_IPV4 = 0x800;
+
+// support ipv4 protocol type
+const bit<16> PROTOCOL_ICMP = 0x0001;
+const bit<16> PROTOCOL_TCP = 0x0006;
+const bit<16> PROTOCOL_UDP = 0x0007;
+
+
+/*************************************************************************
+*********************** H E A D E R S  ***********************************
+*************************************************************************/
+header sfc_t {
+    bit<16> chainId;
+    bit<16> chainLength;
+}
+
+header nf_t {
+    bit<15> nfInstanceId;
+    bit<1>  isLast;
+}
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -33,18 +52,20 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
-struct resubmit_t {
-    bit<8> a;
-    bit<8> b;
-}
-
-struct metadata {
-    resubmit_t re;
+header tcp_udp_t {
+    bit<16>     srcPort;
+    bit<16>     dstPort;
 }
 
 struct headers {
-    ethernet_t   ethernet;
-    ipv4_t       ipv4;
+    sfc_t sfc;
+    nf_t[10] nfs;
+    ethernet_t  ethernet;
+    ipv4_t      ipv4;
+    tcp_udp_t   tcp_udp;
+}
+
+struct metadata {
 }
 
 /*************************************************************************
@@ -70,19 +91,18 @@ parser MyParser(packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        transition accept;
+        transition select((bit<16>)hdr.ipv4.protocol) {
+            PROTOCOL_TCP: parse_tcp_udp;
+            PROTOCOL_UDP: parse_tcp_udp;
+            default: accept;
+        }
     }
 
+    state parse_tcp_udp {
+        packet.extract(hdr.tcp_udp);
+        transition accept;
+    }
 }
-
-/*************************************************************************
-************   C H E C K S U M    V E R I F I C A T I O N   *************
-*************************************************************************/
-
-control MyVerifyChecksum(inout headers hdr, inout metadata meta) {   
-    apply {  }
-}
-
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -91,32 +111,50 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-
     action drop() {
-	mark_to_drop(standard_metadata);
+        mark_to_drop(standard_metadata);
     }
-    
-    action resubmit_action(bit<32> dstAddr) {
-        hdr.ipv4.dstAddr = dstAddr;
-        // resubmit(meta);
-        recirculate(meta);
+
+    action port_forward(macAddr_t dstAddr, egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
     }
-    
-    table ipv4_lpm {
+
+    table port_exact {
         key = {
-            hdr.ipv4.dstAddr: lpm;
+            standard_metadata.ingress_port: exact;
         }
         actions = {
-            resubmit_action;
+            port_forward;
             drop;
             NoAction;
         }
         size = 1024;
         default_action = drop();
     }
+
+    action add_p4sfc_headers() {
+        hdr.sfc.setValid();
+        hdr.sfc.chainId = 0;
+        hdr.sfc.chainLength = 3;
+        
+        hdr.nfs[0].setValid();
+        hdr.nfs[0].nfInstanceId = 0;
+        hdr.nfs[0].isLast = 0;
+    
+        hdr.nfs[1].setValid();
+        hdr.nfs[1].nfInstanceId = 1;
+        hdr.nfs[1].isLast = 0;
+        
+        hdr.nfs[2].setValid();
+        hdr.nfs[2].nfInstanceId = 2;
+        hdr.nfs[2].isLast = 1;
+    }
     
     apply {
-        ipv4_lpm.apply();
+        add_p4sfc_headers();
+        port_exact.apply();
     }
 }
 
@@ -131,28 +169,45 @@ control MyEgress(inout headers hdr,
 }
 
 /*************************************************************************
+*********************** C H E C K S U M  *********************************
+*************************************************************************/
+
+
+/*************************************************************************
+************   C H E C K S U M    V E R I F I C A T I O N   *************
+*************************************************************************/
+
+control MyVerifyChecksum(inout headers hdr, inout metadata meta) {   
+    apply {  }
+}
+
+/*************************************************************************
 *************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
 
-control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
-     apply {
-	update_checksum(
-	    hdr.ipv4.isValid(),
-            { hdr.ipv4.version,
-	      hdr.ipv4.ihl,
-              hdr.ipv4.diffserv,
-              hdr.ipv4.totalLen,
-              hdr.ipv4.identification,
-              hdr.ipv4.flags,
-              hdr.ipv4.fragOffset,
-              hdr.ipv4.ttl,
-              hdr.ipv4.protocol,
-              hdr.ipv4.srcAddr,
-              hdr.ipv4.dstAddr },
+control MyComputeChecksum(inout headers hdr, inout metadata meta) {
+    apply {
+        update_checksum(
+            hdr.ipv4.isValid(),
+            {
+                hdr.ipv4.version,
+                hdr.ipv4.ihl,
+                hdr.ipv4.diffserv,
+                hdr.ipv4.totalLen,
+                hdr.ipv4.identification,
+                hdr.ipv4.flags,
+                hdr.ipv4.fragOffset,
+                hdr.ipv4.ttl,
+                hdr.ipv4.protocol,
+                hdr.ipv4.srcAddr,
+                hdr.ipv4.dstAddr
+            },
             hdr.ipv4.hdrChecksum,
-            HashAlgorithm.csum16);
+            HashAlgorithm.csum16
+        );
     }
 }
+
 
 /*************************************************************************
 ***********************  D E P A R S E R  *******************************
@@ -160,8 +215,11 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
+        packet.emit(hdr.sfc);
+        packet.emit(hdr.nfs);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
+        packet.emit(hdr.tcp_udp);
     }
 }
 

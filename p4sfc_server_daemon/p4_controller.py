@@ -30,19 +30,19 @@ class P4Controller(object):
         )
         self.network_switch_connection.MasterArbitrationUpdate()
 
-        # self.server_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
-        #     '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
-        # self.server_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
-        #     name='s4',
-        #     address='127.0.0.1:50054',
-        #     device_id=3,
-        #     proto_dump_file='../configurable_p4_demo/logs/s4-p4runtime-requests.txt'
-        # )
-        # self.server_switch_connection.MasterArbitrationUpdate()
+        self.server_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
+            '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
+        self.server_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
+            name='s4',
+            address='127.0.0.1:50054',
+            device_id=3,
+            proto_dump_file='../configurable_p4_demo/logs/s4-p4runtime-requests.txt'
+        )
+        self.server_switch_connection.MasterArbitrationUpdate()
 
-        # self.server_switch_connection.SetForwardingPipelineConfig(p4info=self.server_switch_p4info_helper.p4info,
-        #                                bmv2_json_file_path="../configurable_p4_demo/build/p4sfc_server_pkt_distribution.json")
-        # print 'Server switch config successfully...\n'
+        self.server_switch_connection.SetForwardingPipelineConfig(p4info=self.server_switch_p4info_helper.p4info,
+                                       bmv2_json_file_path="../configurable_p4_demo/build/p4sfc_server_pkt_distribution.json")
+        print 'Server switch config successfully...\n'
 
     def __get_prefix(self, stage_id):
         return "MyIngress.elementControl_%d" % (stage_id % 5)

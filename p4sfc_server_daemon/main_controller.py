@@ -47,7 +47,7 @@ def deploy_chain():
 @app.route('/insert_entry', methods=["POST"])
 def insert_entry():
     data = request.get_json()
-    if data.get("key") is None:
+    if data.get("magic") != "sonic-fnrg":
         return "Bad packet"
     instance_id = data.get("instance_id")
     print 'instance_id %d\n' % instance_id

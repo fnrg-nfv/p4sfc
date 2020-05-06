@@ -66,3 +66,15 @@ Switch ubuntu version from 18.04 to **16.04**. Run *root-bootstrap.sh* and *user
 - [CONCEPT] diff ingress & egress in v1model;
 - design **state** communicaiton between docker and p4switch;
 - **sfc workflow** design.
+
+
+## Evaluation
+
+- service chain configuration time. (length from 3 to 10)
+- recirculate overhead analysis
+- 三类NF对比，click与offload的latency和throughput对比。
+- chain latency and throughput comparasion with click and click-fast (e.g., click-dpdk)
+- whole chain unoffloadable situation (NFP). 需要对比一下我们的方案和直接用click构建chain的方案开销。那个分发估计时延会比较大，但可以说我们兼容其他分发方式。
+- ---
+- Naive卸载策略和我们卸载策略对比。
+- rule write time
