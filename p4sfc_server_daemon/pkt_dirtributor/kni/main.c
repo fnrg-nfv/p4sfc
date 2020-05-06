@@ -79,6 +79,11 @@
 /*
  * Structure of port parameters
  */
+struct tx_buffer {
+	uint8_t size;
+	struct rte_mbuf *pkts[PKT_BURST_SZ];
+};
+
 struct kni_port_params {
 	uint16_t port_id;/* Port ID */
 	unsigned lcore_rx; /* lcore ID for RX */
@@ -87,6 +92,8 @@ struct kni_port_params {
 	uint32_t nb_kni; /* Number of KNI devices to be created */
 	unsigned lcore_k[KNI_MAX_KTHREAD]; /* lcore ID list for kthreads */
 	struct rte_kni *kni[KNI_MAX_KTHREAD]; /* KNI context pointers */
+	struct tx_buffer *buffer[KNI_MAX_KTHREAD]; // buffer 为了 high-performance
+	
 } __rte_cache_aligned;
 
 static struct kni_port_params *kni_port_params_array[RTE_MAX_ETHPORTS];
@@ -133,6 +140,7 @@ static int kni_config_mac_address(uint16_t port_id, uint8_t mac_addr[]);
 
 static rte_atomic32_t kni_stop = RTE_ATOMIC32_INIT(0);
 static rte_atomic32_t kni_pause = RTE_ATOMIC32_INIT(0);
+
 
 /* Print out statistics on packets handled */
 static void
@@ -196,6 +204,20 @@ kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 	for (i = 0; i < num; i++) {
 		rte_pktmbuf_free(pkts[i]);
 		pkts[i] = NULL;
+	}
+}
+
+static void
+my_kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
+{
+	unsigned i;
+
+	if (pkts == NULL)
+		return;
+
+	for (i = 0; i < num; i++) {
+		rte_pktmbuf_free(pkts[i]);
+		// pkts[i] = NULL;
 	}
 }
 
@@ -277,26 +299,38 @@ kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 // }
 
 static void
-p4sfc_forward(struct rte_mbuf *m)
+p4sfc_forward(struct rte_mbuf **m, struct kni_port_params *p, unsigned num)
+// p4sfc_forward(struct rte_mbuf *m, struct kni_port_params *p)
 {
-	// printf("Receive pkt from click\n");
-	uint16_t magic = *(uint16_t *)((char *)m->buf_addr + m->data_off);
-	printf("%d\n", magic);
-	// printf("%d\n", m->data_off);
-	// printf("%d\n\n", m->buf_addr);
+	// p->buffer[1]->pkts[p->buffer[1]->size++] = m;
+	// if (p->buffer[1]->size == 32) {
+	// 	printf("sadf\n");
+	// 	rte_kni_tx_burst(p->kni[1], p->buffer[1]->pkts, p->buffer[1]->size);
+	// 	p->buffer[1]->size = 0;
+	// }
+
+	// struct rte_mbuf *pkts_burst[num];
+	unsigned nb_tx;
+	for( int i =0; i<num; i++){
+		p->buffer[1]->pkts[p->buffer[1]->size++] = m[i];
+		if (p->buffer[1]->size == 32) {
+			nb_tx = rte_kni_tx_burst(p->kni[1], p->buffer[1]->pkts, p->buffer[1]->size);
+			// if (unlikely(nb_tx < 32)) {
+			// 	my_kni_burst_free_mbufs(p->buffer[1]->pkts[nb_tx], 32 - nb_tx);
+			// }
+			p->buffer[1]->size = 0;
+		}
+	}
+	kni_burst_free_mbufs(m, num); // TODO: 应该不能在这里free，但是不free的话会OOM，应该在哪里free呢？
+
+	// pkts_burst[0] = m;
+	// rte_kni_tx_burst(p->kni[1], pkts_burst, num);
+	// rte_kni_handle_request(p->kni[1]);
+	// uint16_t magic = *(uint16_t *)((char *)m->buf_addr + m->data_off);
+	// printf("%d\n", magic);
 	// if (magic == 255) {
 	// 	printf("Receive successfully\n");
 	// }
-
-	// dst_port = l2fwd_dst_ports[portid];
-
-	// if (mac_updating)
-	// 	l2fwd_mac_updating(m, dst_port);
-
-	// buffer = tx_buffer[dst_port];
-	// sent = rte_eth_tx_buffer(dst_port, 0, buffer, m);
-	// if (sent)
-	// 	port_statistics[dst_port].tx += sent;
 }
 
 static void
@@ -358,11 +392,18 @@ kni_egress(struct kni_port_params *p)
 			RTE_LOG(ERR, APP, "Error receiving from KNI\n");
 			return;
 		}
-		for (i = 0; i < num; i++) {
-			m = pkts_burst[i];
-			rte_prefetch0(rte_pktmbuf_mtod(m, void *));
-			p4sfc_forward(m);
-		}
+		// for (i = 0; i < num; i++) {
+		// 	m = pkts_burst[i];
+		// 	rte_prefetch0(rte_pktmbuf_mtod(m, void *));
+		// 	p4sfc_forward(m, p);
+		// }
+		p4sfc_forward(pkts_burst, p, num);
+		// nb_tx = rte_kni_tx_burst(p->kni[1], pkts_burst, num);
+		// rte_kni_handle_request(p->kni[1]);
+		// if (unlikely(nb_tx < num)) {
+		// 	/* Free mbufs not tx to kni interface */
+		// 	kni_burst_free_mbufs(&pkts_burst[nb_tx], num - nb_tx);
+		// }
 	}
 }
 
@@ -1060,6 +1101,9 @@ kni_alloc(uint16_t port_id)
 			rte_exit(EXIT_FAILURE, "Fail to create kni for "
 						"port: %d\n", port_id);
 		params[port_id]->kni[i] = kni;
+		printf("%d\n", sizeof(struct tx_buffer));
+		printf("%d\n", sizeof(struct tx_buffer *));
+		params[port_id]->buffer[i] = (struct tx_buffer *)rte_zmalloc("pkt_buffer", sizeof(struct tx_buffer), 0);
 	}
 
 	return 0;
