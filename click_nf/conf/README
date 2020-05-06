@@ -1,5 +1,8 @@
-run scripted click router by following commands: (details: ./run.py -h)
+CLICK-BASED NETWORK FUNCTION: 
 
-```bash
-sudo ./run.py [pattern-file] [-i/--id id] [nargs]
-```
+- NAT         : nat.click
+- firewall    : firewall.click
+- monitor     : monitor.click
+* IDS         : IDS.click           based on snort
+* VPN         : vpn.click
+- forwarder   : forwarder.click
