@@ -39,14 +39,14 @@ c1 :: Classifier(12/0806 20/0001,
                   12/0800,
                   -);
   
-FromDevice(eth0) -> [0]c0;
-FromDevice(eth1) -> [0]c1;
+FromDevice(vethm0) -> [0]c0;
+FromDevice(vethm1) -> [0]c1;
  
  
-out0 :: Queue(200) -> ToDevice(eth0);
-out1 :: Queue(200) -> ToDevice(eth1);
+out0 :: Queue(200) -> ToDevice(vethm0);
+out1 :: Queue(200) -> ToDevice(vethm1);
 //This packet goes to linux stack
-tol :: ToHost();
+// tol :: ToHost();
   
 // An "ARP querier" for each interface.
 arpq0 :: ARPQuerier(18.26.4.24, 00:50:BF:01:0C:91);
@@ -56,7 +56,7 @@ arpq1 :: ARPQuerier(18.26.7.1, 00:50:BF:01:0C:5D);
 t :: Tee(3);
 c0[1] -> t;
 c1[1] -> t;
-t[0] -> tol;
+t[0] -> out0;
 t[1] ->[1]arpq0
 t[2] ->[1]arpq1
  
@@ -96,7 +96,8 @@ c1[0] -> ar1 -> out1;
 		        18.26.4.1/32 3, 
 		        18.26.7.1/32 2,
 		        18.26.7.0/24 4,  	
-		        18.26.8.0/24 18.26.4.1 1 234 ABCDEFFF001DEFD2354550FE40CD708E 112233EE556677888877665544332211 300 64);
+		      //   18.26.8.0/24 18.26.4.1 1 234 ABCDEFFF001DEFD2354550FE40CD708E 112233EE556677888877665544332211 300 64);
+		        18.26.8.0/24 1);
  
 // IPsec incoming packet IP table visit order 
 // rt[0]->rt[4]
@@ -114,7 +115,7 @@ c1[2] -> Paint(2) -> ip;
  
 // IP packets for this machine.
 // ToHost expects ethernet packets, so cook up a fake header.
-rt[2] -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> tol;
+rt[2] -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> out0;
  
 //1 entering the ipsec tunnel...
 //ESP Encapsulate -> Authenticate -> Encrypt -> IP Encapsulate -> send back to IP routing table 
