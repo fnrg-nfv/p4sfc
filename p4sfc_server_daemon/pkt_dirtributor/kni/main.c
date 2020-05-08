@@ -42,6 +42,9 @@
 #include <rte_malloc.h>
 #include <rte_kni.h>
 
+#include <rte_hash.h>
+#include <rte_hash_crc.h>
+
 /* Macros for printing using RTE_LOG */
 #define RTE_LOGTYPE_APP RTE_LOGTYPE_USER1
 
@@ -76,14 +79,17 @@
 #define KNI_SECOND_PER_DAY      86400
 
 #define KNI_MAX_KTHREAD 32
-/*
- * Structure of port parameters
- */
+
+#define P4SFC_MAX_NF_INSTANCE 256
+
 struct tx_buffer {
 	uint8_t size;
 	struct rte_mbuf *pkts[PKT_BURST_SZ];
 };
 
+/*
+ * Structure of port parameters
+ */
 struct kni_port_params {
 	uint16_t port_id;/* Port ID */
 	unsigned lcore_rx; /* lcore ID for RX */
@@ -98,6 +104,13 @@ struct kni_port_params {
 
 static struct kni_port_params *kni_port_params_array[RTE_MAX_ETHPORTS];
 
+struct kni_position {
+	uint16_t port_index;
+	uint32_t kni_index;
+};
+
+static struct rte_hash *nf_instance_id_2_kni;
+static struct kni_position *kni_positions[P4SFC_MAX_NF_INSTANCE];
 
 /* Options for configuring ethernet port */
 static struct rte_eth_conf port_conf = {
@@ -207,6 +220,16 @@ kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 	}
 }
 
+static inline uint32_t
+hash_crc(const void *data, __rte_unused uint32_t data_len,
+		uint32_t init_val)
+{
+	const uint16_t *nf_instance_id;
+	nf_instance_id = data;
+	init_val = rte_hash_crc_4byte((uint32_t)*nf_instance_id, init_val);
+	return init_val;
+}
+
 static void
 my_kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 {
@@ -298,7 +321,7 @@ my_kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 // }
 
 static void
-p4sfc_forward(struct rte_mbuf **m, struct kni_port_params *p, unsigned num)
+p4sfc_forward(struct rte_mbuf **m, unsigned num)
 // p4sfc_forward(struct rte_mbuf *m, struct kni_port_params *p)
 {
 	// p->buffer[1]->pkts[p->buffer[1]->size++] = m;
@@ -311,14 +334,23 @@ p4sfc_forward(struct rte_mbuf **m, struct kni_port_params *p, unsigned num)
 	// struct rte_mbuf *pkts_burst[num];
 	unsigned nb_tx;
 	unsigned i;
+	int hash_index;
+	struct kni_position *position;
+	uint16_t nf_instance_id = 1;
+	struct kni_port_params *p;
+	uint32_t kni_index;
 	for( i = 0; i < num; i++){
-		p->buffer[1]->pkts[p->buffer[1]->size++] = m[i];
-		if (p->buffer[1]->size == 32) {
-			nb_tx = rte_kni_tx_burst(p->kni[1], p->buffer[1]->pkts, p->buffer[1]->size);
+		hash_index = rte_hash_lookup((const struct rte_hash *)nf_instance_id_2_kni, (const void *)&nf_instance_id);
+		position = kni_positions[hash_index];
+		p = kni_port_params_array[position->port_index];
+		kni_index = position->kni_index;
+		p->buffer[kni_index]->pkts[p->buffer[kni_index]->size++] = m[i];
+		if (p->buffer[kni_index]->size == 32) {
+			nb_tx = rte_kni_tx_burst(p->kni[kni_index], p->buffer[kni_index]->pkts, p->buffer[kni_index]->size);
 			if (unlikely(nb_tx < 32)) {
-				my_kni_burst_free_mbufs(&p->buffer[1]->pkts[nb_tx], 32 - nb_tx);
+				my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], 32 - nb_tx);
 			}
-			p->buffer[1]->size = 0;
+			p->buffer[kni_index]->size = 0;
 		}
 	}
 
@@ -393,7 +425,7 @@ kni_egress(struct kni_port_params *p)
 		// 	rte_prefetch0(rte_pktmbuf_mtod(m, void *));
 		// 	p4sfc_forward(m, p);
 		// }
-		p4sfc_forward(pkts_burst, p, num);
+		p4sfc_forward(pkts_burst, num);
 		// nb_tx = rte_kni_tx_burst(p->kni[1], pkts_burst, num);
 		// rte_kni_handle_request(p->kni[1]);
 		// if (unlikely(nb_tx < num)) {
@@ -1204,6 +1236,31 @@ main(int argc, char** argv)
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE,
 			"Could not create link status thread!\n");
+
+	/*初始化hash查询表 */
+	struct rte_hash_parameters hash_params = {
+		.name = NULL,
+		.entries = P4SFC_MAX_NF_INSTANCE,
+		.key_len = 2,
+		.hash_func = hash_crc,
+		.hash_func_init_val = 0,
+	};
+
+	nf_instance_id_2_kni = rte_hash_create(&hash_params);
+	if (nf_instance_id_2_kni == NULL)
+		rte_exit(EXIT_FAILURE,
+			"Unable to create the nat hash on socket %d\n",
+			0);
+	
+
+	/*往hashtable里加条目用于测试*/
+	struct kni_position *position = (struct kni_position *)rte_malloc(NULL, sizeof(*position), 0);
+	position->port_index = 0;
+	position->kni_index = 1;
+	uint16_t nf_instance_id = 1;
+	int hash_index = ret = rte_hash_add_key((const struct rte_hash *)nf_instance_id_2_kni, (const void *)&nf_instance_id);
+	kni_positions[hash_index] = position;
+
 
 	/* Launch per-lcore function on every lcore */
 	rte_eal_mp_remote_launch(main_loop, NULL, CALL_MASTER);
