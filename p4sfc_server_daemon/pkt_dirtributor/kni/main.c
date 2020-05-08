@@ -202,7 +202,7 @@ kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 		return;
 
 	for (i = 0; i < num; i++) {
-		rte_pktmbuf_free(pkts[i]);
+		// rte_pktmbuf_free(pkts[i]);
 		pkts[i] = NULL;
 	}
 }
@@ -217,7 +217,6 @@ my_kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 
 	for (i = 0; i < num; i++) {
 		rte_pktmbuf_free(pkts[i]);
-		// pkts[i] = NULL;
 	}
 }
 
@@ -311,17 +310,17 @@ p4sfc_forward(struct rte_mbuf **m, struct kni_port_params *p, unsigned num)
 
 	// struct rte_mbuf *pkts_burst[num];
 	unsigned nb_tx;
-	for( int i =0; i<num; i++){
+	unsigned i;
+	for( i = 0; i < num; i++){
 		p->buffer[1]->pkts[p->buffer[1]->size++] = m[i];
 		if (p->buffer[1]->size == 32) {
 			nb_tx = rte_kni_tx_burst(p->kni[1], p->buffer[1]->pkts, p->buffer[1]->size);
-			// if (unlikely(nb_tx < 32)) {
-			// 	my_kni_burst_free_mbufs(p->buffer[1]->pkts[nb_tx], 32 - nb_tx);
-			// }
+			if (unlikely(nb_tx < 32)) {
+				my_kni_burst_free_mbufs(&p->buffer[1]->pkts[nb_tx], 32 - nb_tx);
+			}
 			p->buffer[1]->size = 0;
 		}
 	}
-	kni_burst_free_mbufs(m, num); // TODO: 应该不能在这里free，但是不free的话会OOM，应该在哪里free呢？
 
 	// pkts_burst[0] = m;
 	// rte_kni_tx_burst(p->kni[1], pkts_burst, num);
@@ -374,17 +373,14 @@ static void
 kni_egress(struct kni_port_params *p)
 {
 	uint8_t i;
-	uint16_t port_id;
-	unsigned nb_tx, num;
+	unsigned num;
 	uint32_t nb_kni;
 	struct rte_mbuf *pkts_burst[PKT_BURST_SZ];
-	struct rte_mbuf *m;
 
 	if (p == NULL)
 		return;
 
 	nb_kni = p->nb_kni;
-	port_id = p->port_id;
 	for (i = 0; i < nb_kni; i++) {
 		/* Burst rx from kni */
 		num = rte_kni_rx_burst(p->kni[i], pkts_burst, PKT_BURST_SZ);
@@ -1101,8 +1097,6 @@ kni_alloc(uint16_t port_id)
 			rte_exit(EXIT_FAILURE, "Fail to create kni for "
 						"port: %d\n", port_id);
 		params[port_id]->kni[i] = kni;
-		printf("%d\n", sizeof(struct tx_buffer));
-		printf("%d\n", sizeof(struct tx_buffer *));
 		params[port_id]->buffer[i] = (struct tx_buffer *)rte_zmalloc("pkt_buffer", sizeof(struct tx_buffer), 0);
 	}
 
