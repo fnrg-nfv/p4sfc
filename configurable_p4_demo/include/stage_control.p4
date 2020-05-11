@@ -20,10 +20,10 @@ control StageControl(inout headers hdr,
             hdr.sfc.chainId: exact;
             meta.curNfInstanceId: exact;
         }
-        // size = 1024;
-        const entries = {
-            (0, 0): set_stage(0);
-        }
+        size = 1024;
+        // const entries = {
+        //     (0, 0): set_stage(0);
+        // }
         default_action = no_stage();
     }
 

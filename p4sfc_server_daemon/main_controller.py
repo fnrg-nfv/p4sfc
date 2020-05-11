@@ -66,6 +66,15 @@ def insert_entry():
     p4_controller.insert_entry(chain_id, nf_id, stage_index, entry_info)
     return "OK"
 
+@app.route("/insert_route", methods=["POST"])
+def insert_route():
+    data = request.get_json()
+    chain_id = data.get("chain_id")
+    chain_length = data.get("chain_length")
+    output_port = data.get("output_port")
+    p4_controller.insert_route(chain_id, chain_length, output_port)
+    return "OK"
+
 
 @app.route('/delete_entry', methods=["POST"])
 def delete_entry():
