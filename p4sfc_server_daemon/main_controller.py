@@ -1,5 +1,6 @@
 from flask import Flask, request
 import argparse
+import time
 from p4_controller import P4Controller
 from control_rule_generator import SFC
 from click_nf_runner import start_nfs
@@ -41,6 +42,7 @@ def deploy_chain():
     # config pkt process logic
     global p4_controller
     p4_controller.config_pipeline(sfc)
+    print "Configure pipeline for chain %d successfully...\n  Time: %d ms\n" % (chain_id, time.time()*1000)
     return "OK"
 
 
@@ -64,6 +66,16 @@ def insert_entry():
     }
     print entry_info
     p4_controller.insert_entry(chain_id, nf_id, stage_index, entry_info)
+    return "OK"
+
+@app.route("/insert_route", methods=["POST"])
+def insert_route():
+    data = request.get_json()
+    chain_id = data.get("chain_id")
+    chain_length = data.get("chain_length")
+    output_port = data.get("output_port")
+    p4_controller.insert_route(chain_id, chain_length, output_port)
+    print "Add route info for chain %d successfully...\n  Time: %d ms\n" % (chain_id, time.time()*1000)
     return "OK"
 
 

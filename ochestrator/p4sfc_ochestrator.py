@@ -2,7 +2,7 @@
 from flask import Flask, request
 import requests
 import json
-
+import time
 import os
 import sys
 
@@ -70,6 +70,21 @@ def parse_chain(chain_desc):
     nf_groups[cur_location] = cur_group
     return nf_groups
 
+def parse_route(chain_route, nf_groups, chain_id, chain_length):
+    route_infos = {}
+    for switch in  chain_route:
+        if switch != "egress" and switch != "ingress":
+            num_nfs =  len(nf_groups.get(switch)) if nf_groups.get(switch) != None else 0
+            chain_length = chain_length - num_nfs    
+            route_infos[switch] = {
+                "chain_id": chain_id,
+                "chain_length": chain_length,
+                "output_port": 0 # 硬编码一下，本来应该根据拓扑决定
+            }
+    return route_infos
+
+
+
 
 @app.route('/test')
 def test():
@@ -78,14 +93,17 @@ def test():
 
 @app.route('/deploy_chain', methods=['POST'])
 def deploy_chain():
+    global chain_id
+    global server_addr
+    global headers
+
+    print "Receive deploy request....\n  Chain_id: %d\n  Time: %d ms\n" % (chain_id, time.time()*1000)
+
     data = request.get_json()
     chain_desc = data.get("chain_desc")
     chain_length = len(chain_desc)
     nf_groups = parse_chain(chain_desc)
 
-    global chain_id
-    global server_addr
-    global headers
     for location, nfs in nf_groups.iteritems():
         url = server_addr[location] + "/deploy_chain"
         payload = {
@@ -98,7 +116,19 @@ def deploy_chain():
                          data=json.dumps(payload))
 
     chain_route = data.get("route")
-    print "Chain route config has not been implenmented..."
+    chain_length = len(chain_desc)
+    route_infos = parse_route(chain_route, nf_groups, chain_id, chain_length)
+    for switch, route_info in route_infos.iteritems():
+        url = server_addr[switch] + "/insert_route"
+        payload = {
+            "chain_id": route_info["chain_id"],
+            "chain_length": route_info["chain_length"],
+            "output_port": route_info["output_port"]
+        }
+        requests.request("POST", url, headers=headers,
+                         data=json.dumps(payload))
+
+    chain_id = chain_id + 1
     return "OK"
 
 
