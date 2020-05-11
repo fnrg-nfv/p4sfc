@@ -2,7 +2,7 @@
 from flask import Flask, request
 import requests
 import json
-
+import time
 import os
 import sys
 
@@ -79,7 +79,7 @@ def parse_route(chain_route, nf_groups, chain_id, chain_length):
             route_infos[switch] = {
                 "chain_id": chain_id,
                 "chain_length": chain_length,
-                "output_port": 0, # 硬编码一下，本来应该根据拓扑决定
+                "output_port": 0 # 硬编码一下，本来应该根据拓扑决定
             }
     return route_infos
 
@@ -93,14 +93,17 @@ def test():
 
 @app.route('/deploy_chain', methods=['POST'])
 def deploy_chain():
+    global chain_id
+    global server_addr
+    global headers
+
+    print "Receive deploy request....\n  Chain_id: %d\n  Time: %f\n" % (chain_id, time.time())
+
     data = request.get_json()
     chain_desc = data.get("chain_desc")
     chain_length = len(chain_desc)
     nf_groups = parse_chain(chain_desc)
 
-    global chain_id
-    global server_addr
-    global headers
     for location, nfs in nf_groups.iteritems():
         url = server_addr[location] + "/deploy_chain"
         payload = {
