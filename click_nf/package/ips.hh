@@ -17,13 +17,16 @@ public:
 
   void push(int, Packet *);
 
-  class IPSPattern {
-    uint32_t len;
-    char *p;
+  struct IPSPattern {
+    const uint32_t len;
+    const char *data;
   };
+  void parse_pattern(String &s);
+  bool pattern_match(IPSPattern &pt, Packet *p);
 
 protected:
   Vector<IPSPattern> patterns;
+  void print_patterns(void);
 };
 
 CLICK_ENDDECLS

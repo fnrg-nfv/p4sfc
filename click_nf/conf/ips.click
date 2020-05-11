@@ -5,7 +5,7 @@ src :: InfiniteSource( DATA \< 00 00 00 00 00 00 00 00 00 00 00 00 08 00 45
 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00>, LIMIT 2, STOP
 true)
 
-ips :: SampleIPS(00 01 02 03, 04 05 06 07);
+ips :: SampleIPS(08 00 45 00, 04 05 06 07);
 
 src -> ips;
 
