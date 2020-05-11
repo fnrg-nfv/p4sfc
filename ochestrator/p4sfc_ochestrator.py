@@ -97,7 +97,7 @@ def deploy_chain():
     global server_addr
     global headers
 
-    print "Receive deploy request....\n  Chain_id: %d\n  Time: %f\n" % (chain_id, time.time())
+    print "Receive deploy request....\n  Chain_id: %d\n  Time: %d ms\n" % (chain_id, time.time()*1000)
 
     data = request.get_json()
     chain_desc = data.get("chain_desc")
