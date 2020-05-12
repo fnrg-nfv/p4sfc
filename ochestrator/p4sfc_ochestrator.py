@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-import const
 from flask import Flask, request, jsonify
 import requests
 import json
@@ -12,6 +11,7 @@ import sys
 sys.path.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)),
                  '../utils/'))
+import const
 
 
 def addr2dec(addr):
