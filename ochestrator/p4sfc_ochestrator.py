@@ -27,8 +27,8 @@ def dec2addr(dec):
 app = Flask(__name__)
 chain_id = 0
 server_addr = {
-    "s1": "http://10.149.252.25:8090",
-    "s2": "http://10.149.252.26:8090",
+    # "s1": "http://10.149.252.25:8090",
+    # "s2": "http://10.149.252.26:8090",
     "s3": "http://10.149.252.27:8090"
 }
 headers = {
@@ -133,6 +133,21 @@ def deploy_chain():
     chain_id = chain_id + 1
     return "OK"
 
+@app.route('/delete_chain', methods=['POST'])
+def delete_chain():
+    global server_addr
+    global headers
+    data = request.get_json()
+    chain_id = data.get("chain_id")
+    print "Receive delete request....\n  Chain_id: %d\n  Time: %d ms\n" % (chain_id, time.time()*1000)
+    payload = {
+        "chain_id": chain_id
+    }
+    for location, addr in server_addr.iteritems():
+        url = addr + "/delete_chain"
+        requests.request("POST", url, headers=headers,
+                         data=json.dumps(payload))
+    return "OK"
 
 
 if __name__ == '__main__':
