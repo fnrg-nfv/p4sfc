@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
-from flask import Flask, request
+import const
+from flask import Flask, request, jsonify
 import requests
 import json
 import time
@@ -11,7 +12,6 @@ import sys
 sys.path.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)),
                  '../utils/'))
-import const
 
 
 def addr2dec(addr):
@@ -23,6 +23,7 @@ def addr2dec(addr):
 def dec2addr(dec):
     "将十进制整数IP转换成点分十进制的字符串IP地址"
     return ".".join([str(dec >> x & 0xff) for x in [24, 16, 8, 0]])
+
 
 app = Flask(__name__)
 chain_id = 0
@@ -39,7 +40,6 @@ nf_offlodability = {
     "Firewall": const.OFFLOADABLE,
     "IPRewriter": const.PARTIAL_OFFLOADABLE
 }
-
 
 
 def parse_chain(chain_desc):
@@ -72,19 +72,20 @@ def parse_chain(chain_desc):
     nf_groups[cur_location] = cur_group
     return nf_groups
 
+
 def parse_route(chain_route, nf_groups, chain_id, chain_length):
     route_infos = {}
-    for switch in  chain_route:
+    for switch in chain_route:
         if switch != "egress" and switch != "ingress":
-            num_nfs =  len(nf_groups.get(switch)) if nf_groups.get(switch) != None else 0
-            chain_length = chain_length - num_nfs    
+            num_nfs = len(nf_groups.get(switch)) if nf_groups.get(
+                switch) != None else 0
+            chain_length = chain_length - num_nfs
             route_infos[switch] = {
                 "chain_id": chain_id,
                 "chain_length": chain_length,
-                "output_port": 0 # 硬编码一下，本来应该根据拓扑决定
+                "output_port": 0  # 硬编码一下，本来应该根据拓扑决定
             }
     return route_infos
-
 
 
 
@@ -95,11 +96,11 @@ def test():
 
 @app.route('/deploy_chain', methods=['POST'])
 def deploy_chain():
+    receive_time = int(time.time()*1000)
+
     global chain_id
     global server_addr
     global headers
-
-    print "Receive deploy request....\n  Chain_id: %d\n  Time: %d ms\n" % (chain_id, time.time()*1000)
 
     data = request.get_json()
     chain_desc = data.get("chain_desc")
@@ -120,6 +121,7 @@ def deploy_chain():
     chain_route = data.get("route")
     chain_length = len(chain_desc)
     route_infos = parse_route(chain_route, nf_groups, chain_id, chain_length)
+    complete_time = 0
     for switch, route_info in route_infos.iteritems():
         url = server_addr[switch] + "/insert_route"
         payload = {
@@ -127,27 +129,43 @@ def deploy_chain():
             "chain_length": route_info["chain_length"],
             "output_port": route_info["output_port"]
         }
-        requests.request("POST", url, headers=headers,
-                         data=json.dumps(payload))
+        response = requests.request("POST", url, headers=headers,
+                                    data=json.dumps(payload))
+        complete_time = max(int(response.text), complete_time)
+
+    response_payload = {
+        "chain_id": chain_id,
+        "receive_time": receive_time,
+        "complete_time": complete_time
+    }
 
     chain_id = chain_id + 1
-    return str(chain_id - 1) 
+    return jsonify(response_payload)
+
 
 @app.route('/delete_chain', methods=['POST'])
 def delete_chain():
+    receive_time = int(time.time()*1000)
     global server_addr
     global headers
     data = request.get_json()
     chain_id = data.get("chain_id")
-    print "Receive delete request....\n  Chain_id: %d\n  Time: %d ms\n" % (chain_id, time.time()*1000)
     payload = {
         "chain_id": chain_id
     }
+    complete_time = 0
     for location, addr in server_addr.iteritems():
         url = addr + "/delete_chain"
-        requests.request("POST", url, headers=headers,
-                         data=json.dumps(payload))
-    return "OK"
+        response = requests.request("POST", url, headers=headers,
+                                    data=json.dumps(payload))
+        complete_time = max(int(response.text), complete_time)
+
+    response_payload = {
+        "receive_time": receive_time,
+        "complete_time": complete_time
+    }
+
+    return jsonify(response_payload)
 
 
 if __name__ == '__main__':

@@ -18,6 +18,7 @@ nfs = [
     }
 ]
 
+
 def deploy_chain_request(chain_length):
     global servers
     global nfs
@@ -47,9 +48,11 @@ def deploy_chain_request(chain_length):
         'Content-Type': 'application/json'
     }
 
-    chain_id = requests.request("POST", url, headers=headers,
-                         data=json.dumps(payload))
-    return int(chain_id.text)
+    print payload
+    response = requests.request("POST", url, headers=headers,
+                                data=json.dumps(payload))
+    return json.loads(response.text)
+
 
 def delete_chain_request(chain_id):
     url = "http://10.149.252.27:8091/delete_chain"
@@ -60,10 +63,26 @@ def delete_chain_request(chain_id):
         'Content-Type': 'application/json'
     }
 
-    requests.request("POST", url, headers=headers,
-                         data=json.dumps(payload))
+    response = requests.request("POST", url, headers=headers,
+                                data=json.dumps(payload))
+    return json.loads(response.text)
+
+
+def eval_configuration_time(times, chain_length):
+    total_deploy_time = 0
+    total_delete_time = 0
+    for i in range(times):
+        response = deploy_chain_request(chain_length)
+        total_deploy_time = total_deploy_time + \
+            (response["complete_time"] - response["receive_time"])
+        time.sleep(1)
+        response = delete_chain_request(response["chain_id"])
+        total_delete_time = total_delete_time + \
+            (response["complete_time"] - response["receive_time"])
+
+    print "Running time: %d.  Chain_length: %d.\n  Avg deploy time: %d ms.\n  Avg delete time: %d ms.\n" % (
+        times, chain_length, total_deploy_time / times, total_delete_time / times)
+
 
 if __name__ == '__main__':
-    chain_id = deploy_chain_request(5)
-    time.sleep(1)
-    delete_chain_request(chain_id)
+    eval_configuration_time(3, 1)

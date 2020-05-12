@@ -42,16 +42,15 @@ def deploy_chain():
     # config pkt process logic
     global p4_controller
     p4_controller.config_pipeline(sfc)
-    print "Configure pipeline for chain %d successfully...\n  Time: %d ms\n" % (chain_id, time.time()*1000)
     return "OK"
+
 
 @app.route("/delete_chain", methods=["POST"])
 def delete_chain():
     data = request.get_json()
     chain_id = data.get("chain_id")
     p4_controller.delete_pipeline(chain_id)
-    print "Delete pipeline for chain %d successfully...\n  Time: %d ms\n" % (chain_id, time.time()*1000)
-    return "OK"
+    return str(int(time.time()*1000))
 
 
 @app.route('/insert_entry', methods=["POST"])
@@ -76,6 +75,7 @@ def insert_entry():
     p4_controller.insert_entry(chain_id, nf_id, stage_index, entry_info)
     return "OK"
 
+
 @app.route("/insert_route", methods=["POST"])
 def insert_route():
     data = request.get_json()
@@ -83,8 +83,7 @@ def insert_route():
     chain_length = data.get("chain_length")
     output_port = data.get("output_port")
     p4_controller.insert_route(chain_id, chain_length, output_port)
-    print "Add route info for chain %d successfully...\n  Time: %d ms\n" % (chain_id, time.time()*1000)
-    return "OK"
+    return str(int(time.time()*1000))
 
 
 @app.route('/delete_entry', methods=["POST"])
