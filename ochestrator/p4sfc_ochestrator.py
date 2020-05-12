@@ -27,7 +27,9 @@ def dec2addr(dec):
 app = Flask(__name__)
 chain_id = 0
 server_addr = {
-    "s1": "http://localhost:8090"
+    "s1": "http://10.149.252.25:8090",
+    "s2": "http://10.149.252.26:8090",
+    "s3": "http://10.149.252.27:8090"
 }
 headers = {
     'Content-Type': 'application/json'

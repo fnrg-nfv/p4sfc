@@ -23,10 +23,10 @@ class P4Controller(object):
         self.network_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
             p4info_file_path)
         self.network_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
-            name='s2',
-            address='127.0.0.1:50052',
-            device_id=1,
-            proto_dump_file='../configurable_p4_demo/logs/s2-p4runtime-requests.txt'
+            name='s1',
+            address='127.0.0.1:50051',
+            device_id=0,
+            proto_dump_file='../configurable_p4_demo/logs/s1-p4runtime-requests.txt'
         )
         self.network_switch_connection.MasterArbitrationUpdate()
 
