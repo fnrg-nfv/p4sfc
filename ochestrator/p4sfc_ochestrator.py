@@ -27,8 +27,8 @@ def dec2addr(dec):
 app = Flask(__name__)
 chain_id = 0
 server_addr = {
-    # "s1": "http://10.149.252.25:8090",
-    # "s2": "http://10.149.252.26:8090",
+    "s1": "http://10.149.252.25:8090",
+    "s2": "http://10.149.252.26:8090",
     "s3": "http://10.149.252.27:8090"
 }
 headers = {
@@ -131,7 +131,7 @@ def deploy_chain():
                          data=json.dumps(payload))
 
     chain_id = chain_id + 1
-    return "OK"
+    return str(chain_id - 1) 
 
 @app.route('/delete_chain', methods=['POST'])
 def delete_chain():

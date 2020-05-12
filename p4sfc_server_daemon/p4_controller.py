@@ -149,9 +149,10 @@ class P4Controller(object):
         self.config_rule_record[sfc.id] = network_switch_entries
     
     def delete_pipeline(self, chain_id):
-        entries = self.config_rule_record[chain_id]
-        for entry in entries:
-            self.network_switch_connection.DeleteTableEntry(entry)
+        entries = self.config_rule_record.get(chain_id)
+        if entries is not None:
+            for entry in entries:
+                self.network_switch_connection.DeleteTableEntry(entry)
 
 
 if __name__ == '__main__':

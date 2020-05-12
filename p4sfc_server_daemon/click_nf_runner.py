@@ -11,12 +11,36 @@ import const
 
 free_switch_port = [
     {
-        "vnic_name": "veth1",
+        "vnic_name": "veth0",
         "port_id": 1
     },
     {
+        "vnic_name": "veth1",
+        "port_id": 2
+    },
+        {
+        "vnic_name": "veth2",
+        "port_id": 3
+    },
+        {
+        "vnic_name": "veth3",
+        "port_id": 4
+    },
+        {
+        "vnic_name": "veth4",
+        "port_id": 5
+    },
+    {
+        "vnic_name": "veth5",
+        "port_id": 6
+    },
+        {
+        "vnic_name": "veth11",
+        "port_id": 7
+    },
+    {
         "vnic_name": "veth12",
-        "port_id": 11
+        "port_id": 8
     }
 ]
 
