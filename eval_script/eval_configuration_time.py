@@ -85,4 +85,4 @@ def eval_configuration_time(times, chain_length):
 
 
 if __name__ == '__main__':
-    eval_configuration_time(1, 10)
+    eval_configuration_time(10, 10)
