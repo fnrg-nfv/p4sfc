@@ -39,7 +39,7 @@ def deploy_chain_request(chain_length):
             route.append(nf_desc["location"])
     route.append("egress")
 
-    url = "http://10.149.252.27:8091/deploy_chain"
+    url = "http://10.149.252.24:8091/deploy_chain"
     payload = {
         "chain_desc": chain_desc,
         "route": route
@@ -55,7 +55,7 @@ def deploy_chain_request(chain_length):
 
 
 def delete_chain_request(chain_id):
-    url = "http://10.149.252.27:8091/delete_chain"
+    url = "http://10.149.252.24:8091/delete_chain"
     payload = {
         "chain_id": chain_id
     }
