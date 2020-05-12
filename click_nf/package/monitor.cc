@@ -12,7 +12,7 @@ SampleMonitor::SampleMonitor() {}
 SampleMonitor::~SampleMonitor() {}
 
 int SampleMonitor::initialize(ErrorHandler *errh) {
-  //   errh->message("Successfully linked with package!");
+  errh->message("Successfully linked with SampleMonitor!");
   _total_pkts = 0;
   _cur_pkts = 0;
   _last_time = _get_cur_time();
