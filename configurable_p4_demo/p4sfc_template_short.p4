@@ -1,0 +1,62 @@
+/* -*- P4_16 -*- */
+#include <core.p4>
+#include <v1model.p4>
+#include "include/headers.p4"
+#include "include/metadata.p4"
+#include "include/parser.p4"
+#include "include/checksum.p4"
+#include "include/deparser.p4"
+#include "include/element_control.p4"
+#include "include/element_complete_control.p4"
+#include "include/forward_control.p4"
+
+/*************************************************************************
+**************  I N G R E S S   P R O C E S S I N G   *******************
+*************************************************************************/
+
+control MyIngress(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+
+    ElementControl() elementControl_0;
+    ElementCompleteControl() elementCompleteControl_0;
+    ElementControl() elementControl_1;
+    ElementCompleteControl() elementCompleteControl_1;
+    ForwardControl() forwardControl;
+    apply {
+        meta.curNfInstanceId = (bit<16>) hdr.nfs[0].nfInstanceId;
+        if(meta.nextStage == 0) {
+            elementControl_0.apply(hdr, meta, standard_metadata);
+            elementCompleteControl_0.apply(hdr, meta, standard_metadata);
+        }
+        if(meta.nextStage == 1) {
+            elementControl_1.apply(hdr, meta, standard_metadata);
+            elementCompleteControl_1.apply(hdr, meta, standard_metadata);
+        }
+
+        forwardControl.apply(hdr, meta, standard_metadata);
+    }
+}
+
+/*************************************************************************
+****************  E G R E S S   P R O C E S S I N G   *******************
+*************************************************************************/
+
+control MyEgress(inout headers hdr,
+                 inout metadata meta,
+                 inout standard_metadata_t standard_metadata) {
+    apply {  }
+}
+
+/*************************************************************************
+***********************  S W I T C H  *******************************
+*************************************************************************/
+
+V1Switch(
+MyParser(),
+MyVerifyChecksum(),
+MyIngress(),
+MyEgress(),
+MyComputeChecksum(),
+MyDeparser()
+) main;

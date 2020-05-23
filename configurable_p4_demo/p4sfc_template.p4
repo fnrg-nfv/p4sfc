@@ -19,7 +19,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    StageControl() stageControl;                  
+    StageControl() stageControl;
     ElementControl() elementControl_0;
     ElementCompleteControl() elementCompleteControl_0;
     ElementControl() elementControl_1;
@@ -70,7 +70,7 @@ control MyIngress(inout headers hdr,
             // if more elements need to be execute, recirculate the packet
             if(meta.nextStage != NO_STAGE) {
                 meta.isRecirculatePkt = 1;
-                recirculate(meta);
+                // recirculate(meta);
             }
             else { //otherwise, route the packet
                 if(standard_metadata.egress_spec != DROP_PORT && standard_metadata.egress_spec != SERVER_PORT) {

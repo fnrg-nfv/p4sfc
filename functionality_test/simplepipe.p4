@@ -33,13 +33,8 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
-struct resubmit_t {
-    bit<8> a;
-    bit<8> b;
-}
-
 struct metadata {
-    resubmit_t re;
+    /* empty */
 }
 
 struct headers {
@@ -57,19 +52,6 @@ parser MyParser(packet_in packet,
                 inout standard_metadata_t standard_metadata) {
 
     state start {
-        transition parse_ethernet;
-    }
-
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            TYPE_IPV4: parse_ipv4;
-            default: accept;
-        }
-    }
-
-    state parse_ipv4 {
-        packet.extract(hdr.ipv4);
         transition accept;
     }
 
@@ -91,32 +73,35 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-
     action drop() {
-	mark_to_drop(standard_metadata);
+        mark_to_drop(standard_metadata);
     }
     
-    action resubmit_action(bit<32> dstAddr) {
-        hdr.ipv4.dstAddr = dstAddr;
-        // resubmit(meta);
-        recirculate(meta);
+    action port_forward(egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
     
-    table ipv4_lpm {
+    table port_exact {
         key = {
-            hdr.ipv4.dstAddr: lpm;
+            standard_metadata.ingress_port: exact;
         }
         actions = {
-            resubmit_action;
+            port_forward;
             drop;
             NoAction;
         }
-        size = 1024;
+        // size = 1024;
         default_action = drop();
+        const entries = {
+            (1): port_forward(2);
+            (2): port_forward(1);
+
+        }
     }
     
     apply {
-        ipv4_lpm.apply();
+        port_exact.apply();
     }
 }
 

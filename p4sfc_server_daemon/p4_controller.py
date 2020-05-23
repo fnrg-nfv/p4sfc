@@ -23,12 +23,14 @@ class P4Controller(object):
         self.network_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
             p4info_file_path)
         self.network_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
-            name='s2',
-            address='127.0.0.1:50052',
-            device_id=1,
-            proto_dump_file='../configurable_p4_demo/logs/s2-p4runtime-requests.txt'
+            name='s1',
+            address='127.0.0.1:50051',
+            device_id=0,
+            proto_dump_file='../configurable_p4_demo/logs/s1-p4runtime-requests.txt'
         )
         self.network_switch_connection.MasterArbitrationUpdate()
+
+        self.config_rule_record = {}
 
         # self.server_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
         #     '../configurable_p4_demo/build/p4sfc_server_pkt_distribution.p4.p4info.txt')
@@ -60,6 +62,7 @@ class P4Controller(object):
             }
         )
         self.network_switch_connection.WriteTableEntry(table_entry)
+        self.config_rule_record[chain_id].append(table_entry)
 
     def insert_entry(self, chain_id, nf_id, stage_index, entry_info):
         # add prefix to table_name and action_name according to stage_id
@@ -143,6 +146,13 @@ class P4Controller(object):
             self.network_switch_connection.WriteTableEntry(entry)
 
         print 'Network switch config successfully for chain %d.' % sfc.id
+        self.config_rule_record[sfc.id] = network_switch_entries
+    
+    def delete_pipeline(self, chain_id):
+        entries = self.config_rule_record.get(chain_id)
+        if entries is not None:
+            for entry in entries:
+                self.network_switch_connection.DeleteTableEntry(entry)
 
 
 if __name__ == '__main__':

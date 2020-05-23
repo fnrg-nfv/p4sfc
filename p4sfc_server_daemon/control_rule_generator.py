@@ -65,7 +65,7 @@ class SFC:
         cur_nf = None
         for nf in NFs[::-1]:
             cur_nf = NF(nf['name'], nf['id'], nf['offloadability'],
-                        nf.get('click_file_name'), nf['click_config'], cur_nf)
+                        nf.get('click_file_name'), nf.get('click_config'), cur_nf)
         return cur_nf
 
     def divide_chain(self):
