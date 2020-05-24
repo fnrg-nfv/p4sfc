@@ -85,22 +85,25 @@ struct p4sfc_nf_header {
 	uint16_t nf_id;
 };
 
-static uint64_t timer_period = 10; /* default period is 10 seconds for send packets */
+static uint64_t timer_period = 0.05; /* default period is 10 seconds for send packets */
 
 static void
 fill_p4sfc_header(struct rte_mbuf *m, struct p4sfc_chain_header *hdr) {
-	// hdr->chain_id = rte_cpu_to_be_16(1);
-	// hdr->chain_length = rte_cpu_to_be_16(3);
-	hdr->chain_id = 1;
-	hdr->chain_length = 3;
-	int i;
+	uint16_t chain_length = 3;
+	hdr->chain_id = rte_cpu_to_be_16(1);
+	hdr->chain_length = rte_cpu_to_be_16(chain_length);
+	uint16_t i;
 	struct p4sfc_nf_header *nf_hdr;
-	for (i = 0; i < hdr->chain_length; i++) {
+	uint16_t nf_id;
+	for (i = 0; i < chain_length; i++) {
 		nf_hdr = (struct p4sfc_nf_header *) rte_pktmbuf_append(m, sizeof(struct p4sfc_nf_header));
-		nf_hdr->nf_id = (i << 1);
-		if (i == hdr->chain_length - 1) {
-			nf_hdr->nf_id++; // is last
+		if (i == chain_length - 1) {
+			nf_id = (i << 1) + 1; // is last
 		}
+		else {
+			nf_id = i << 1;
+		}
+		nf_hdr->nf_id = rte_cpu_to_be_16(nf_id);
 	}
 }
 
@@ -110,7 +113,7 @@ fill_ethernet_header(struct rte_ether_hdr *hdr) {
 	struct rte_ether_addr d_addr = {{0x00,0x50,0x56,0x97,0x5A,0xBF}};
 	hdr->s_addr =s_addr;
 	hdr->d_addr =d_addr;
-	hdr->ether_type = 0x0800;
+	hdr->ether_type = rte_cpu_to_be_16(0x0800);
 }
 
 static void
@@ -199,7 +202,7 @@ l2fwd_main_loop(void)
 			buffer=tx_buffer[0];
 			sent = rte_eth_tx_buffer_flush(0, 0, buffer);
 			if (sent > 0) {
-				printf("Send %d packets...\n", sent);
+				// printf("Send %d packets...\n", sent);
 			}
 			prev_tsc = cur_tsc;
 		}
