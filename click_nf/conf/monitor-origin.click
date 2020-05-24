@@ -1,3 +1,5 @@
+define($interval 2)
+
 InfiniteSource( DATA \< 
 // 00 00 00 03 00 20 01 70 0C DD
 00 00 00 00 00 00 00 00 00 00 00 00 08 00 
@@ -9,10 +11,9 @@ InfiniteSource( DATA \<
     -> Discard;
 
 Script( TYPE ACTIVE,
-    read c.rate,
-    read c.bit_rate,
-    read c.byte_rate,
-    wait 1,
-    loop,
-    end,
-    )
+        print "interval: $(interval)",
+        label loop_start,
+        print "RX Rate: $(c.rate); bit rate: $(c.bit_rate)",
+        wait $interval,
+        goto loop_start
+        );
