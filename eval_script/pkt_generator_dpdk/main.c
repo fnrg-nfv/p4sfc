@@ -38,6 +38,8 @@
 #include <rte_ethdev.h>
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
+#include <rte_ip.h>
+#include <rte_tcp.h>
 
 static volatile bool force_quit;
 
@@ -74,11 +76,69 @@ static struct rte_eth_conf port_conf = {
 
 struct rte_mempool * l2fwd_pktmbuf_pool = NULL;
 
-struct p4sfc_header {
-	uint32_t chain_id;
+struct p4sfc_chain_header {
+	uint16_t chain_id;
+	uint16_t chain_length;
 };
 
-static uint64_t timer_period = 0.05; /* default period is 10 seconds for send packets */
+struct p4sfc_nf_header {
+	uint16_t nf_id;
+};
+
+static uint64_t timer_period = 10; /* default period is 10 seconds for send packets */
+
+static void
+fill_p4sfc_header(struct rte_mbuf *m, struct p4sfc_chain_header *hdr) {
+	// hdr->chain_id = rte_cpu_to_be_16(1);
+	// hdr->chain_length = rte_cpu_to_be_16(3);
+	hdr->chain_id = 1;
+	hdr->chain_length = 3;
+	int i;
+	struct p4sfc_nf_header *nf_hdr;
+	for (i = 0; i < hdr->chain_length; i++) {
+		nf_hdr = (struct p4sfc_nf_header *) rte_pktmbuf_append(m, sizeof(struct p4sfc_nf_header));
+		nf_hdr->nf_id = (i << 1);
+		if (i == hdr->chain_length - 1) {
+			nf_hdr->nf_id++; // is last
+		}
+	}
+}
+
+static void
+fill_ethernet_header(struct rte_ether_hdr *hdr) {
+	struct rte_ether_addr s_addr = {{0x14,0x02,0xEC,0x89,0x8D,0x24}};
+	struct rte_ether_addr d_addr = {{0x00,0x50,0x56,0x97,0x5A,0xBF}};
+	hdr->s_addr =s_addr;
+	hdr->d_addr =d_addr;
+	hdr->ether_type = 0x0800;
+}
+
+static void
+fill_ipv4_header(struct rte_ipv4_hdr *hdr) {
+	hdr->version_ihl = (4 << 4) + 5; // ipv4, length 5 (*4)
+	hdr->type_of_service = 0; // No Diffserv
+	hdr->total_length = rte_cpu_to_be_16(40); // tcp 20
+	hdr->packet_id = rte_cpu_to_be_16(5462); // set random
+	hdr->fragment_offset = rte_cpu_to_be_16(0);
+	hdr->time_to_live = 64;
+	hdr->next_proto_id = 6; // tcp
+	hdr->hdr_checksum = rte_cpu_to_be_16(25295);
+	hdr->src_addr = rte_cpu_to_be_32(0xC0A80001); // 192.168.0.1
+	hdr->dst_addr = rte_cpu_to_be_32(0x01010101); // 1.1.1.1
+}
+
+static void
+fill_tcp_header(struct rte_tcp_hdr *hdr) {
+	hdr->src_port = rte_cpu_to_be_16(1234);
+	hdr->dst_port = rte_cpu_to_be_16(5678);
+	hdr->sent_seq = rte_cpu_to_be_32(0);
+	hdr->recv_ack = rte_cpu_to_be_32(0);
+	hdr->data_off = 0;
+	hdr->tcp_flags = 0;
+	hdr->rx_win = rte_cpu_to_be_16(16);
+	hdr->cksum = rte_cpu_to_be_16(0);
+	hdr->tcp_urp = rte_cpu_to_be_16(0);
+}
 
 static void
 p4sfc_send_custom_pkt_burst(void)
@@ -88,18 +148,25 @@ p4sfc_send_custom_pkt_burst(void)
 	struct rte_mbuf *m;
 	dst_port = 0;
 	buffer = tx_buffer[dst_port];
+	struct p4sfc_chain_header *chain_h;
+	struct rte_ether_hdr *ether_h;
+	struct rte_ipv4_hdr *ipv4_h;
+	struct rte_tcp_hdr *tcp_h;
 	for (i = 0; i < MAX_PKT_BURST - 1; i++){
 		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
-		struct rte_ether_hdr *ether_h;
+
+		chain_h = (struct p4sfc_chain_header *) rte_pktmbuf_append(m, sizeof(struct p4sfc_chain_header));
+		fill_p4sfc_header(m, chain_h);
+
 		ether_h = (struct rte_ether_hdr *) rte_pktmbuf_append(m, sizeof(struct rte_ether_hdr));
-		struct rte_ether_addr s_addr = {{0x14,0x02,0xEC,0x89,0x8D,0x24}};
-		struct rte_ether_addr d_addr = {{0x00,0x50,0x56,0x97,0x5A,0xBF}};
-		ether_h->s_addr =s_addr;
-		ether_h->d_addr =d_addr;
-		ether_h->ether_type = 0x0a00;
-		struct p4sfc_header *hdr;
-		hdr = (struct p4sfc_header *) rte_pktmbuf_append(m, sizeof(struct p4sfc_header));
-		hdr->chain_id = 666;
+		fill_ethernet_header(ether_h);
+
+		ipv4_h = (struct rte_ipv4_hdr *) rte_pktmbuf_append(m, sizeof(struct rte_ipv4_hdr));
+		fill_ipv4_header(ipv4_h);
+
+		tcp_h = (struct rte_tcp_hdr *) rte_pktmbuf_append(m, sizeof(struct rte_tcp_hdr));
+		fill_tcp_header(tcp_h);
+
 		rte_eth_tx_buffer(dst_port, 0, buffer, m);
 	}
 }
@@ -114,6 +181,7 @@ l2fwd_main_loop(void)
 	// const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S *
 	// 		BURST_TX_DRAIN_US;
 	struct rte_eth_dev_tx_buffer *buffer;
+	int sent;
 
 	prev_tsc = 0;
 	lcore_id = rte_lcore_id();
@@ -129,7 +197,10 @@ l2fwd_main_loop(void)
 			// send custom packet
 			p4sfc_send_custom_pkt_burst();
 			buffer=tx_buffer[0];
-			rte_eth_tx_buffer_flush(0, 0, buffer);
+			sent = rte_eth_tx_buffer_flush(0, 0, buffer);
+			if (sent > 0) {
+				printf("Send %d packets...\n", sent);
+			}
 			prev_tsc = cur_tsc;
 		}
 	}
