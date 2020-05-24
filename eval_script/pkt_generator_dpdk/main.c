@@ -41,9 +41,6 @@
 
 static volatile bool force_quit;
 
-/* MAC updating enabled by default */
-static int mac_updating = 1;
-
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
 #define MAX_PKT_BURST 32
@@ -64,14 +61,6 @@ static struct rte_ether_addr l2fwd_ports_eth_addr[RTE_MAX_ETHPORTS];
 /* mask of enabled ports */
 static uint32_t l2fwd_enabled_port_mask = 0;
 
-/* list of enabled ports */
-static uint32_t l2fwd_dst_ports[RTE_MAX_ETHPORTS];
-
-static unsigned int l2fwd_rx_queue_per_lcore = 1;
-
-#define MAX_RX_QUEUE_PER_LCORE 16
-#define MAX_TX_QUEUE_PER_PORT 16
-
 static struct rte_eth_dev_tx_buffer *tx_buffer[RTE_MAX_ETHPORTS];
 
 static struct rte_eth_conf port_conf = {
@@ -85,104 +74,14 @@ static struct rte_eth_conf port_conf = {
 
 struct rte_mempool * l2fwd_pktmbuf_pool = NULL;
 
-/* Per-port statistics struct */
-struct l2fwd_port_statistics {
-	uint64_t tx;
-	uint64_t rx;
-	uint64_t dropped;
-} __rte_cache_aligned;
-struct l2fwd_port_statistics port_statistics[RTE_MAX_ETHPORTS];
-
 struct p4sfc_header {
 	uint32_t chain_id;
 };
 
-#define MAX_TIMER_PERIOD 86400 /* 1 day max */
-/* A tsc-based timer responsible for triggering statistics printout */
-static uint64_t timer_period = 10; /* default period is 10 seconds */
-
-/* Print out statistics on packets dropped */
-static void
-print_stats(void)
-{
-	uint64_t total_packets_dropped, total_packets_tx, total_packets_rx;
-	unsigned portid;
-
-	total_packets_dropped = 0;
-	total_packets_tx = 0;
-	total_packets_rx = 0;
-
-	const char clr[] = { 27, '[', '2', 'J', '\0' };
-	const char topLeft[] = { 27, '[', '1', ';', '1', 'H','\0' };
-
-		/* Clear screen and move to top left */
-	printf("%s%s", clr, topLeft);
-
-	printf("\nPort statistics ====================================");
-
-	for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++) {
-		/* skip disabled ports */
-		if ((l2fwd_enabled_port_mask & (1 << portid)) == 0)
-			continue;
-		printf("\nStatistics for port %u ------------------------------"
-			   "\nPackets sent: %24"PRIu64
-			   "\nPackets received: %20"PRIu64
-			   "\nPackets dropped: %21"PRIu64,
-			   portid,
-			   port_statistics[portid].tx,
-			   port_statistics[portid].rx,
-			   port_statistics[portid].dropped);
-
-		total_packets_dropped += port_statistics[portid].dropped;
-		total_packets_tx += port_statistics[portid].tx;
-		total_packets_rx += port_statistics[portid].rx;
-	}
-	printf("\nAggregate statistics ==============================="
-		   "\nTotal packets sent: %18"PRIu64
-		   "\nTotal packets received: %14"PRIu64
-		   "\nTotal packets dropped: %15"PRIu64,
-		   total_packets_tx,
-		   total_packets_rx,
-		   total_packets_dropped);
-	printf("\n====================================================\n");
-}
+static uint64_t timer_period = 0.05; /* default period is 10 seconds for send packets */
 
 static void
-l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
-{
-	struct rte_ether_hdr *eth;
-	void *tmp;
-
-	eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
-
-	/* 02:00:00:00:00:xx */
-	tmp = &eth->d_addr.addr_bytes[0];
-	*((uint64_t *)tmp) = 0x000000000002 + ((uint64_t)dest_portid << 40);
-
-	/* src addr */
-	rte_ether_addr_copy(&l2fwd_ports_eth_addr[dest_portid], &eth->s_addr);
-}
-
-static void
-l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
-{
-	unsigned dst_port;
-	int sent;
-	struct rte_eth_dev_tx_buffer *buffer;
-
-	dst_port = l2fwd_dst_ports[portid];
-
-	if (mac_updating)
-		l2fwd_mac_updating(m, dst_port);
-
-	buffer = tx_buffer[dst_port];
-	sent = rte_eth_tx_buffer(dst_port, 0, buffer, m);
-	if (sent)
-		port_statistics[dst_port].tx += sent;
-}
-
-static void
-p4sfc_send_custom_pkt_burst(unsigned portid)
+p4sfc_send_custom_pkt_burst(void)
 {
 	unsigned dst_port, i;
 	struct rte_eth_dev_tx_buffer *buffer;
@@ -210,21 +109,14 @@ p4sfc_send_custom_pkt_burst(unsigned portid)
 static void
 l2fwd_main_loop(void)
 {
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-	struct rte_mbuf *m;
-	int sent;
 	unsigned lcore_id;
-	uint64_t prev_tsc, diff_tsc, cur_tsc, timer_tsc;
-	unsigned i, j, portid, nb_rx;
-	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S *
-			BURST_TX_DRAIN_US;
+	uint64_t prev_tsc, diff_tsc, cur_tsc;
+	// const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S *
+	// 		BURST_TX_DRAIN_US;
 	struct rte_eth_dev_tx_buffer *buffer;
 
 	prev_tsc = 0;
-	timer_tsc = 0;
-
 	lcore_id = rte_lcore_id();
-
 
 	RTE_LOG(INFO, L2FWD, "entering main loop on lcore %u\n", lcore_id);
 
@@ -232,38 +124,14 @@ l2fwd_main_loop(void)
 
 		cur_tsc = rte_rdtsc();
 
-		/*
-		 * TX burst queue drain
-		 */
 		diff_tsc = cur_tsc - prev_tsc;
 		if (unlikely(diff_tsc > timer_period)) {
 			// send custom packet
-			p4sfc_send_custom_pkt_burst(0);
+			p4sfc_send_custom_pkt_burst();
 			buffer=tx_buffer[0];
-			sent = rte_eth_tx_buffer_flush(0, 0, buffer);
-			if (sent > 0) {
-				// printf("Send %d pkts...\n", sent);
-			}
+			rte_eth_tx_buffer_flush(0, 0, buffer);
 			prev_tsc = cur_tsc;
 		}
-
-		/*
-		 * Read packet from RX queues
-		 */
-		// for (i = 0; i < qconf->n_rx_port; i++) {
-
-		// 	portid = qconf->rx_port_list[i];
-		// 	nb_rx = rte_eth_rx_burst(portid, 0,
-		// 				 pkts_burst, MAX_PKT_BURST);
-
-		// 	port_statistics[portid].rx += nb_rx;
-
-		// 	for (j = 0; j < nb_rx; j++) {
-		// 		m = pkts_burst[j];
-		// 		rte_prefetch0(rte_pktmbuf_mtod(m, void *));
-		// 		l2fwd_simple_forward(m, portid);
-		// 	}
-		// }
 	}
 }
 
@@ -278,13 +146,8 @@ l2fwd_launch_one_lcore(__attribute__((unused)) void *dummy)
 static void
 l2fwd_usage(const char *prgname)
 {
-	printf("%s [EAL options] -- -p PORTMASK [-q NQ]\n"
-	       "  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
-		   "  -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default, 86400 maximum)\n"
-		   "  --[no-]mac-updating: Enable or disable MAC addresses updating (enabled by default)\n"
-		   "      When enabled:\n"
-		   "       - The source MAC address is replaced by the TX port MAC address\n"
-		   "       - The destination MAC address is replaced by 02:00:00:00:00:TX_PORT_ID\n",
+	printf("%s [EAL options] -- -p PORTMASK\n"
+	       "  -p PORTMASK: hexadecimal bitmask of ports to configure\n",
 	       prgname);
 }
 
@@ -305,58 +168,22 @@ l2fwd_parse_portmask(const char *portmask)
 	return pm;
 }
 
-static int
-l2fwd_parse_timer_period(const char *q_arg)
-{
-	char *end = NULL;
-	int n;
-
-	/* parse number string */
-	n = strtol(q_arg, &end, 10);
-	if ((q_arg[0] == '\0') || (end == NULL) || (*end != '\0'))
-		return -1;
-	if (n >= MAX_TIMER_PERIOD)
-		return -1;
-
-	return n;
-}
-
 static const char short_options[] =
 	"p:"  /* portmask */
-	"q:"  /* number of queues */
-	"T:"  /* timer period */
 	;
 
-#define CMD_LINE_OPT_MAC_UPDATING "mac-updating"
-#define CMD_LINE_OPT_NO_MAC_UPDATING "no-mac-updating"
-
-enum {
-	/* long options mapped to a short option */
-
-	/* first long only option value must be >= 256, so that we won't
-	 * conflict with short options */
-	CMD_LINE_OPT_MIN_NUM = 256,
-};
-
-static const struct option lgopts[] = {
-	{ CMD_LINE_OPT_MAC_UPDATING, no_argument, &mac_updating, 1},
-	{ CMD_LINE_OPT_NO_MAC_UPDATING, no_argument, &mac_updating, 0},
-	{NULL, 0, 0, 0}
-};
 
 /* Parse the argument given in the command line of the application */
 static int
 l2fwd_parse_args(int argc, char **argv)
 {
-	int opt, ret, timer_secs;
+	int opt, ret;
 	char **argvopt;
-	int option_index;
 	char *prgname = argv[0];
 
 	argvopt = argv;
 
-	while ((opt = getopt_long(argc, argvopt, short_options,
-				  lgopts, &option_index)) != EOF) {
+	while ((opt = getopt(argc, argvopt, short_options)) != EOF) {
 
 		switch (opt) {
 		/* portmask */
@@ -367,17 +194,6 @@ l2fwd_parse_args(int argc, char **argv)
 				l2fwd_usage(prgname);
 				return -1;
 			}
-			break;
-
-		/* timer period */
-		case 'T':
-			timer_secs = l2fwd_parse_timer_period(optarg);
-			if (timer_secs < 0) {
-				printf("invalid timer period\n");
-				l2fwd_usage(prgname);
-				return -1;
-			}
-			timer_period = timer_secs;
 			break;
 
 		/* long options */
@@ -482,7 +298,7 @@ main(int argc, char **argv)
 	uint16_t nb_ports;
 	uint16_t nb_ports_available = 0;
 	uint16_t portid;
-	unsigned lcore_id, rx_lcore_id;
+	unsigned lcore_id;
 	unsigned int nb_lcores = 0;
 	unsigned int nb_mbufs;
 
@@ -502,7 +318,6 @@ main(int argc, char **argv)
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "Invalid L2FWD arguments\n");
 
-	printf("MAC updating %s\n", mac_updating ? "enabled" : "disabled");
 
 	/* convert to number of cycles */
 	timer_period *= rte_get_timer_hz();
@@ -515,12 +330,6 @@ main(int argc, char **argv)
 	if (l2fwd_enabled_port_mask & ~((1 << nb_ports) - 1))
 		rte_exit(EXIT_FAILURE, "Invalid portmask; possible (0x%x)\n",
 			(1 << nb_ports) - 1);
-
-	/* reset l2fwd_dst_ports */
-	for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++)
-		l2fwd_dst_ports[portid] = 0;
-
-	rx_lcore_id = 0;
 
 	nb_mbufs = RTE_MAX(nb_ports * (nb_rxd + nb_txd + MAX_PKT_BURST +
 		nb_lcores * MEMPOOL_CACHE_SIZE), 8192U);
@@ -611,14 +420,6 @@ main(int argc, char **argv)
 
 		rte_eth_tx_buffer_init(tx_buffer[portid], MAX_PKT_BURST);
 
-		ret = rte_eth_tx_buffer_set_err_callback(tx_buffer[portid],
-				rte_eth_tx_buffer_count_callback,
-				&port_statistics[portid].dropped);
-		if (ret < 0)
-			rte_exit(EXIT_FAILURE,
-			"Cannot set error callback for tx buffer on port %u\n",
-				 portid);
-
 		ret = rte_eth_dev_set_ptypes(portid, RTE_PTYPE_UNKNOWN, NULL,
 					     0);
 		if (ret < 0)
@@ -647,8 +448,6 @@ main(int argc, char **argv)
 				l2fwd_ports_eth_addr[portid].addr_bytes[4],
 				l2fwd_ports_eth_addr[portid].addr_bytes[5]);
 
-		/* initialize port stats */
-		memset(&port_statistics, 0, sizeof(port_statistics));
 	}
 
 	if (!nb_ports_available) {

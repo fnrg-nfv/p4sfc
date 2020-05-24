@@ -191,10 +191,9 @@ p4sfc_show_packet(struct rte_mbuf *m) {
 	struct p4sfc_header *hdr;
 	hdr = rte_pktmbuf_mtod_offset(m, struct p4sfc_header *,
 				sizeof(struct rte_ether_hdr));
-	if (hdr->chain_id == 666) {
-		printf("Receive Packets\n");
-	}
-	// printf("%d\n", hdr->chain_id);
+	// if (hdr->chain_id == 666) {
+	// 	printf("Receive Packets\n");
+	// }
 }
 
 
