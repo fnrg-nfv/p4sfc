@@ -29,19 +29,18 @@ control ElementControl(inout headers hdr,
             set_control_data;
             drop;
         }
-        size = 1024;
         default_action = drop;
-
-        // const entries = {
-        //     (0, 0, 0): set_control_data(0, 255, 1);
-        //     (1, 1, 1): set_control_data(0, 255, 1);
-        //     (0, 1, 1): set_control_data(2, 2, 1);
-        //     (0, 2, 2): set_control_data(0, 255, 1);
-        // }
+        // size = 1024;
+        const entries = {
+            (0, 0, 0): set_control_data(0, 255, 0);
+            // (1, 1, 1): set_control_data(0, 255, 1);
+            // (0, 1, 1): set_control_data(2, 2, 1);
+            // (0, 2, 2): set_control_data(0, 255, 1);
+        }
     }
 
     IpRewriter()  ipRewriter;
-    // Monitor()     monitor;
+    Monitor()     monitor;
     Firewall()    firewall;
     apply {
         chainId_stageId_exact.apply();
@@ -51,9 +50,9 @@ control ElementControl(inout headers hdr,
         else if(meta.curElement == ELEMENT_IPREWRITER) {
             ipRewriter.apply(hdr, meta, standard_metadata);
         }
-        // else if (meta.curElement == ELEMENT_MONITOR) {
-        //     monitor.apply(hdr, meta, standard_metadata);
-        // }
+        else if (meta.curElement == ELEMENT_MONITOR) {
+            monitor.apply(hdr, meta, standard_metadata);
+        }
         else if(meta.curElement == ELEMENT_FIREWALL) {
             firewall.apply(hdr, meta, standard_metadata);
         }

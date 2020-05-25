@@ -17,6 +17,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <sys/time.h>
 
 #include <rte_common.h>
 #include <rte_log.h>
@@ -85,12 +86,12 @@ struct p4sfc_nf_header {
 	uint16_t nf_id;
 };
 
-static uint64_t timer_period = 0.05; /* default period is 10 seconds for send packets */
+static uint64_t timer_period = 5; /* default period is 10 seconds for send packets */
 
 static void
 fill_p4sfc_header(struct rte_mbuf *m, struct p4sfc_chain_header *hdr) {
-	uint16_t chain_length = 3;
-	hdr->chain_id = rte_cpu_to_be_16(1);
+	uint16_t chain_length = 1;
+	hdr->chain_id = rte_cpu_to_be_16(0);
 	hdr->chain_length = rte_cpu_to_be_16(chain_length);
 	uint16_t i;
 	struct p4sfc_nf_header *nf_hdr;
@@ -132,8 +133,8 @@ fill_ipv4_header(struct rte_ipv4_hdr *hdr) {
 
 static void
 fill_tcp_header(struct rte_tcp_hdr *hdr) {
-	hdr->src_port = rte_cpu_to_be_16(1234);
-	hdr->dst_port = rte_cpu_to_be_16(5678);
+	hdr->src_port = rte_cpu_to_be_16(0x162E);
+	hdr->dst_port = rte_cpu_to_be_16(0x04d2);
 	hdr->sent_seq = rte_cpu_to_be_32(0);
 	hdr->recv_ack = rte_cpu_to_be_32(0);
 	hdr->data_off = 0;
@@ -155,7 +156,8 @@ p4sfc_send_custom_pkt_burst(void)
 	struct rte_ether_hdr *ether_h;
 	struct rte_ipv4_hdr *ipv4_h;
 	struct rte_tcp_hdr *tcp_h;
-	for (i = 0; i < MAX_PKT_BURST - 1; i++){
+	// for (i = 0; i < MAX_PKT_BURST - 1; i++){
+	for (i = 0; i < 1; i++){
 		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 
 		chain_h = (struct p4sfc_chain_header *) rte_pktmbuf_append(m, sizeof(struct p4sfc_chain_header));
@@ -200,6 +202,10 @@ l2fwd_main_loop(void)
 			// send custom packet
 			p4sfc_send_custom_pkt_burst();
 			buffer=tx_buffer[0];
+			struct timeval te;
+			gettimeofday(&te, NULL); // get current time
+			long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+			printf("Send a packet\n  Time: %lld ms\n", milliseconds);
 			sent = rte_eth_tx_buffer_flush(0, 0, buffer);
 			if (sent > 0) {
 				// printf("Send %d packets...\n", sent);
