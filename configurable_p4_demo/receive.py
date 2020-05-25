@@ -2,6 +2,7 @@
 import sys
 import struct
 import os
+import time
 
 from scapy.all import sniff, sendp, hexdump, get_if_list, get_if_hwaddr
 from scapy.all import Packet, IPOption
@@ -34,11 +35,14 @@ class IPOption_MRI(IPOption):
                                    IntField("", 0),
                                    length_from=lambda pkt:pkt.count*4) ]
 def handle_pkt(pkt):
-    if TCP in pkt:
-        print "got a packet"
-        pkt.show2()
-    #    hexdump(pkt)
-        sys.stdout.flush()
+    cur_time = time.time()*1000
+    # if TCP in pkt and pkt[TCP].dport == 0x2222:
+    print "Got a packet\n  TIme: %d (ms)" % (cur_time)
+    # if TCP in pkt:
+    #     print "got a packet"
+    #     pkt.show2()
+    #     hexdump(pkt)
+    #     sys.stdout.flush()
 
 
 def main():

@@ -99,7 +99,8 @@ struct kni_port_params {
 	unsigned lcore_k[KNI_MAX_KTHREAD]; /* lcore ID list for kthreads */
 	struct rte_kni *kni[KNI_MAX_KTHREAD]; /* KNI context pointers */
 	struct tx_buffer *buffer[KNI_MAX_KTHREAD]; // buffer 为了 high-performance
-	
+	struct rte_mbuf *port_buffer[PKT_BURST_SZ];
+	uint16_t port_buffer_size;
 } __rte_cache_aligned;
 
 static struct kni_port_params *kni_port_params_array[RTE_MAX_ETHPORTS];
@@ -206,19 +207,19 @@ signal_handler(int signum)
 }
 
 /* free pkts中num个数据包 */
-static void
-kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
-{
-	unsigned i;
+// static void
+// kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
+// {
+// 	unsigned i;
 
-	if (pkts == NULL)
-		return;
+// 	if (pkts == NULL)
+// 		return;
 
-	for (i = 0; i < num; i++) {
-		// rte_pktmbuf_free(pkts[i]);
-		pkts[i] = NULL;
-	}
-}
+// 	for (i = 0; i < num; i++) {
+// 		// rte_pktmbuf_free(pkts[i]);
+// 		pkts[i] = NULL;
+// 	}
+// }
 
 static inline uint32_t
 hash_crc(const void *data, __rte_unused uint32_t data_len,
@@ -320,85 +321,92 @@ my_kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 // 	}
 // }
 
-static void
-p4sfc_forward(struct rte_mbuf **m, unsigned num)
-// p4sfc_forward(struct rte_mbuf *m, struct kni_port_params *p)
-{
-	// p->buffer[1]->pkts[p->buffer[1]->size++] = m;
-	// if (p->buffer[1]->size == 32) {
-	// 	printf("sadf\n");
-	// 	rte_kni_tx_burst(p->kni[1], p->buffer[1]->pkts, p->buffer[1]->size);
-	// 	p->buffer[1]->size = 0;
-	// }
+struct p4sfc_chain_header {
+	uint16_t chain_id;
+	uint16_t chain_length;
+};
 
-	// struct rte_mbuf *pkts_burst[num];
+struct p4sfc_nf_header {
+	uint16_t nf_id;
+};
+
+static uint16_t
+get_first_nf_instance_id(struct rte_mbuf *m) {
+	struct p4sfc_chain_header *hdr;
+	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *);
+	if (hdr->chain_length == 0) {
+		return -1;
+	}
+	struct p4sfc_nf_header *nf;
+	nf = rte_pktmbuf_mtod_offset(m, struct p4sfc_nf_header *,
+				sizeof(struct p4sfc_chain_header));
+	uint16_t nf_instance_id;
+	nf_instance_id = rte_be_to_cpu_16(nf->nf_id);
+	nf_instance_id = nf_instance_id >> 1;
+	// printf("nf_instance_id:  %d\n", nf_instance_id);
+	return nf_instance_id;
+	
+}
+
+// 代码中注释了两处if是为了收到包立马就发出去，但这样可能会影响速度
+static void
+p4sfc_forward(struct rte_mbuf **m, unsigned num, struct kni_port_params *port)
+{
 	unsigned nb_tx;
 	unsigned i;
 	int hash_index;
 	struct kni_position *position;
-	uint16_t nf_instance_id = 1;
+	uint16_t nf_instance_id;
 	struct kni_port_params *p;
 	uint32_t kni_index;
 	for( i = 0; i < num; i++){
+		nf_instance_id = get_first_nf_instance_id(m[i]);
 		hash_index = rte_hash_lookup((const struct rte_hash *)nf_instance_id_2_kni, (const void *)&nf_instance_id);
+		if (hash_index < 0) {
+			// nf not in server, send to switch
+			port->port_buffer[port->port_buffer_size++] = m[i];
+			// if (port->port_buffer_size == 32) {
+				nb_tx = rte_eth_tx_burst(port->port_id, 0, port->port_buffer, port->port_buffer_size);
+				port->port_buffer_size = 0;
+			// }
+			return;
+		}
+		// nf running in the server
 		position = kni_positions[hash_index];
 		p = kni_port_params_array[position->port_index];
 		kni_index = position->kni_index;
 		p->buffer[kni_index]->pkts[p->buffer[kni_index]->size++] = m[i];
-		if (p->buffer[kni_index]->size == 32) {
+		// if (p->buffer[kni_index]->size == 32) {
 			nb_tx = rte_kni_tx_burst(p->kni[kni_index], p->buffer[kni_index]->pkts, p->buffer[kni_index]->size);
-			if (unlikely(nb_tx < 32)) {
-				my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], 32 - nb_tx);
+			// if (unlikely(nb_tx < 32)) {
+			if (unlikely(nb_tx < 1)) {
+				// my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], 32 - nb_tx);
+				my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], 1);
 			}
 			p->buffer[kni_index]->size = 0;
-		}
+		// }
 	}
-
-	// pkts_burst[0] = m;
-	// rte_kni_tx_burst(p->kni[1], pkts_burst, num);
-	// rte_kni_handle_request(p->kni[1]);
-	// uint16_t magic = *(uint16_t *)((char *)m->buf_addr + m->data_off);
-	// printf("%d\n", magic);
-	// if (magic == 255) {
-	// 	printf("Receive successfully\n");
-	// }
 }
 
 static void
 kni_ingress(struct kni_port_params *p)
 {
-	uint8_t i;
 	uint16_t port_id;
-	unsigned nb_rx, num;
-	uint32_t nb_kni;
+	unsigned nb_rx;
 	struct rte_mbuf *pkts_burst[PKT_BURST_SZ];
 
 	if (p == NULL)
 		return;
 
-	nb_kni = p->nb_kni;
 	port_id = p->port_id;
-	for (i = 0; i < nb_kni; i++) {
-		/* Burst rx from eth */
-		nb_rx = rte_eth_rx_burst(port_id, 0, pkts_burst, PKT_BURST_SZ);
-		if (unlikely(nb_rx > PKT_BURST_SZ)) {
-			RTE_LOG(ERR, APP, "Error receiving from eth\n");
-			return;
-		}
-		/* Burst tx to kni */
-		// num = rte_kni_tx_burst(p->kni[i], pkts_burst, nb_rx);
-		num = 0;
-		if (num) {
-			kni_stats[port_id].rx_packets += num;
-		}
-
-		rte_kni_handle_request(p->kni[i]);
-		if (unlikely(num < nb_rx)) {
-			/* Free mbufs not tx to kni interface */
-			kni_burst_free_mbufs(&pkts_burst[num], nb_rx - num);
-			kni_stats[port_id].rx_dropped += nb_rx - num;
-		}
+	nb_rx = rte_eth_rx_burst(port_id, 0, pkts_burst, PKT_BURST_SZ);
+	if (unlikely(nb_rx > PKT_BURST_SZ)) {
+		RTE_LOG(ERR, APP, "Error receiving from eth\n");
+		return;
 	}
+
+	p4sfc_forward(pkts_burst, nb_rx, p);
+
 }
 
 static void
@@ -425,7 +433,7 @@ kni_egress(struct kni_port_params *p)
 		// 	rte_prefetch0(rte_pktmbuf_mtod(m, void *));
 		// 	p4sfc_forward(m, p);
 		// }
-		p4sfc_forward(pkts_burst, num);
+		p4sfc_forward(pkts_burst, num, p);
 		// nb_tx = rte_kni_tx_burst(p->kni[1], pkts_burst, num);
 		// rte_kni_handle_request(p->kni[1]);
 		// if (unlikely(nb_tx < num)) {
@@ -1256,8 +1264,8 @@ main(int argc, char** argv)
 	/*往hashtable里加条目用于测试*/
 	struct kni_position *position = (struct kni_position *)rte_malloc(NULL, sizeof(*position), 0);
 	position->port_index = 0;
-	position->kni_index = 1;
-	uint16_t nf_instance_id = 1;
+	position->kni_index = 0;
+	uint16_t nf_instance_id = 0;
 	int hash_index = ret = rte_hash_add_key((const struct rte_hash *)nf_instance_id_2_kni, (const void *)&nf_instance_id);
 	kni_positions[hash_index] = position;
 
