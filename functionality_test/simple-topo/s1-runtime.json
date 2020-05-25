@@ -1,5 +1,5 @@
 {
   "target": "bmv2",
-  "p4info": "build/basic.p4.p4info.txt",
-  "bmv2_json": "build/basic.json"
+  "p4info": "build/simplepipe.p4.p4info.txt",
+  "bmv2_json": "build/simplepipe.json"
 }

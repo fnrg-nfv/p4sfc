@@ -87,6 +87,7 @@ struct p4sfc_nf_header {
 };
 
 static uint64_t timer_period = 5; /* default period is 10 seconds for send packets */
+static bool latency_test = true;
 
 static void
 fill_p4sfc_header(struct rte_mbuf *m, struct p4sfc_chain_header *hdr) {
@@ -156,8 +157,14 @@ p4sfc_send_custom_pkt_burst(void)
 	struct rte_ether_hdr *ether_h;
 	struct rte_ipv4_hdr *ipv4_h;
 	struct rte_tcp_hdr *tcp_h;
-	// for (i = 0; i < MAX_PKT_BURST - 1; i++){
-	for (i = 0; i < 1; i++){
+	unsigned burst_size;
+	if (latency_test) {
+		burst_size = 1;
+	}
+	else {
+		burst_size = MAX_PKT_BURST - 1;
+	}
+	for (i = 0; i < burst_size; i++){
 		m = rte_pktmbuf_alloc(l2fwd_pktmbuf_pool);
 
 		chain_h = (struct p4sfc_chain_header *) rte_pktmbuf_append(m, sizeof(struct p4sfc_chain_header));
@@ -179,12 +186,10 @@ p4sfc_send_custom_pkt_burst(void)
 
 /* main processing loop */
 static void
-l2fwd_main_loop(void)
+l2fwd_main_loop_latency(void)
 {
 	unsigned lcore_id;
 	uint64_t prev_tsc, diff_tsc, cur_tsc;
-	// const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S *
-	// 		BURST_TX_DRAIN_US;
 	struct rte_eth_dev_tx_buffer *buffer;
 	int sent;
 
@@ -215,10 +220,49 @@ l2fwd_main_loop(void)
 	}
 }
 
+static void
+l2fwd_main_loop_throughput(void)
+{
+	unsigned lcore_id;
+	uint64_t prev_tsc, diff_tsc, cur_tsc;
+	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S *
+			BURST_TX_DRAIN_US;
+	struct rte_eth_dev_tx_buffer *buffer;
+	int sent;
+
+	prev_tsc = 0;
+	lcore_id = rte_lcore_id();
+
+	RTE_LOG(INFO, L2FWD, "entering main loop on lcore %u\n", lcore_id);
+
+	while (!force_quit) {
+
+		cur_tsc = rte_rdtsc();
+
+		diff_tsc = cur_tsc - prev_tsc;
+		if (unlikely(diff_tsc > drain_tsc)) {
+			// send custom packet
+			p4sfc_send_custom_pkt_burst();
+			buffer=tx_buffer[0];
+			sent = rte_eth_tx_buffer_flush(0, 0, buffer);
+			if (sent > 0) {
+				// printf("Send %d packets...\n", sent);
+			}
+			prev_tsc = cur_tsc;
+		}
+	}
+}
+
+
 static int
 l2fwd_launch_one_lcore(__attribute__((unused)) void *dummy)
 {
-	l2fwd_main_loop();
+	if (latency_test) {
+		l2fwd_main_loop_latency();
+	}
+	else {
+		l2fwd_main_loop_throughput();
+	}
 	return 0;
 }
 
