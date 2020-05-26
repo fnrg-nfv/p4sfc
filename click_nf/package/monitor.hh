@@ -15,7 +15,8 @@ public:
   const char *processing() const { return "a/a"; }
   const char *flow_code() const { return "x/y"; }
 
-  void push(int, Packet *);
+  Packet *simple_action(Packet *);
+
 
 protected:
   int _cur_pkts;

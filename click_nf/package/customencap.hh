@@ -16,8 +16,9 @@ public:
   const char *processing() const { return "a/a"; }
   const char *flow_code() const { return "x/y"; }
 
-  void push(int, Packet *);
   int configure(Vector<String> &conf, ErrorHandler *errh);
+  Packet *simple_action(Packet *);
+
 
 protected:
   char* _header; 

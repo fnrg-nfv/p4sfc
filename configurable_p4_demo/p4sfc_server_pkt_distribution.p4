@@ -37,7 +37,9 @@ control MyIngress(inout headers hdr,
         // size = 1024;
         const entries = {
             (0, 0): sent_to_nf_instance(1);
-            (0, 3): sent_to_nf_instance(2);
+            (0, 1): sent_to_nf_instance(2);
+            (0, 2): sent_to_nf_instance(3);
+            (0, 3): sent_to_nf_instance(4);
         }
         default_action = send_to_switch;
     }
