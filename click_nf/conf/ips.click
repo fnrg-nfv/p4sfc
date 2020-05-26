@@ -1,6 +1,6 @@
 require(package "p4sfc");
 
-define($dev, eth0)
+define($dev eth0)
 
 src :: FromDevice($dev);
 out :: ToDevice($dev);
