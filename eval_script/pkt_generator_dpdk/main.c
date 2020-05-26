@@ -130,7 +130,7 @@ fill_ipv4_header(struct rte_ipv4_hdr *hdr) {
 	hdr->hdr_checksum = rte_cpu_to_be_16(25295);
 	// hdr->src_addr = rte_cpu_to_be_32(0xC0A80001); // 192.168.0.1
 	hdr->src_addr = rte_cpu_to_be_32(0x0AA80001);
-	hdr->dst_addr = rte_cpu_to_be_32(0x01010101); // 1.1.1.1
+	hdr->dst_addr = rte_cpu_to_be_32(0x4d4d4d4d); // 1.1.1.1
 }
 
 static void
