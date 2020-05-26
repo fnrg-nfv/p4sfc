@@ -1,10 +1,10 @@
 require(package "p4sfc");
-define($header "00 00 00 01 00 01")
+define($header "00 00 00 04 00 00 00 02 00 04 00 07")
 define($interval 2)
 define($dev eth0)
 define($rate 1)
 define($limit 10)
-define($pktsize 1497)
+define($pktsize 1494)
 
 mn :: SampleMonitor();
 

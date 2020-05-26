@@ -41,6 +41,7 @@ parser MyParser(packet_in packet,
         transition select((bit<16>)hdr.ipv4.protocol) {
             PROTOCOL_TCP: parse_tcp_udp;
             PROTOCOL_UDP: parse_tcp_udp;
+            0x0011:         parse_tcp_udp;
             default: accept;
         }
     }

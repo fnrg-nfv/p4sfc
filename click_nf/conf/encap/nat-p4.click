@@ -2,7 +2,7 @@ require(package "p4sfc");
 
 define($dev eth0);
 
-rw :: P4IPRewriter(0, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
+rw :: P4IPRewriter(770, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 ec :: P4SFCEncap();
 
 FromDevice($dev) -> [0]ec;
