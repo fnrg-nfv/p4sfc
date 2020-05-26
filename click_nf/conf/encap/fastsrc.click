@@ -9,7 +9,6 @@ define($pktsize 1400)
 FastUDPFlows($rate, -1, $pktsize, 0:0:0:0:0:0, 1.0.0.1, 1:1:1:1:1:1, 2.0.0.2, 100, 10)
     -> CustomEncap($header)
     -> c :: Counter
-    -> Print($header)
     -> ToDevice($dev);
 
 Script( TYPE ACTIVE,

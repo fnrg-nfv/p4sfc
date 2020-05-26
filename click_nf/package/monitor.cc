@@ -23,7 +23,7 @@ void SampleMonitor::push(int input, Packet *p) {
   _total_pkts++;
   _cur_pkts++;
   long int cur_time = _get_cur_time();
-  if (cur_time - _last_time >= 1000000) { // interval: 1s
+  if (cur_time - _last_time >= 500000) { // interval: .5s
     std::cout << "MONITOR == Current time(us):" << cur_time
               << "\tTotal:" << _total_pkts << "\tInterval:" << _cur_pkts
               << std::endl;
