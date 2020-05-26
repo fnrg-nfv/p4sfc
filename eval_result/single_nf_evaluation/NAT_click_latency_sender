@@ -7,21 +7,25 @@ Checking link statusdone
 Port0 Link Up. Speed 10000 Mbps - full-duplex
 L2FWD: entering main loop on lcore 0
 Send a packet
-  Time: 1590477356147 ms
+  Time: 1590477891882 ms
 Send a packet
-  Time: 1590477361147 ms
+  Time: 1590477896883 ms
 Send a packet
-  Time: 1590477366147 ms
+  Time: 1590477901883 ms
 Send a packet
-  Time: 1590477371147 ms
+  Time: 1590477906883 ms
 Send a packet
-  Time: 1590477376147 ms
+  Time: 1590477911883 ms
 Send a packet
-  Time: 1590477381147 ms
+  Time: 1590477916883 ms
 Send a packet
-  Time: 1590477386147 ms
+  Time: 1590477921883 ms
 Send a packet
-  Time: 1590477391147 ms
+  Time: 1590477926883 ms
+Send a packet
+  Time: 1590477931883 ms
+Send a packet
+  Time: 1590477936883 ms
 
 
 Signal 2 received, preparing to exit...
