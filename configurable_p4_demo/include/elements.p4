@@ -120,3 +120,73 @@ control Firewall(inout headers hdr,
         Firewall_ternary.apply();
     }
 }
+
+control Classifier(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+    
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    table Firewall_ternary {
+        key = {
+            hdr.sfc.chainId: exact;
+            meta.curNfInstanceId: exact;
+            meta.stageId: exact;
+            hdr.ipv4.srcAddr: ternary;
+            hdr.ipv4.dstAddr: ternary;
+            hdr.ipv4.protocol: ternary;
+            hdr.tcp_udp.srcPort: ternary;
+            hdr.tcp_udp.dstPort: ternary;
+        }
+        actions = {
+            NoAction;
+            drop;
+        }
+        default_action = NoAction();
+        // size = 1024;
+        const entries = {
+            (0, 1, 0, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+        }
+    }
+    
+    apply{
+        Firewall_ternary.apply();
+    }
+}
+
+control IpRoute(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+    
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    table Firewall_ternary {
+        key = {
+            hdr.sfc.chainId: exact;
+            meta.curNfInstanceId: exact;
+            meta.stageId: exact;
+            hdr.ipv4.srcAddr: ternary;
+            hdr.ipv4.dstAddr: ternary;
+            hdr.ipv4.protocol: ternary;
+            hdr.tcp_udp.srcPort: ternary;
+            hdr.tcp_udp.dstPort: ternary;
+        }
+        actions = {
+            NoAction;
+            drop;
+        }
+        default_action = NoAction();
+        // size = 1024;
+        const entries = {
+            (0, 1, 0, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+        }
+    }
+    
+    apply{
+        Firewall_ternary.apply();
+    }
+}

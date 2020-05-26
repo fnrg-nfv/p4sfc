@@ -87,7 +87,7 @@ struct p4sfc_nf_header {
 };
 
 static uint64_t timer_period = 5; /* default period is 10 seconds for send packets */
-static bool latency_test = true;
+static bool latency_test = false;
 
 static void
 fill_p4sfc_header(struct rte_mbuf *m, struct p4sfc_chain_header *hdr) {
@@ -128,7 +128,8 @@ fill_ipv4_header(struct rte_ipv4_hdr *hdr) {
 	hdr->time_to_live = 64;
 	hdr->next_proto_id = 6; // tcp
 	hdr->hdr_checksum = rte_cpu_to_be_16(25295);
-	hdr->src_addr = rte_cpu_to_be_32(0xC0A80001); // 192.168.0.1
+	// hdr->src_addr = rte_cpu_to_be_32(0xC0A80001); // 192.168.0.1
+	hdr->src_addr = rte_cpu_to_be_32(0x0AA80001);
 	hdr->dst_addr = rte_cpu_to_be_32(0x01010101); // 1.1.1.1
 }
 

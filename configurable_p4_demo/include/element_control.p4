@@ -32,7 +32,7 @@ control ElementControl(inout headers hdr,
         default_action = drop;
         // size = 1024;
         const entries = {
-            (0, 0, 0): set_control_data(0, 255, 0);
+            (0, 0, 0): set_control_data(0, 255, 1);
             // (1, 1, 1): set_control_data(0, 255, 1);
             // (0, 1, 1): set_control_data(2, 2, 1);
             // (0, 2, 2): set_control_data(0, 255, 1);
@@ -42,6 +42,8 @@ control ElementControl(inout headers hdr,
     IpRewriter()  ipRewriter;
     Monitor()     monitor;
     Firewall()    firewall;
+    Classifier()  classifier;
+    IpRoute()     ipRoute;
     apply {
         chainId_stageId_exact.apply();
         if(meta.curElement == ELEMENT_NONE) {
@@ -55,6 +57,12 @@ control ElementControl(inout headers hdr,
         }
         else if(meta.curElement == ELEMENT_FIREWALL) {
             firewall.apply(hdr, meta, standard_metadata);
+        }
+        else if(meta.curElement == ELEMENT_CLASSIFIER) {
+            classifier.apply(hdr, meta, standard_metadata);
+        }
+        else if(meta.curElement == ELEMENT_IPROUTE) {
+            ipRoute.apply(hdr, meta, standard_metadata);
         }
     }
 }
