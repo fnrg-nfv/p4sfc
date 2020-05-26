@@ -2,7 +2,7 @@ require(package "p4sfc");
 define($header "00 00 00 01 00 01")
 define($interval 2)
 define($dev eth0)
-define($pktsize 1497)
+define($pktsize 63)
 define($rate 100000)
 
 FastUDPSource($rate, -1, $pktsize, 0:0:0:0:0:0, 10.0.0.1, 1234, 1:1:1:1:1:1, 77.77.77.77, 1234)
