@@ -32,7 +32,7 @@ control ElementControl(inout headers hdr,
         default_action = drop;
         // size = 1024;
         const entries = {
-            (0, 0, 0): set_control_data(4, 255, 0);
+            (0, 0, 0): set_control_data(4, 255, 1);
             // (1, 1, 1): set_control_data(0, 255, 1);
             // (0, 1, 1): set_control_data(2, 2, 1);
             // (0, 2, 2): set_control_data(0, 255, 1);
