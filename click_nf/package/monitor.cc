@@ -19,7 +19,7 @@ int SampleMonitor::initialize(ErrorHandler *errh) {
   return 0;
 }
 
-void SampleMonitor::push(int input, Packet *p) {
+Packet *SampleMonitor::simple_action(Packet *p) {
   _total_pkts++;
   _cur_pkts++;
   long int cur_time = _get_cur_time();
@@ -30,7 +30,7 @@ void SampleMonitor::push(int input, Packet *p) {
     _cur_pkts = 0;
     _last_time = cur_time;
   }
-  output(input).push(p);
+  return p;
 }
 
 long int SampleMonitor::_get_cur_time() {
