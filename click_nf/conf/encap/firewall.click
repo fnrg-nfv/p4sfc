@@ -1,12 +1,15 @@
-define($dev eth0)
+define($dev eth0);
+require(package "p4sfc");
+ec :: P4SFCEncap();
 
-src :: FromDevice($dev)
+FromDevice($dev) -> [0]ec;
+out1 :: Print(out)
+     -> [1]ec;
+ec[1] -> Queue(1024)
+      -> ToDevice($dev);
 
-drop :: Discard;
-
-out :: Queue(1024)
-    -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
-    -> ToDevice($dev);
+out :: EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
+    -> out1;
 
 alert :: Print(alert)
       -> out;
@@ -17,21 +20,15 @@ AddressInfo(
   extern_next_hop	00:10:20:30:40:50,
 );
 
-ipclf :: IPClassifier(src net intern and dst net intern,
-                      src net intern,
-                      dst host extern,
-                      -);
-
-ipfilter :: IPFilter(deny src 10.0.0.1/8,
+ipfilter :: IPFilter(allow src net intern && dst net intern,
+                     1 src net intern,
+                     1 dst host extern,
                      deny all)
 
+ec[0] -> Strip(14)
+      -> CheckIPHeader
+      -> ipfilter;
 
-src -> Strip(14)
-    -> CheckIPHeader
-    -> ipclf;
-
-ipclf[0] -> out;
-ipclf[1] -> alert;
-ipclf[2] -> alert;
-ipclf[3] -> drop;
+ipfilter[0] -> out;
+ipfilter[1] -> alert;
 

@@ -7,3 +7,6 @@ CLICK-BASED NETWORK FUNCTION:
 * VPN            : vpn.click
 - load balancer  : lb.click
 - forwarder      : forwarder.click
+
+BUG:
+- P4SFCEncap does not handle the DROP situation: DROP packets should retrieve their headers.
