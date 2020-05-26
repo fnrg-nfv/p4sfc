@@ -1,18 +1,12 @@
-src :: InfiniteSource( DATA \< 
-// 00 00 00 03 00 20 01 70 0C DD
-00 00 00 00 00 00 00 00 00 00 00 00 08 00 
-45 00 00 2E 00 00 40 00 40 11 96 24 0A 00
-00 01 4D 4D 4D 4D 22 B8 5B 25 00 1A DD 41
-00 00 00 00 00 00 00 00 00 00 00 00 00 00
-00 00 00 00>, LIMIT 1, STOP true); 
+define($dev eth0)
 
-drop :: Print(drop)
-     -> Discard;
+src :: FromDevice($dev)
+
+drop :: Discard;
 
 out :: Queue(1024)
     -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
-    -> Print(out)
-    -> ToDevice(vethm0);
+    -> ToDevice($dev);
 
 alert :: Print(alert)
       -> out;
@@ -28,10 +22,12 @@ ipclf :: IPClassifier(src net intern and dst net intern,
                       dst host extern,
                       -);
 
-src -> Print(in)
-    -> Strip(14)
+ipfilter :: IPFilter(deny src 10.0.0.1/8,
+                     deny all)
+
+
+src -> Strip(14)
     -> CheckIPHeader
-    -> IPPrint(ip_in)
     -> ipclf;
 
 ipclf[0] -> out;
