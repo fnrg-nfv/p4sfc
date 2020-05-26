@@ -5,7 +5,7 @@ define($dev eth0)
 define($pktsize 1400)
 define($rate 100000)
 
-FastUDPSource($rate, -1, $pktsize, 0:0:0:0:0:0, 1.0.0.1, 1234, 1:1:1:1:1:1, 2.0.0.2, 1234)
+FastUDPSource($rate, -1, $pktsize, 0:0:0:0:0:0, 10.0.0.1, 1234, 1:1:1:1:1:1, 10.0.0.2, 1234)
     -> CustomEncap($header)
     -> c :: Counter
     -> ToDevice($dev);
