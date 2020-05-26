@@ -17,6 +17,7 @@
 
 #include <click/config.h>
 #include <click/error.hh>
+#include <stdio.h>
 
 #include "customencap.hh"
 
@@ -27,6 +28,7 @@ int CustomEncap::configure(Vector<String> &conf, ErrorHandler *errh) {
     _len = 0;
   } else {
     parse_pattern(conf[0]);
+    errh->debug("CE config: %s\n", conf[0].c_str());
   }
   return 0;
 }
@@ -64,12 +66,17 @@ void CustomEncap::parse_pattern(String &s) {
   _header = (char *)realloc(data, cur_p);
 }
 
-void CustomEncap::push(int input, Packet *p) {
-  assert(input == 0);
+// void CustomEncap::push(int input, Packet *p) {
+//   assert(input == 0);
+//   p = simple_action(p);
+//   output(0).push(p);
+// }
+
+Packet* CustomEncap::simple_action(Packet *p) {
   p = p->push(_len);
   const unsigned char *pdata = p->data();
   memcpy((char *)pdata, _header, _len);
-  output(0).push(p);
+  return p;
 }
 
 CLICK_ENDDECLS
