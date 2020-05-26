@@ -3,7 +3,7 @@ CLICK-BASED NETWORK FUNCTION:
 - NAT            : nat.click, nat-p4.click, nat-p4-encap.click
 - firewall       : firewall.click
 - monitor        : monitor.click
-* IPS            : ips.click                                        # based on snort
+- IPS            : ips.click                                        # based on snort
 * VPN            : vpn.click
 - load balancer  : lb.click
 - forwarder      : forwarder.click

@@ -27,11 +27,11 @@ control ForwardControl(inout headers hdr,
             set_output_port;
             drop;
         }
-        size = 1024;
+        // size = 1024;
         default_action = drop;
-        // const entries = {
-        //     (0, 0): set_output_port(2);
-        // }
+        const entries = {
+            (0, 1): set_output_port(2);
+        }
     }
 
     apply {

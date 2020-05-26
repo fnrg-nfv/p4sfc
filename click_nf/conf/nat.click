@@ -1,15 +1,12 @@
 // software-NAT composed by click elements led by mjt
+define($dev, eth0)
 
-src :: FromDevice(h1-eth0);
+src :: FromDevice($dev);
 // TODO
-out :: IPPrint(ok)
-    -> Queue(1024)
-    -> ToDevice(h1-eth0);
-// out :: IPPrint(ok)
-//     -> Discard;
+out :: Queue(1024)
+    -> ToDevice($dev);
 
-drop :: IPPrint(drop)
-     -> Discard;
+drop :: Discard;
 
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
