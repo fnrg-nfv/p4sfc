@@ -5,13 +5,13 @@ define($dev eth0);
 rw :: P4IPRewriter(0, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 ec :: P4SFCEncap();
 
-src :: FromDevice($dev) -> [0]ec;
-
+FromDevice($dev) -> [0]ec;
+src :: ec[0];
 out :: [1]ec;
-
 ec[1] -> Print(out)
       -> Queue(1024)
       -> ToDevice($dev);
+
 
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
@@ -24,12 +24,10 @@ ip :: IPClassifier(src net intern and dst net intern,
                    dst host extern,
                    -);
 
-src -> Print(in)
-    -> [0]ec;
-ec[0] -> Strip(14)
-      -> CheckIPHeader
-      -> IPPrint(in_ip)
-      -> ip; 
+src -> Strip(14)
+    -> CheckIPHeader
+    -> IPPrint(in_ip)
+    -> ip; 
 
 ip[0] -> out;
 ip[1] -> [0]rw;

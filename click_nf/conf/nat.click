@@ -1,11 +1,16 @@
 // software-NAT composed by click elements led by mjt
-define($dev, eth0)
+require(package "p4sfc");
 
-src :: FromDevice($dev);
-// TODO
-out :: Queue(1024)
-    -> ToDevice($dev);
+define($dev eth0);
 
+ec :: P4SFCEncap();
+
+FromDevice($dev) -> [0]ec;
+src :: ec[0];
+out :: [1]ec;
+ec[1] -> Print(out)
+      -> Queue(1024)
+      -> ToDevice($dev);
 drop :: Discard;
 
 AddressInfo(
