@@ -71,6 +71,7 @@ void SampleIPS::push(int, Packet *p) {
     if (pattern_match(patterns[i], p)) {
       // TODO: alert something here.
       output(0).push(p);
+      return;
     }
   }
   output(1).push(p);

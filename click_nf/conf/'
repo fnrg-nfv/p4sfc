@@ -8,11 +8,12 @@ out1 :: Print(out)
 ec[1] -> Queue(1024)
       -> ToDevice($dev);
 
-out :: EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
-    -> out1;
-
 alert :: Print(alert)
       -> out;
+
+out :: Queue(1024)
+    -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
+    -> out1;
 
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
@@ -22,12 +23,12 @@ AddressInfo(
 
 ipfilter :: IPFilter(allow src net intern && dst net intern,
                      1 src net intern,
-                     1 dst host extern,
+                     1 dst net extern,
                      deny all)
 
-ec[0] -> Strip(14)
-      -> CheckIPHeader
-      -> ipfilter;
+src -> Strip(14)
+    -> CheckIPHeader
+    -> ipfilter;
 
 ipfilter[0] -> out;
 ipfilter[1] -> alert;
