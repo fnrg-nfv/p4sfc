@@ -38,10 +38,10 @@ control IpRewriter(inout headers hdr,
         }
         default_action = send_to_server();
         // size = 1024;
-        // const entries = {
-            // (0, 0, 0, 0xC0A80001, 0x01010101, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
+        const entries = {
+            (0, 0, 0, 0x0AA80001, 0x01010101, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
             // (0, 2, 2, 0x0a000101, 0x0a000303, 0x162E, 0x04d2): rewrite(0x0c0c0c0c, 0x0d0d0d0d, 0x3333, 0x4444);
-        // }
+        }
     }
 
     apply{
@@ -112,7 +112,7 @@ control Firewall(inout headers hdr,
         default_action = NoAction();
         // size = 1024;
         const entries = {
-            (0, 1, 0, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+            (0, 0, 0, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
         }
     }
     
@@ -129,30 +129,31 @@ control Classifier(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    table Firewall_ternary {
+    action set_next_stage(bit<8> nextStage) {
+        meta.nextStage = nextStage;
+    }
+
+    table Classifier_ternary {
         key = {
             hdr.sfc.chainId: exact;
             meta.curNfInstanceId: exact;
             meta.stageId: exact;
             hdr.ipv4.srcAddr: ternary;
-            hdr.ipv4.dstAddr: ternary;
-            hdr.ipv4.protocol: ternary;
-            hdr.tcp_udp.srcPort: ternary;
-            hdr.tcp_udp.dstPort: ternary;
         }
         actions = {
             NoAction;
             drop;
+            set_next_stage;
         }
         default_action = NoAction();
         // size = 1024;
         const entries = {
-            (0, 1, 0, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+            (0, 0, 0, 0x0AA80001 &&& 0xffffffff): set_next_stage(255);
         }
     }
     
     apply{
-        Firewall_ternary.apply();
+        Classifier_ternary.apply();
     }
 }
 
@@ -163,30 +164,31 @@ control IpRoute(inout headers hdr,
     action drop() {
         mark_to_drop(standard_metadata);
     }
+    
+    action set_output_port(egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+    }
 
-    table Firewall_ternary {
+    table IpRoute_ternary {
         key = {
             hdr.sfc.chainId: exact;
             meta.curNfInstanceId: exact;
             meta.stageId: exact;
-            hdr.ipv4.srcAddr: ternary;
             hdr.ipv4.dstAddr: ternary;
-            hdr.ipv4.protocol: ternary;
-            hdr.tcp_udp.srcPort: ternary;
-            hdr.tcp_udp.dstPort: ternary;
         }
         actions = {
             NoAction;
             drop;
+            set_output_port;
         }
         default_action = NoAction();
         // size = 1024;
         const entries = {
-            (0, 1, 0, 0x00000000 &&& 0x00000000, 0x0a000303 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
+            (0, 0, 0, 0x01010101 &&& 0xffffffff): set_output_port(132);
         }
     }
     
     apply{
-        Firewall_ternary.apply();
+        IpRoute_ternary.apply();
     }
 }

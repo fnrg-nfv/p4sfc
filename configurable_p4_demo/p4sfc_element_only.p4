@@ -19,10 +19,10 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     ForwardControl() forwardControl;
-    IpRewriter()  ipRewriter;
+    IpRoute()     ipRoute;
 
     apply {
-        ipRewriter.apply(hdr, meta, standard_metadata);
+        ipRoute.apply(hdr, meta, standard_metadata);
         forwardControl.apply(hdr, meta, standard_metadata);
     }
 }

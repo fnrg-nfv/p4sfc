@@ -1,0 +1,33 @@
+EAL: Probing VFIO support...
+Initializing port 0... done: 
+Port 0, MAC address: 08:00:00:00:01:11
+
+
+Checking link statusdone
+Port0 Link Up. Speed 10000 Mbps - full-duplex
+L2FWD: entering main loop on lcore 0
+Send a packet
+  Time: 1590466884605 ms
+Send a packet
+  Time: 1590466889605 ms
+Send a packet
+  Time: 1590466894605 ms
+Send a packet
+  Time: 1590466899605 ms
+Send a packet
+  Time: 1590466904605 ms
+Send a packet
+  Time: 1590466909606 ms
+Send a packet
+  Time: 1590466914606 ms
+Send a packet
+  Time: 1590466919606 ms
+Send a packet
+  Time: 1590466924606 ms
+Send a packet
+  Time: 1590466929606 ms
+
+
+Signal 2 received, preparing to exit...
+Closing port 0... Done
+Bye...

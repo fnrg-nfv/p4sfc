@@ -41,4 +41,4 @@ ip[2] -> [1]rw;
 ip[3] -> drop;
 
 rw[0] -> out;
-rw[1] -> drop;
+rw[1] -> out;

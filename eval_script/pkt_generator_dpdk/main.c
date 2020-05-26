@@ -87,7 +87,7 @@ struct p4sfc_nf_header {
 };
 
 static uint64_t timer_period = 5; /* default period is 10 seconds for send packets */
-static bool latency_test = false;
+static bool latency_test = true;
 
 static void
 fill_p4sfc_header(struct rte_mbuf *m, struct p4sfc_chain_header *hdr) {
