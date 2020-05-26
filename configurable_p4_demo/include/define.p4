@@ -8,7 +8,7 @@ typedef bit<1>  boolean_t;
 typedef bit<16> transport_port_t;
 
 const bit<9> DROP_PORT = 511;
-const bit<9> SERVER_PORT = 4;
+const bit<9> SERVER_PORT = 3;
 const bit<8> NO_STAGE = 255;
 
 

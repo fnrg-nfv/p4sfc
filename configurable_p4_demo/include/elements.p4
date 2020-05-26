@@ -11,7 +11,7 @@ control IpRewriter(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     action send_to_server() {
-        standard_metadata.egress_spec = (bit<9>) 4;
+        standard_metadata.egress_spec = (bit<9>) 3;
         // mark_to_drop(standard_metadata);
     }
 
@@ -38,10 +38,10 @@ control IpRewriter(inout headers hdr,
         }
         default_action = send_to_server();
         // size = 1024;
-        const entries = {
-            (0, 0, 0, 0xC0A80001, 0x01010101, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
+        // const entries = {
+            // (0, 0, 0, 0xC0A80001, 0x01010101, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
             // (0, 2, 2, 0x0a000101, 0x0a000303, 0x162E, 0x04d2): rewrite(0x0c0c0c0c, 0x0d0d0d0d, 0x3333, 0x4444);
-        }
+        // }
     }
 
     apply{
