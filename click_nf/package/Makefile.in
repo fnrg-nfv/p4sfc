@@ -34,8 +34,6 @@ KVERSIONFLAGS = --gpl
 DEFS = @DEFS@ $(CLICKDEFS)
 INCLUDES = -I. -I$(top_builddir) -I$(srcdir) $(CLICKINCLUDES)
 
-PACKAGE_LIBS = -lcurl
-
 # Set this variable to force 'click-elem2package' to include a header,
 # such as your package's '<config.h>', if necessary.
 #ELEM2PACKAGE_INCLUDES = -i'<config.h>'
