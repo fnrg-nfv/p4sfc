@@ -22,7 +22,7 @@ def start_click_nf(nf, chain_id):
     switch_port = free_switch_port.pop(0)
     nic_to_bind = switch_port['vnic_name']
     click_id = get_click_instance_id(chain_id, nf.id, nf.stage_index)
-    print 'click id give to element %d\n' % click_id
+    print 'click id give to element is %d\n' % click_id
     start_command = "sudo ../click_nf/pattern/run.py -i %d ../click_nf/pattern/%s.pattern %s >logs/%s.log 2>&1 &" % (
         click_id, nf.click_file_name, nic_to_bind, nf.click_file_name)
     os.system(start_command)

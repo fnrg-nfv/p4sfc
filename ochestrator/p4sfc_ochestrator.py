@@ -59,17 +59,23 @@ def parse_chain(chain_desc):
 
         # assgin offloadability
         nf['offloadability'] = nf_offlodability[nf['name']]
+        
         # group by location
         location = nf['location']
-        if location == cur_location:
-            cur_group.append(nf)
-        else:
-            if cur_location is not None:
-                nf_groups[cur_location] = cur_group
-            cur_location = location
-            cur_group = [nf]
+        nf_group = nf_groups.get(location, [])
+        nf_group.append(nf)
+        nf_groups[location] = nf_group
 
-    nf_groups[cur_location] = cur_group
+
+    #     if location == cur_location:
+    #         cur_group.append(nf)
+    #     else:
+    #         if cur_location is not None:
+    #             nf_groups[cur_location] = cur_group
+    #         cur_location = location
+    #         cur_group = [nf]
+
+    # nf_groups[cur_location] = cur_group
     return nf_groups
 
 
