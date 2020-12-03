@@ -14,6 +14,9 @@ GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
 
 all: client server
 
+test: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o test.o
+	$(CXX) $^ $(LDFLAGS) -o $@
+
 client: p4sfcstate.pb.o p4sfcstate.grpc.pb.o client.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
@@ -35,4 +38,4 @@ server: p4sfcstate.pb.o p4sfcstate.grpc.pb.o server.o
 proto: p4sfcstate.pb.cc p4sfcstate.grpc.pb.cc 
 
 clean:
-	rm -f *.o *.pb.cc *.pb.h client server
+	rm -f *.o *.pb.cc *.pb.h client server test

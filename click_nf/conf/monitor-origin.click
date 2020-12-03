@@ -1,5 +1,5 @@
-define($interval 2)
-define($dev eth0)
+define($interval 5)
+define($dev vEth0_1)
 
 FromDevice($dev)
     -> c :: Counter

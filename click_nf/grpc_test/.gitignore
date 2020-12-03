@@ -1,5 +1,6 @@
-*.o
 client
 server
+test
+*.o
 *.pb.cc
 *.pb.h

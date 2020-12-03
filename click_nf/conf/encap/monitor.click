@@ -1,4 +1,4 @@
-define($dev eth0);
+define($dev vEth0_1);
 require(package "p4sfc");
 ec :: P4SFCEncap();
 

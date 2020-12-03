@@ -1,31 +1,5 @@
-// Copyright 2015, Google Inc.
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-//
-//     * Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-//     * Neither the name of Google Inc. nor the names of its
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// This is protobuf file for gRPC between servers (state library) and controller.
+// Controller need to obtian top-K matched states periodically.
 
 syntax = "proto3";
 
@@ -39,9 +13,6 @@ service RPC {
   rpc GetState (Empty) returns (TableEntryReply) {}
 }
 
-message Empty{
-
-}
 
 // The request message containing the user's name.
 message HelloRequest {
@@ -53,14 +24,19 @@ message HelloReply {
   string message = 1;
 }
 
+message Empty{ }
+
 message TableEntryReply {
-  repeated TableEntry entries = 1;
+  int32 cur_pos = 1;
+  repeated TableEntry entries = 2;
 }
 
 message TableEntry {
-  uint32 table_id = 1;
+  // uint32 table_id = 1;
+  // table name
+  bytes table_name = 1;
   repeated FieldMatch match = 2;
-  TableAction action = 3;
+  Action action = 3;
   // Should only be set if the match implies a TCAM lookup, i.e. at least one of
   // the match fields is Optional, Ternary or Range.  A higher number indicates
   // higher priority.  Only a highest priority entry that matches the packet
@@ -72,64 +48,50 @@ message TableEntry {
   // this is stored, as long as it is returned with the rest of the entry in
   // a Read RPC. This is deprecated in favor of the more flexible metadata
   // field.
+  SlidingWindow window = 5;
   // MeterConfig meter_config = 6;
   // CounterData counter_data = 7;
 }
 
+message SlidingWindow {
+  repeated int64 slot = 1;
+}
+
 message FieldMatch {
-  uint32 field_id = 1;
+  string field_name = 1;
 
   // Matches can be performed on arbitrarily-large inputs; the protobuf type
   // 'bytes' is used to model arbitrarily-large values.
   message Exact {
     bytes value = 1;
   }
-  message Ternary {
-    bytes value = 1;
-    bytes mask = 2;
-  }
-  message LPM {
-    bytes value = 1;
-    int32 prefix_len = 2;  // in bits
-  }
-  // A Range is logically a set that contains all values numerically between
-  // 'low' and 'high' inclusively.
-  message Range {
-    bytes low = 1;
-    bytes high = 2;
-  }
-  // If the Optional match should be a wildcard, the FieldMatch must be omitted.
-  // Otherwise, this behaves like an exact match.
-  message Optional {
-    bytes value = 1;
-  }
 
   oneof field_match_type {
     Exact exact = 2;
-    Ternary ternary = 3;
-    LPM lpm = 4;
-    Range range = 6;
-    Optional optional = 7;
-    // Architecture-specific match value; it corresponds to the other_match_type
-    // in the P4Info MatchField message.
-    // .google.protobuf.Any other = 100;
+    // TODO: only exact is supported currently. 
   }
 }
 
-message TableAction {
-  oneof type {
-    Action action = 1;
-    // uint32 action_profile_member_id = 2;
-    // uint32 action_profile_group_id = 3;
-    // ActionProfileActionSet action_profile_action_set = 4;
-  }
-}
+// message TableAction {
+//   oneof type {
+//     Action action = 1;
+//     // uint32 action_profile_member_id = 2;
+//     // uint32 action_profile_group_id = 3;
+//     // ActionProfileActionSet action_profile_action_set = 4;
+//   }
+// }
 
 message Action {
-  uint32 action_id = 1;
+  string action = 1;
   message Param {
-    uint32 param_id = 2;
+    // param may not be needed. it is determined by action and never changed.
+    string param = 2;
     bytes value = 3;
   }
+  // uint32 action_id = 1;
+  // message Param {
+  //   uint32 param_id = 2;
+  //   bytes value = 3;
+  // }
   repeated Param params = 4;
 }

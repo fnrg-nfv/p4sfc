@@ -6,12 +6,8 @@
 
 #include "p4sfcstate.grpc.pb.h"
 
-using grpc::Channel;
-using grpc::ClientContext;
-using grpc::Status;
-using P4SFCState::HelloRequest;
-using P4SFCState::HelloReply;
-using P4SFCState::RPC;
+using namespace grpc;
+using namespace P4SFCState;
 
 class GreeterClient {
  public:
@@ -52,7 +48,7 @@ class GreeterClient {
 int main(int argc, char** argv) {
   // Instantiate the client. It requires a channel, out of which the actual RPCs
   // are created. This channel models a connection to an endpoint (in this case,
-  // localhost at port 50051). We indicate that the channel isn't authenticated
+  // localhost at port 28282). We indicate that the channel isn't authenticated
   // (use of InsecureChannelCredentials()).
   GreeterClient greeter(grpc::CreateChannel(
       "localhost:28282", grpc::InsecureChannelCredentials()));

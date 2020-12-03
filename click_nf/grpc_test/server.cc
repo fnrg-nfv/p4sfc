@@ -1,24 +1,18 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
+#include <chrono>
 
 #include <grpc++/grpc++.h>
 
 #include "p4sfcstate.grpc.pb.h"
 
-using grpc::Server;
-using grpc::ServerBuilder;
-using grpc::ServerContext;
-using grpc::Status;
-// using P4SFCState::HelloRequest;
-// using P4SFCState::HelloReply;
-// using P4SFCState::RPC;
-// using P4SFCState::Empty;
-// using P4SFCState::TableEntryReply;
+using namespace grpc;
 using namespace P4SFCState;
 
 // Logic and data behind the server's behavior.
-class GreeterServiceImpl final : public RPC::Service {
+class ServiceImpl final : public RPC::Service {
 
   Status SayHello(ServerContext* context, const HelloRequest* request,
                   HelloReply* reply) override {
@@ -29,8 +23,9 @@ class GreeterServiceImpl final : public RPC::Service {
 
   Status GetState(ServerContext* context, const Empty* request, TableEntryReply* response) {
     TableEntry* entry = response->add_entries();
-    FieldMatch* match = entry->add_match();
-  
+
+    // entry->CopyFrom()
+
 
     return Status::OK;
   }
@@ -39,7 +34,7 @@ class GreeterServiceImpl final : public RPC::Service {
 
 void RunServer() {
   std::string server_address("0.0.0.0:28282");
-  GreeterServiceImpl service;
+  ServiceImpl service;
 
   ServerBuilder builder;
   // Listen on the given address without any authentication mechanism.
@@ -57,7 +52,12 @@ void RunServer() {
 }
 
 int main(int argc, char** argv) {
-  RunServer();
+  std::thread th(RunServer);
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::cout << "Get Here" << std::endl;
+  }
+  // RunServer();
 
   return 0;
 }

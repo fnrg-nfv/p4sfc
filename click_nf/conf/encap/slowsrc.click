@@ -1,7 +1,7 @@
 require(package "p4sfc");
-define($header "00 00 00 04 00 00 00 02 00 04 00 07")
+define($header "00 00 00 01 00 00")
 define($interval 2)
-define($dev eth0)
+define($dev vEth0_0)
 define($rate 1)
 define($limit 10)
 define($pktsize 1494)
