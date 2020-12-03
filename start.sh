@@ -16,9 +16,9 @@ done
 echo "Create vNIC Successfully."
 echo $SWITCH_INTERFACE_STR
 
-sudo simple_switch_grpc $SWITCH_INTERFACE_STR ./configurable_p4_demo/build/p4sfc_server_pkt_distribution.json --thrift-port 9093 --device-id 3 --log-console -- --grpc-server-addr localhost:50054 >switch.log 2>&1 &
+# sudo simple_switch_grpc $SWITCH_INTERFACE_STR ./configurable_p4_demo/build/p4sfc_server_pkt_distribution.json --thrift-port 9093 --device-id 3 --log-console -- --grpc-server-addr localhost:50054 >switch.log 2>&1 &
 
-echo "Start Server switch Successfully."
+# echo "Start Server switch Successfully."
 
 # sudo python ./p4sfc_server_daemon/main_controller.py 
 

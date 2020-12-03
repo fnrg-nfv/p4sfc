@@ -30,12 +30,12 @@ def start_click_nf(nf, chain_id):
 
 
 def start_nfs(chain_head, chain_id):
+    """All NFs should be started in the server
+    due to the rule-centric of our system
+    """
     cur_nf = chain_head
     while cur_nf is not None:
-        if cur_nf.offloadability == const.PARTIAL_OFFLOADABLE or cur_nf.offloadability == const.UN_OFFLOADABLE:
-            cur_nf.running_port = start_click_nf(cur_nf, chain_id)
-        else:
-            cur_nf.running_port = -1
+        cur_nf.running_port = start_click_nf(cur_nf, chain_id)
         cur_nf = cur_nf.next_nf
 
 
