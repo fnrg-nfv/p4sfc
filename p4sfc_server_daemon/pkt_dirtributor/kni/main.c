@@ -406,7 +406,13 @@ kni_ingress(struct kni_port_params *p)
 	}
 
 	p4sfc_forward(pkts_burst, nb_rx, p);
-
+	for (uint8_t i = 0; i < p->nb_kni; i++)
+	{
+		// each kni need to handle request
+		// from kernel (actually from the physical nic)
+		rte_kni_handle_request(p->kni[i]);
+	}
+	
 }
 
 static void
@@ -767,11 +773,7 @@ init_port(uint16_t port)
 	RTE_LOG(INFO, APP, "Initialising port %u ...\n", (unsigned)port);
 	fflush(stdout);
 
-	ret = rte_eth_dev_info_get(port, &dev_info);
-	if (ret != 0)
-		rte_exit(EXIT_FAILURE,
-			"Error during getting device (port %u) info: %s\n",
-			port, strerror(-ret));
+	rte_eth_dev_info_get(port, &dev_info);
 
 	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
 		local_port_conf.txmode.offloads |=
@@ -808,11 +810,7 @@ init_port(uint16_t port)
 						(unsigned)port, ret);
 
 	if (promiscuous_on) {
-		ret = rte_eth_promiscuous_enable(port);
-		if (ret != 0)
-			rte_exit(EXIT_FAILURE,
-				"Could not enable promiscuous mode for port%u: %s\n",
-				port, rte_strerror(-ret));
+		rte_eth_promiscuous_enable(port);
 	}
 }
 
@@ -825,7 +823,6 @@ check_all_ports_link_status(uint32_t port_mask)
 	uint16_t portid;
 	uint8_t count, all_ports_up, print_flag = 0;
 	struct rte_eth_link link;
-	int ret;
 
 	printf("\nChecking link status\n");
 	fflush(stdout);
@@ -835,15 +832,7 @@ check_all_ports_link_status(uint32_t port_mask)
 			if ((port_mask & (1 << portid)) == 0)
 				continue;
 			memset(&link, 0, sizeof(link));
-			ret = rte_eth_link_get_nowait(portid, &link);
-			if (ret < 0) {
-				all_ports_up = 0;
-				if (print_flag == 1)
-					printf("Port %u link get failed: %s\n",
-						portid, rte_strerror(-ret));
-				continue;
-			}
-			/* print link status if flag set */
+			rte_eth_link_get_nowait(portid, &link);
 			if (print_flag == 1) {
 				if (link.link_status)
 					printf(
@@ -910,7 +899,6 @@ monitor_all_ports_link_status(void *arg)
 	struct kni_port_params **p = kni_port_params_array;
 	int prev;
 	(void) arg;
-	int ret;
 
 	while (monitor_links) {
 		rte_delay_ms(500);
@@ -918,13 +906,7 @@ monitor_all_ports_link_status(void *arg)
 			if ((ports_mask & (1 << portid)) == 0)
 				continue;
 			memset(&link, 0, sizeof(link));
-			ret = rte_eth_link_get_nowait(portid, &link);
-			if (ret < 0) {
-				RTE_LOG(ERR, APP,
-					"Get link failed (port %u): %s\n",
-					portid, rte_strerror(-ret));
-				continue;
-			}
+			rte_eth_link_get_nowait(portid, &link);
 			for (i = 0; i < p[portid]->nb_kni; i++) {
 				prev = rte_kni_update_link(p[portid]->kni[i],
 						link.link_status);
@@ -977,14 +959,7 @@ kni_change_mtu(uint16_t port_id, unsigned int new_mtu)
 				"for port%u (%d)\n", (unsigned int)port_id,
 				ret);
 
-	ret = rte_eth_dev_info_get(port_id, &dev_info);
-	if (ret != 0) {
-		RTE_LOG(ERR, APP,
-			"Error during getting device (port %u) info: %s\n",
-			port_id, strerror(-ret));
-
-		return ret;
-	}
+	rte_eth_dev_info_get(port_id, &dev_info);
 
 	rxq_conf = dev_info.default_rxconf;
 	rxq_conf.offloads = conf.rxmode.offloads;
@@ -1074,7 +1049,6 @@ kni_alloc(uint16_t port_id)
 	struct rte_kni *kni;
 	struct rte_kni_conf conf;
 	struct kni_port_params **params = kni_port_params_array;
-	int ret;
 
 	if (port_id >= RTE_MAX_ETHPORTS || !params[port_id])
 		return -1;
@@ -1104,24 +1078,14 @@ kni_alloc(uint16_t port_id)
 			struct rte_kni_ops ops;
 			struct rte_eth_dev_info dev_info;
 
-			ret = rte_eth_dev_info_get(port_id, &dev_info);
-			if (ret != 0)
-				rte_exit(EXIT_FAILURE,
-					"Error during getting device (port %u) info: %s\n",
-					port_id, strerror(-ret));
+			memset(&dev_info, 0, sizeof(dev_info));
+			rte_eth_dev_info_get(port_id, &dev_info);
 
 			/* Get the interface default mac address */
-			ret = rte_eth_macaddr_get(port_id,
+			rte_eth_macaddr_get(port_id,
 				(struct rte_ether_addr *)&conf.mac_addr);
-			if (ret != 0)
-				rte_exit(EXIT_FAILURE,
-					"Failed to get MAC address (port %u): %s\n",
-					port_id, rte_strerror(-ret));
 
 			rte_eth_dev_get_mtu(port_id, &conf.mtu);
-
-			conf.min_mtu = dev_info.min_mtu;
-			conf.max_mtu = dev_info.max_mtu;
 
 			memset(&ops, 0, sizeof(ops));
 			ops.port_id = port_id;
@@ -1139,7 +1103,6 @@ kni_alloc(uint16_t port_id)
 		params[port_id]->kni[i] = kni;
 		params[port_id]->buffer[i] = (struct tx_buffer *)rte_zmalloc("pkt_buffer", sizeof(struct tx_buffer), 0);
 	}
-
 	return 0;
 }
 
@@ -1254,21 +1217,23 @@ main(int argc, char** argv)
 		.hash_func_init_val = 0,
 	};
 
+	// if not present will cause segment fault!
+	hash_params.name = "test";
+	hash_params.socket_id = 0;
+
 	nf_instance_id_2_kni = rte_hash_create(&hash_params);
 	if (nf_instance_id_2_kni == NULL)
 		rte_exit(EXIT_FAILURE,
 			"Unable to create the nat hash on socket %d\n",
 			0);
 	
-
 	/*往hashtable里加条目用于测试*/
 	struct kni_position *position = (struct kni_position *)rte_malloc(NULL, sizeof(*position), 0);
 	position->port_index = 0;
-	position->kni_index = 0;
+	position->kni_index = 1;
 	uint16_t nf_instance_id = 0;
 	int hash_index = ret = rte_hash_add_key((const struct rte_hash *)nf_instance_id_2_kni, (const void *)&nf_instance_id);
 	kni_positions[hash_index] = position;
-
 
 	/* Launch per-lcore function on every lcore */
 	rte_eal_mp_remote_launch(main_loop, NULL, CALL_MASTER);

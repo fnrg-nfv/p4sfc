@@ -10,18 +10,31 @@ using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
-using helloworld::HelloRequest;
-using helloworld::HelloReply;
-using helloworld::Greeter;
+// using P4SFCState::HelloRequest;
+// using P4SFCState::HelloReply;
+// using P4SFCState::RPC;
+// using P4SFCState::Empty;
+// using P4SFCState::TableEntryReply;
+using namespace P4SFCState;
 
 // Logic and data behind the server's behavior.
-class GreeterServiceImpl final : public Greeter::Service {
+class GreeterServiceImpl final : public RPC::Service {
+
   Status SayHello(ServerContext* context, const HelloRequest* request,
                   HelloReply* reply) override {
     std::string prefix("Hello ");
     reply->set_message(prefix + request->name());
     return Status::OK;
   }
+
+  Status GetState(ServerContext* context, const Empty* request, TableEntryReply* response) {
+    TableEntry* entry = response->add_entries();
+    FieldMatch* match = entry->add_match();
+  
+
+    return Status::OK;
+  }
+
 };
 
 void RunServer() {
