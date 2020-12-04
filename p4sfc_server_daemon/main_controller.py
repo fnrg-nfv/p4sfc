@@ -1,12 +1,16 @@
 from flask import Flask, request
 import argparse
 import time
-from p4_controller import P4Controller
-from control_rule_generator import SFC
+from control_rule_generator import SFC, generate_rules
 from click_nf_runner import start_nfs
+import os
+import sys
+sys.path.append(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '../utils/'))
+import p4runtime_lib.helper
 
 app = Flask(__name__)
-p4_controller = None
+p4info_helper = None
 
 
 def get_chain_id(instance_id):
@@ -39,9 +43,8 @@ def deploy_chain():
     # start nfs in the server
     start_nfs(sfc.chain_head, chain_id)
 
-    # config pkt process logic
-    global p4_controller
-    p4_controller.config_pipeline(sfc)
+    # get pkt process logic rules
+    rules = generate_rules(sfc, p4info_helper)
     return "OK"
 
 
@@ -50,7 +53,7 @@ def delete_chain():
     data = request.get_json()
     chain_id = data.get("chain_id")
     p4_controller.delete_pipeline(chain_id)
-    return str(int(time.time()*1000))
+    return str(int(time.time() * 1000))
 
 
 @app.route('/insert_entry', methods=["POST"])
@@ -83,7 +86,7 @@ def insert_route():
     chain_length = data.get("chain_length")
     output_port = data.get("output_port")
     p4_controller.insert_route(chain_id, chain_length, output_port)
-    return str(int(time.time()*1000))
+    return str(int(time.time() * 1000))
 
 
 @app.route('/delete_entry', methods=["POST"])
@@ -117,18 +120,25 @@ def read_counter():
 
 
 def main(p4info_file_path, server_port):
-    global p4_controller
-    p4_controller = P4Controller(p4info_file_path)
+    p4info_helper = p4runtime_lib.helper.P4InfoHelper(p4info_file_path)
     print 'P4SFC server daemon init successfully...'
     app.run(host="0.0.0.0", port=server_port)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='P4SFC Server Daemon')
-    parser.add_argument('--p4info', help='p4info proto in text format from p4c',
-                        type=str, action="store", required=False,
-                        default='../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
-    parser.add_argument('--server-port', help='port for RESTful API',
-                        type=str, action="store", required=False, default=8090)
+    parser.add_argument(
+        '--p4info',
+        help='p4info proto in text format from p4c',
+        type=str,
+        action="store",
+        required=False,
+        default='../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
+    parser.add_argument('--server-port',
+                        help='port for RESTful API',
+                        type=str,
+                        action="store",
+                        required=False,
+                        default=8090)
     args = parser.parse_args()
     main(args.p4info, args.server_port)

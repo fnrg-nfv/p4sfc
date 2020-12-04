@@ -234,6 +234,25 @@ def showTableEntry(entry, p4info_helper):
             action_name, p.param_id), p.value)
     print
 
+
+def generate_rules(sfc, p4info_helper):
+    rules = []
+
+    rules.extend(
+        generate_element_control_rules(sfc.pre_host_chain_head,
+                                       sfc.pre_host_chain_tail, sfc.id,
+                                       p4info_helper))
+    rules.extend(
+        generate_element_control_rules(sfc.post_host_chain_head,
+                                       sfc.post_host_chain_tail, sfc.id,
+                                       p4info_helper))
+
+    rules.extend(generate_forward_control_rules(sfc, p4info_helper))
+
+    print 'Network switch config successfully for chain %d.' % sfc.id
+    return rules
+
+
 if __name__ == '__main__':
     chain_id = 0
     chain_length = 5
@@ -269,8 +288,7 @@ if __name__ == '__main__':
         "click_config": {
             "haha": 666
         }
-    },
-    {
+    }, {
         "name": "IPRewriter",
         "id": 3,
         "offloadability": const.PARTIAL_OFFLOADABLE,
@@ -292,16 +310,7 @@ if __name__ == '__main__':
     # switch_connection.MasterArbitrationUpdate()
 
     rules = []
-    # rules.extend(
-    #     generate_element_control_rules(sfc.pre_host_chain_head,
-    #                                    sfc.pre_host_chain_tail, sfc.id,
-    #                                    p4info_helper))
-    # rules.extend(
-    #     generate_element_control_rules(sfc.post_host_chain_head,
-    #                                    sfc.post_host_chain_tail, sfc.id,
-    #                                    p4info_helper))
-
-    rules.extend(generate_forward_control_rules(sfc, p4info_helper))
+    rules.extend(generate_rules(sfc, p4info_helper))
 
     for rule in rules:
         # switch_connection.WriteTableEntry(rule)
