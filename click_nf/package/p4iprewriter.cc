@@ -28,9 +28,8 @@
 #include <stdio.h>
 #include <string>
 
-#include <curl/curl.h>
-
 #include "p4iprewriter.hh"
+#include "p4sfcstate.hh"
 
 CLICK_DECLS
 
@@ -368,43 +367,25 @@ void P4IPRewriterEntry::p4add(int instance_id) {
   IPFlowID _rw_flow = _rw_entry->_flowid;
   std::ostringstream os;
 
-  os << "{\"magic\": \"sonic-fnrg\", \"instance_id\": " << instance_id
-     << ","
-        "\"table_name\": \"ipRewriter.IpRewriter_exact\","
-        "\"match_fields\": {"
-        "\"hdr.ipv4.srcAddr\": "
-     << ntohl(_flowid.saddr().addr()) << ","
-     << "\"hdr.ipv4.dstAddr\": " << ntohl(_flowid.daddr().addr()) << ","
-     << "\"hdr.tcp_udp.srcPort\": " << ntohs(_flowid.sport()) << ","
-     << "\"hdr.tcp_udp.dstPort\": " << ntohs(_flowid.dport())
-     << "}, \"action_name\":  \"ipRewriter.rewrite\","
-        "\"action_params\": { "
-        "\"srcAddr\":"
-     << ntohl(_rw_flow.saddr().addr()) << ","
-     << "\"dstAddr\":" << ntohl(_rw_flow.daddr().addr()) << ","
-     << "\"srcPort\":" << ntohs(_rw_flow.sport()) << ","
-     << "\"dstPort\":" << ntohs(_rw_flow.dport()) << " }}";
+  // os << "{\"magic\": \"sonic-fnrg\", \"instance_id\": " << instance_id
+  //    << ","
+  //       "\"table_name\": \"ipRewriter.IpRewriter_exact\","
+  //       "\"match_fields\": {"
+  //       "\"hdr.ipv4.srcAddr\": "
+  //    << ntohl(_flowid.saddr().addr()) << ","
+  //    << "\"hdr.ipv4.dstAddr\": " << ntohl(_flowid.daddr().addr()) << ","
+  //    << "\"hdr.tcp_udp.srcPort\": " << ntohs(_flowid.sport()) << ","
+  //    << "\"hdr.tcp_udp.dstPort\": " << ntohs(_flowid.dport())
+  //    << "}, \"action_name\":  \"ipRewriter.rewrite\","
+  //       "\"action_params\": { "
+  //       "\"srcAddr\":"
+  //    << ntohl(_rw_flow.saddr().addr()) << ","
+  //    << "\"dstAddr\":" << ntohl(_rw_flow.daddr().addr()) << ","
+  //    << "\"srcPort\":" << ntohs(_rw_flow.sport()) << ","
+  //    << "\"dstPort\":" << ntohs(_rw_flow.dport()) << " }}";
 
   std::string data = os.str(); // .str() returns temporary
 
-  CURL *curl;
-  // CURLcode res;
-  curl = curl_easy_init();
-  if (curl) {
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8090/insert_entry");
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "https");
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    printf("curl: %s\n", data.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-    curl_easy_perform(curl);
-    // res = curl_easy_perform(curl);
-    // std::cout << curl_easy_strerror(res) << std::endl;
-  }
-  curl_easy_cleanup(curl);
 }
 
 CLICK_ENDDECLS

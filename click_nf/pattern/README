@@ -1,5 +1,0 @@
-run scripted click router by following commands: (details: ./run.py -h)
-
-```bash
-sudo ./run.py [pattern-file] [-i/--id id] [nargs]
-```

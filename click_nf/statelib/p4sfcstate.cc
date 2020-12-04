@@ -153,7 +153,7 @@ toString(TableEntry *entry) {
         auto p = a.params(i);
         ret += p.param() + ": " + p.value() + "; ";
     }
-    ret += "\tPriority: " + entry->priority();
+    ret += "\tPriority: " + to_string(entry->priority());
     auto w = entry->window();
     size = w.slot_size();
     ret += "\tSlidingWindow(" + to_string(size) + "): ";

@@ -2,5 +2,6 @@ client
 server
 test
 *.o
+*.so
 *.pb.cc
 *.pb.h

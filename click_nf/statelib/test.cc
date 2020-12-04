@@ -31,6 +31,7 @@ void insertOneEntry(Table* t) {
         p->set_param("port");
         p->set_value("1");
     }
+    e->set_priority(0);
     t->insert(e);
     t->lookup(e);
 }
@@ -38,11 +39,12 @@ void insertOneEntry(Table* t) {
 int main(int argc, char const *argv[])
 {
     init();
-    auto t = new Table();
+    Table t;
+    // auto t = new Table();
     for (size_t i = 0; i < 100; i++) 
-        insertOneEntry(t);
+        insertOneEntry(&t);
     
-    // cout << "Table size: " << t->size() << endl;
+    cout << "Table size: " << t.size() << endl;
     // this_thread::sleep_for(std::chrono::seconds(1));
     // for(auto i = tables.begin(); i != tables.cend(); i++) {
     //     Table* table = *i;
