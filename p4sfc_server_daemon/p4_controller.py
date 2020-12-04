@@ -123,24 +123,15 @@ class P4Controller(object):
                 return {"packet_count": counter.data.packet_count, "byte_count": counter.data.byte_count}
 
     def config_pipeline(self, sfc):
-        # server_switch_entries = generate_server_pkt_distribution_rules(sfc.chain_head, sfc.id, self.server_switch_p4info_helper)
-        # for entry in server_switch_entries:
-        #     self.server_switch_connection.WriteTableEntry(entry)
-        # print 'Server switch config successfully for chain %d.' % sfc.id
-
         network_switch_entries = []
-        network_switch_entries.extend(generate_element_control_rules(
-            sfc.pre_host_chain_head, sfc.pre_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
-        network_switch_entries.extend(generate_element_control_rules(
-            sfc.post_host_chain_head, sfc.post_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
 
-        network_switch_entries.extend(generate_stage_control_rules(
+        network_switch_entries.extend(generate_element_control_rules(
             sfc.pre_host_chain_head, sfc.pre_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
-        network_switch_entries.extend(generate_stage_control_rules(
+        network_switch_entries.extend(generate_element_control_rules(
             sfc.post_host_chain_head, sfc.post_host_chain_tail, sfc.id, self.network_switch_p4info_helper))
 
         network_switch_entries.extend(generate_forward_control_rules(
-            sfc.chain_head, sfc.id, sfc.chain_length, self.network_switch_p4info_helper))
+            sfc, self.network_switch_p4info_helper))
 
         for entry in network_switch_entries:
             self.network_switch_connection.WriteTableEntry(entry)
