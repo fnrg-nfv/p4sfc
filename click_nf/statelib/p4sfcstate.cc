@@ -15,7 +15,7 @@ string buildKey(TableEntry *);
 int getSum(TableEntry *);
 
 vector<Table*> tables;
-int curPos;
+int curPos = 0;
 bool isInit = false;
 
 // Logic and data behind the server's behavior.
@@ -29,6 +29,10 @@ class ServiceImpl final : public RPC::Service {
     }
 
     Status GetState(ServerContext* context, const Empty* request, TableEntryReply* reply) {
+        // TODO: 
+        // 1. move on cur_pos;
+        // 2. return a k-ranked list;
+        // 3. clear old slots;
         for(auto i = tables.begin(); i != tables.cend(); i++) {
             Table* table = *i;
             for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
@@ -41,13 +45,14 @@ class ServiceImpl final : public RPC::Service {
     }
 
 };
+std::unique_ptr<Server> server;
 
 void runServer(string addr) {
     ServiceImpl service;
     ServerBuilder builder;
     builder.AddListeningPort(addr, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
-    std::unique_ptr<Server> server(builder.BuildAndStart());
+    server = builder.BuildAndStart();
 
     std::cout << "Server listening on " << addr << std::endl;
 
@@ -55,22 +60,25 @@ void runServer(string addr) {
     server->Wait();
 }
 
+thread* server_thread;
 
-void init(string addr) {
-    curPos = 0;
-    
-    if (isInit)
+void startServer(string addr) {
+    if (server_thread)
         return;
-    
-    // thread th(runServer, addr);
+    server_thread = new thread(runServer, addr);
 }
 
-TableEntry* NewTableEntry() {
+void shutdownServer() {
+    server->Shutdown();
+    server_thread->join();
+}
+
+TableEntry* newTableEntry() {
     TableEntry *entry = new TableEntry();
     // init sliding window
-    SlidingWindow window = entry->window();
+    SlidingWindow* window = entry->mutable_window();
     for (int i = 0; i < WINDOW_SIZE; i++)
-        window.add_slot(0);
+        window->add_slot(0);
     return entry;
 }
 
@@ -95,26 +103,25 @@ getSum(TableEntry *e){
 // concat all val as key, seperated by commas
 // entry maybe a true tableentry or something built from packet header
 string 
-buildKey(TableEntry *entry) {
+buildKey(const TableEntry &entry) {
     string ret("");
-    int match_size = entry->match_size();
+    int match_size = entry.match_size();
     for (int i = 0; i < match_size; i++) {
-        FieldMatch match = entry->match(i);
+        auto m = entry.match(i);
         // TODO: only support exact currently
-        FieldMatch_Exact exact = match.exact();
-        ret += exact.value() + ",";
+        ret += m.exact().value() + ",";
     }
     return ret;
 }
 
 void 
-Table::insert(TableEntry *entry) {
+Table::insert(const TableEntry &entry) {
     string key = buildKey(entry);
-    _map.insert({key, *entry});
+    _map.insert({key, entry});
 }
 
 TableEntry*
-Table::lookup(TableEntry *lookup_entry) {
+Table::lookup(const TableEntry& lookup_entry) {
     string key = buildKey(lookup_entry);
     auto it = _map.find(key);
     if (it == _map.end()) return NULL;
@@ -125,13 +132,42 @@ Table::lookup(TableEntry *lookup_entry) {
 
 void 
 incSlot(TableEntry *entry) {
-    auto w = entry->window();
-    w.set_slot(curPos, w.slot(curPos) + 1);
+    auto w = entry->mutable_window();
+    w->set_slot(curPos, w->slot(curPos) + 1);
 }
 
+
 void 
-Table::remove(TableEntry *entry) {
+Table::remove(const TableEntry &entry) {
     _map.erase(buildKey(entry));
+}
+
+string 
+toString(TableEntry *entry) {
+    string ret("");
+    ret += "TableName: " + entry->table_name();
+    ret += "\tMatch: ";
+    int size = entry->match_size();
+    for (size_t i = 0; i < size; i++)
+    {
+        auto m = entry->match(i);
+        ret += m.field_name() + ": " + m.exact().value() + "; ";
+    }
+    auto a = entry->action();
+    size = a.params_size();
+    ret += "\tAction: " + a.action() + " param: ";
+    for (size_t i = 0; i < size; i++)
+    {
+        auto p = a.params(i);
+        ret += p.param() + ": " + p.value() + "; ";
+    }
+    ret += "\tPriority: " + to_string(entry->priority());
+    auto w = entry->window();
+    size = w.slot_size();
+    ret += "\tSlidingWindow(" + to_string(size) + "): ";
+    for (size_t i = 0; i < size; i++)
+        ret += to_string(w.slot(i)) + " "; 
+    return ret;
 }
 
 }

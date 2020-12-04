@@ -27,12 +27,30 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
-
-#include <curl/curl.h>
+#include <arpa/inet.h>
 
 #include "p4iprewriter.hh"
 
+#define P4H_IP_SADDR "hdr.ipv4.srcAddr"
+#define P4H_IP_DADDR "hdr.ipv4.dstAddr"
+#define P4H_IP_SPORT "hdr.ipv4.srcPort"
+#define P4H_IP_DPORT "hdr.ipv4.dstPort"
+#define P4_TABLE_NAME "nat_exact"
+#define P4_IPRW_ACTION_NAME "flow_rewrite"
+#define P4_IPRW_PARAM_SA "srcAddr"
+#define P4_IPRW_PARAM_DA "dstAddr"
+#define P4_IPRW_PARAM_SP "srcPort"
+#define P4_IPRW_PARAM_DP "dstPort"
+
 CLICK_DECLS
+
+P4IPRewriter::P4IPRewriter() {
+  P4SFCState::startServer();
+}
+
+P4IPRewriter::~P4IPRewriter() {
+  P4SFCState::shutdownServer();
+}
 
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
   // std::cout << "Specs Len: " << conf.size() << std::endl;
@@ -86,6 +104,100 @@ int P4IPRewriter::parse_input_spec(const String &line, P4IPRewriterInput &is,
   return 0;
 }
 
+void flow2entry_action(const IPFlowID& flow, P4SFCState::TableEntry *e) {
+  auto a = e->mutable_action();
+  a->set_action(P4_IPRW_ACTION_NAME);
+
+  {
+    auto p = a->add_params();
+    p->set_param(P4_IPRW_PARAM_SA);
+    p->set_value(flow.saddr().s().c_str());
+  }
+  {
+    auto p = a->add_params();
+    p->set_param(P4_IPRW_PARAM_DA);
+    p->set_value(flow.daddr().s().c_str());
+  }
+  {
+    auto p = a->add_params();
+    p->set_param(P4_IPRW_PARAM_SP);
+    p->set_value(std::to_string(ntohs(flow.sport())));
+  }
+  {
+    auto p = a->add_params();
+    p->set_param(P4_IPRW_PARAM_DP);
+    p->set_value(std::to_string(ntohs(flow.dport())));
+  }
+
+}
+
+void flow2entry_match(const IPFlowID& flow, P4SFCState::TableEntry *e) {
+  {
+    auto m = e->add_match();
+    m->set_field_name(P4H_IP_SADDR); // can be eliminated
+    auto ex = m->mutable_exact();
+    ex->set_value(flow.saddr().s().c_str());
+  }
+  {
+    auto m = e->add_match();
+    m->set_field_name(P4H_IP_DADDR); // can be eliminated
+    auto ex = m->mutable_exact();
+    ex->set_value(flow.daddr().s().c_str());
+  }
+  {
+    auto m = e->add_match();
+    m->set_field_name(P4H_IP_SPORT); // can be eliminated
+    auto ex = m->mutable_exact();
+    ex->set_value(std::to_string(ntohs(flow.sport())));
+  }
+  {
+    auto m = e->add_match();
+    m->set_field_name(P4H_IP_DPORT); // can be eliminated
+    auto ex = m->mutable_exact();
+    ex->set_value(std::to_string(ntohs(flow.dport())));
+  }
+}
+
+void apply(WritablePacket* p, const P4SFCState::TableEntry& e) {
+  assert(p->has_network_header());
+  click_ip *iph = p->ip_header();
+
+  auto a = e.action();
+  {
+    auto p = a.params(0);
+    std::string val = p.value();
+    inet_pton(AF_INET, val.c_str(), &(iph->ip_src));
+  }
+  {
+    auto p = a.params(1);
+    std::string val = p.value();
+    inet_pton(AF_INET, val.c_str(), &(iph->ip_dst));
+  }
+
+  if (!IP_FIRSTFRAG(iph))
+    return;
+  click_udp *udph = p->udp_header(); // TCP ports in the same place
+
+  {
+    auto p = a.params(2);
+    std::string val = p.value();
+    udph->uh_sport = (uint16_t)std::stoi(val);
+  }
+  {
+    auto p = a.params(3);
+    std::string val = p.value();
+    udph->uh_dport = (uint16_t)std::stoi(val);
+  }
+  // IP header
+  // iph->ip_src = rw_flowid.saddr();
+  // iph->ip_dst = rw_flowid.daddr();
+  // click_update_in_cksum(&iph->ip_sum, 0, 0);
+  // update_csum(, direction, _ip_csum_delta);
+  // end if not first fragment
+  // udph->uh_sport = rw_flowid.sport();
+  // udph->uh_dport = rw_flowid.dport();
+}
+
 void P4IPRewriter::push(int port, Packet *p_in) {
 
   WritablePacket *p = p_in->uniqueify();
@@ -98,9 +210,12 @@ void P4IPRewriter::push(int port, Packet *p_in) {
   }
 
   IPFlowID flowid(p);
+  P4SFCState::TableEntry lookup_entry;
+  flow2entry_match(flowid, &lookup_entry);
 
   // 1. check in map
-  P4IPRewriterEntry *entry = _map.get(flowid);
+  P4SFCState::TableEntry* entry = _map.lookup(lookup_entry);
+  // P4IPRewriterEntry *entry = _map.get(flowid);
 
   // 2. if not in map, inputspec.output
   if (!entry) {
@@ -108,7 +223,7 @@ void P4IPRewriter::push(int port, Packet *p_in) {
     IPFlowID rewritten_flowid = IPFlowID::uninitialized_t();
     int result = is.rewrite_flowid(flowid, rewritten_flowid);
     if (result == rw_addmap) {
-      entry = P4IPRewriter::add_flow(flowid, rewritten_flowid, port);
+      entry = add_flow(flowid, rewritten_flowid, port);
       if (!entry) {
         checked_output_push(port, p);
         return;
@@ -118,27 +233,29 @@ void P4IPRewriter::push(int port, Packet *p_in) {
   }
 
   // update the header
-  entry->apply(p);
+  apply(p, *entry);
+  // entry->apply(p);
 
-  output(entry->output()).push(p);
+  // output(entry->output()).push(p);
+  output(0).push(p);
 }
 
-P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid,
-                                          const IPFlowID &rewritten_flowid,
-                                          int input) {
-  P4IPRewriterEntry *e = new P4IPRewriterEntry();
-  P4IPRewriterEntry *e_reverse = new P4IPRewriterEntry();
 
-  e->initialize(flowid, e_reverse, _input_specs[input].foutput);
-  e_reverse->initialize(rewritten_flowid, e, _input_specs[input].routput);
+P4SFCState::TableEntry *P4IPRewriter::add_flow(const IPFlowID &flowid, const IPFlowID &rewritten_flowid, int input) {
+  P4SFCState::TableEntry *entry = P4SFCState::newTableEntry();
+  P4SFCState::TableEntry *entry_r = P4SFCState::newTableEntry();
+  entry->set_table_name(P4_TABLE_NAME);
+  entry_r->set_table_name(P4_TABLE_NAME);
+  flow2entry_match(flowid, entry);
+  flow2entry_match(rewritten_flowid, entry_r);
 
-  _map.set(e);
-  _map.set(e_reverse);
+  flow2entry_action(rewritten_flowid, entry);
+  flow2entry_action(flowid, entry_r);
 
-  e->p4add(_instance_id);
-  e_reverse->p4add(_instance_id);
+  _map.insert(*entry);
+  _map.insert(*entry_r);
 
-  return e;
+  return entry;
 }
 
 P4IPRewriterInput::P4IPRewriterInput()
@@ -146,12 +263,11 @@ P4IPRewriterInput::P4IPRewriterInput()
   pattern = 0;
 }
 
-int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid,
-                                      IPFlowID &rewritten_flowid) {
+int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid) {
   int i;
   switch (kind) {
   case i_pattern: {
-    i = pattern->rewrite_flowid(flowid, rewritten_flowid, owner->_map);
+    i = pattern->rewrite_flowid(flowid, rewritten_flowid);
     if (i == P4IPRewriter::rw_drop)
       ++failures;
     return i;
@@ -294,10 +410,8 @@ bool P4IPRewriterPattern::parse_with_ports(const String &str,
                               sequential, same_first, variation);
   return true;
 }
-int P4IPRewriterPattern::rewrite_flowid(
-    const IPFlowID &flowid, IPFlowID &rewritten_flowid,
-    const HashContainer<P4IPRewriterEntry> &map) {
 
+int P4IPRewriterPattern::rewrite_flowid(const IPFlowID& flowid, IPFlowID &rewritten_flowid) {
   rewritten_flowid = flowid;
   if (_saddr)
     rewritten_flowid.set_saddr(_saddr);
@@ -308,103 +422,17 @@ int P4IPRewriterPattern::rewrite_flowid(
   if (_dport)
     rewritten_flowid.set_dport(_dport);
 
-  if (!_variation_top)
-    return P4IPRewriter::rw_addmap;
-  else {
-    IPFlowID lookup = rewritten_flowid.reverse();
-    uint32_t base = ntohs(_sport);
+  uint32_t base = ntohs(_sport);
+  uint32_t val;
 
-    uint32_t val;
-    if (_same_first && (val = ntohs(flowid.sport()) - base) <= _variation_top) {
-      lookup.set_sport(flowid.sport());
-      if (!map.find(lookup)) {
-        rewritten_flowid.set_sport(lookup.sport());
-        return P4IPRewriter::rw_addmap;
-      }
-    }
-
-    if (_sequential)
-      val = (_next_variation > _variation_top ? 0 : _next_variation);
-    else
-      val = click_random(0, _variation_top);
-
-    for (uint32_t count = 0; count <= _variation_top;
-         ++count, val = (val == _variation_top ? 0 : val + 1)) {
-      lookup.set_sport(htons(base + val));
-      if (!map.find(lookup)) {
-        rewritten_flowid.set_sport(lookup.dport());
-        _next_variation = val + 1;
-        return P4IPRewriter::rw_addmap;
-      }
-    }
-
+  if (_next_variation > _variation_top)
     return P4IPRewriter::rw_drop;
-  }
-}
+  else
+    val = _next_variation;
 
-// TODO: cksm needs to be applied;
-void P4IPRewriterEntry::apply(WritablePacket *p) {
-  assert(p->has_network_header());
-  click_ip *iph = p->ip_header();
-  IPFlowID rw_flowid = _rw_entry->_flowid;
-
-  // IP header
-  iph->ip_src = rw_flowid.saddr();
-  iph->ip_dst = rw_flowid.daddr();
-
-  // click_update_in_cksum(&iph->ip_sum, 0, 0);
-  // update_csum(, direction, _ip_csum_delta);
-
-  // end if not first fragment
-  if (!IP_FIRSTFRAG(iph))
-    return;
-
-  click_udp *udph = p->udp_header(); // TCP ports in the same place
-  udph->uh_sport = rw_flowid.sport();
-  udph->uh_dport = rw_flowid.dport();
-}
-
-void P4IPRewriterEntry::p4add(int instance_id) {
-  IPFlowID _rw_flow = _rw_entry->_flowid;
-  std::ostringstream os;
-
-  os << "{\"magic\": \"sonic-fnrg\", \"instance_id\": " << instance_id
-     << ","
-        "\"table_name\": \"ipRewriter.IpRewriter_exact\","
-        "\"match_fields\": {"
-        "\"hdr.ipv4.srcAddr\": "
-     << ntohl(_flowid.saddr().addr()) << ","
-     << "\"hdr.ipv4.dstAddr\": " << ntohl(_flowid.daddr().addr()) << ","
-     << "\"hdr.tcp_udp.srcPort\": " << ntohs(_flowid.sport()) << ","
-     << "\"hdr.tcp_udp.dstPort\": " << ntohs(_flowid.dport())
-     << "}, \"action_name\":  \"ipRewriter.rewrite\","
-        "\"action_params\": { "
-        "\"srcAddr\":"
-     << ntohl(_rw_flow.saddr().addr()) << ","
-     << "\"dstAddr\":" << ntohl(_rw_flow.daddr().addr()) << ","
-     << "\"srcPort\":" << ntohs(_rw_flow.sport()) << ","
-     << "\"dstPort\":" << ntohs(_rw_flow.dport()) << " }}";
-
-  std::string data = os.str(); // .str() returns temporary
-
-  CURL *curl;
-  // CURLcode res;
-  curl = curl_easy_init();
-  if (curl) {
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8090/insert_entry");
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "https");
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    printf("curl: %s\n", data.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-    curl_easy_perform(curl);
-    // res = curl_easy_perform(curl);
-    // std::cout << curl_easy_strerror(res) << std::endl;
-  }
-  curl_easy_cleanup(curl);
+  rewritten_flowid.set_sport(htons(base + val));
+  _next_variation = val + 1;
+  return P4IPRewriter::rw_addmap;
 }
 
 CLICK_ENDDECLS

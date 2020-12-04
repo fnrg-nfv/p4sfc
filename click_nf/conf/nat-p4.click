@@ -11,6 +11,7 @@ AddressInfo(
   extern_next_hop	00:10:20:30:40:50,
 );
 
+// TODO: what about src extern and dst intern;
 ip :: IPClassifier(src net intern and dst net intern,
                    src net intern,
                    dst host extern,

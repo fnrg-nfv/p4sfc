@@ -1,7 +1,7 @@
 
 PROTOS_PATH = .
 CXX = g++
-CPPFLAGS += -I/usr/local/include -pthread
+CPPFLAGS += -I/usr/local/include -pthread -fPIC
 CXXFLAGS += -std=c++11
 LDFLAGS += -L/usr/local/lib `pkg-config --libs grpc++ grpc`       \
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
@@ -12,12 +12,15 @@ GRPC_CPP_PLUGIN = grpc_cpp_plugin
 GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
 
 
-all: client server
+all: libstate.so client server test
 
-test: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o test.o
-	$(CXX) $^ $(LDFLAGS) -o $@
+libstate.so: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o
+	$(CXX) $^ $(LDFLAGS) -shared -o $@
 
-client: p4sfcstate.pb.o p4sfcstate.grpc.pb.o client.o
+test: test.o
+	$(CXX) $^ $(LDFLAGS) -L. -lstate -o $@
+
+client: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o client.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 server: p4sfcstate.pb.o p4sfcstate.grpc.pb.o server.o
@@ -38,4 +41,4 @@ server: p4sfcstate.pb.o p4sfcstate.grpc.pb.o server.o
 proto: p4sfcstate.pb.cc p4sfcstate.grpc.pb.cc 
 
 clean:
-	rm -f *.o *.pb.cc *.pb.h client server test
+	rm -f *.o *.so *.pb.cc *.pb.h client server test

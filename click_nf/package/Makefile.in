@@ -32,9 +32,9 @@ KVERSIONFLAGS = --gpl
 
 # Set these variables as required.
 DEFS = @DEFS@ $(CLICKDEFS)
-INCLUDES = -I. -I$(top_builddir) -I$(srcdir) $(CLICKINCLUDES)
+INCLUDES = -I. -I$(top_builddir) -I$(srcdir) $(CLICKINCLUDES) -I../statelib
 
-PACKAGE_LIBS = -lcurl
+PACKAGE_LIBS = -L../statelib -lstate
 
 # Set this variable to force 'click-elem2package' to include a header,
 # such as your package's '<config.h>', if necessary.

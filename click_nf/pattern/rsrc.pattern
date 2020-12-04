@@ -1,5 +1,0 @@
-// $1 : port
-// $2 : packet size
-
-RandomSource($2) -> Queue(20)
-                 -> ToDevice($1);
