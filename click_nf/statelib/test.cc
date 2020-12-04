@@ -32,26 +32,26 @@ void insertOneEntry(Table* t) {
         p->set_value("1");
     }
     e->set_priority(0);
-    t->insert(e);
-    t->lookup(e);
+    t->insert(*e);
+    t->lookup(*e);
 }
 
 int main(int argc, char const *argv[])
 {
-    init();
+    startServer();
     Table t;
     // auto t = new Table();
     for (size_t i = 0; i < 100; i++) 
         insertOneEntry(&t);
     
     cout << "Table size: " << t.size() << endl;
-    // this_thread::sleep_for(std::chrono::seconds(1));
+    this_thread::sleep_for(std::chrono::seconds(1));
     // for(auto i = tables.begin(); i != tables.cend(); i++) {
     //     Table* table = *i;
     //     for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
     //         cout << toString(&j->second) << endl;
     // }
     cout << "Wait for server joining......" << endl;
-    end();
+    shutdownServer();
     return 0;
 }

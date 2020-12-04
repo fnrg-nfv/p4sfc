@@ -1,9 +1,13 @@
 require(package "p4sfc");
-define($dev, eth0)
 
 rw :: P4IPRewriter(0, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 
-src :: FromDevice($dev);
+
+src :: InfiniteSource( DATA \< 
+00 00 00 00 00 00 00 00 00 00 00 00 08 00 45 00 00 2E 00 00 40 00 40 11 96 24
+0A 00 00 01 4D 4D 4D 4D 6E 79 22 B8 00 1A C9 ED 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+>, LIMIT 3, STOP false); 
 
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
@@ -26,8 +30,7 @@ src -> Print(ip)
 out :: IPPrint(out_ip)
     -> EtherEncap(0x0800, extern:eth, extern_next_hop:eth)
     -> Print(out)
-    -> Queue(1024)
-    -> ToDevice($dev);
+    -> Discard;
 
 ip[0] -> out;
 ip[1] -> [0]rw;

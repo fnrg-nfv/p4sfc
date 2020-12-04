@@ -20,13 +20,13 @@ class Table {
         Table();
         int size();
 
-        void insert(TableEntry *);
-        void remove(TableEntry *);
-        TableEntry* lookup(TableEntry *);
+        void insert(const TableEntry&);
+        void remove(const TableEntry&);
+        TableEntry* lookup(const TableEntry&);
 };
 
-void init(string addr="localhost:28282");
-void end();
+void startServer(string addr="localhost:28282");
+void shutdownServer();
 TableEntry* newTableEntry();
 string toString(TableEntry *entry);
 // extern vector<Table*> tables;
