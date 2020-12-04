@@ -5,13 +5,14 @@
 #include <grpc++/grpc++.h>
 
 #include "p4sfcstate.grpc.pb.h"
+#include "p4sfcstate.hh"
 
 using namespace grpc;
 using namespace P4SFCState;
 
-class GreeterClient {
+class RPCClient {
  public:
-  GreeterClient(std::shared_ptr<Channel> channel)
+  RPCClient(std::shared_ptr<Channel> channel)
       : stub_(RPC::NewStub(channel)) {}
 
   // Assembles the client's payload, sends it and presents the response back
@@ -41,20 +42,33 @@ class GreeterClient {
     }
   }
 
+  void GetState(TableEntryReply* reply) {
+    Empty request;
+    ClientContext context;
+    Status status = stub_->GetState(&context, request, reply);
+    if (!status.ok())
+      std::cout << status.error_code() << ": " << status.error_message() << std::endl;
+  }
+
  private:
   std::unique_ptr<RPC::Stub> stub_;
 };
 
 int main(int argc, char** argv) {
-  // Instantiate the client. It requires a channel, out of which the actual RPCs
-  // are created. This channel models a connection to an endpoint (in this case,
-  // localhost at port 28282). We indicate that the channel isn't authenticated
-  // (use of InsecureChannelCredentials()).
-  GreeterClient greeter(grpc::CreateChannel(
+  RPCClient client(grpc::CreateChannel(
       "localhost:28282", grpc::InsecureChannelCredentials()));
+
   std::string user("world");
-  std::string reply = greeter.SayHello(user);
+  std::string reply = client.SayHello(user);
   std::cout << "Greeter received: " << reply << std::endl;
+
+  TableEntryReply teReply;
+  client.GetState(&teReply);
+  int size = teReply.entries_size();
+  for (size_t i = 0; i < size; i++) {
+    auto e = teReply.entries(i);
+    std::cout << toString(&e) << std::endl;
+  }
 
   return 0;
 }

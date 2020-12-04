@@ -12,12 +12,12 @@ GRPC_CPP_PLUGIN = grpc_cpp_plugin
 GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
 
 
-all: client server
+all: client server test
 
 test: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o test.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
-client: p4sfcstate.pb.o p4sfcstate.grpc.pb.o client.o
+client: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o client.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 server: p4sfcstate.pb.o p4sfcstate.grpc.pb.o server.o

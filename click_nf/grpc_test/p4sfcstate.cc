@@ -55,6 +55,7 @@ void runServer(string addr) {
     server->Wait();
 }
 
+thread* server;
 
 void init(string addr) {
     curPos = 0;
@@ -62,15 +63,20 @@ void init(string addr) {
     if (isInit)
         return;
     
-    // thread th(runServer, addr);
+
+    server = new thread(runServer, addr);
 }
 
-TableEntry* NewTableEntry() {
+void end() {
+    server->join();
+}
+
+TableEntry* newTableEntry() {
     TableEntry *entry = new TableEntry();
     // init sliding window
-    SlidingWindow window = entry->window();
+    SlidingWindow* window = entry->mutable_window();
     for (int i = 0; i < WINDOW_SIZE; i++)
-        window.add_slot(0);
+        window->add_slot(0);
     return entry;
 }
 
@@ -99,10 +105,9 @@ buildKey(TableEntry *entry) {
     string ret("");
     int match_size = entry->match_size();
     for (int i = 0; i < match_size; i++) {
-        FieldMatch match = entry->match(i);
+        auto m = entry->match(i);
         // TODO: only support exact currently
-        FieldMatch_Exact exact = match.exact();
-        ret += exact.value() + ",";
+        ret += m.exact().value() + ",";
     }
     return ret;
 }
@@ -125,8 +130,36 @@ Table::lookup(TableEntry *lookup_entry) {
 
 void 
 incSlot(TableEntry *entry) {
+    auto w = entry->mutable_window();
+    w->set_slot(curPos, w->slot(curPos) + 1);
+}
+
+string 
+toString(TableEntry *entry) {
+    string ret("");
+    ret += "TableName: " + entry->table_name();
+    ret += "\tMatch: ";
+    int size = entry->match_size();
+    for (size_t i = 0; i < size; i++)
+    {
+        auto m = entry->match(i);
+        ret += m.field_name() + ": " + m.exact().value() + "; ";
+    }
+    auto a = entry->action();
+    size = a.params_size();
+    ret += "\tAction: " + a.action() + " param: ";
+    for (size_t i = 0; i < size; i++)
+    {
+        auto p = a.params(i);
+        ret += p.param() + ": " + p.value() + "; ";
+    }
+    ret += "\tPriority: " + entry->priority();
     auto w = entry->window();
-    w.set_slot(curPos, w.slot(curPos) + 1);
+    size = w.slot_size();
+    ret += "\tSlidingWindow(" + to_string(size) + "): ";
+    for (size_t i = 0; i < size; i++)
+        ret += to_string(w.slot(i)) + " "; 
+    return ret;
 }
 
 void 

@@ -16,7 +16,7 @@ using namespace std;
 class Table {
     private:
     public:
-        map<string, TableEntry> _map;
+        map<string, TableEntry> _map; // TODO: should be private. Try not to use it.
         Table();
         int size();
 
@@ -26,8 +26,10 @@ class Table {
 };
 
 void init(string addr="localhost:28282");
-TableEntry* NewTableEntry();
-
+void end();
+TableEntry* newTableEntry();
+string toString(TableEntry *entry);
+// extern vector<Table*> tables;
 }
 
 #endif
