@@ -14,6 +14,39 @@ sys.path.append(
 import const
 
 
+# 理论上，在orchestrator中应该维护这样一个全局网络信息
+# 用户的请求只会说明希望把什么网络功能运行在什么server上
+# 以及这个sfc的route是什么，即会流过哪些交换机
+# 然后orchestrator就可以根据用户的信息以及拓扑信息解析出
+# 需要的路由信息并配置到交换机上。
+# 这个工作繁琐且没有难度，只是需要大量的时间，所以暂时不写！
+# network = {
+#     "servers": {
+#         "server 1": {
+#             "daemon_addr": "http://10.149.252.25:8090"
+#         },
+#         "server 2": {
+#             "daemon_addr": "http://10.149.252.24:8090"
+#         },
+#         .....
+#     },
+#     "switches": {
+#         "ingress": {
+#             "control_plane_addr": "http://10.149.252.20:8090"
+#         },
+#         "switch 1": {
+#             "control_plane_addr": "http://10.149.252.66:8090"
+#         },
+#         ...
+#     }
+#     "linkd": {
+#         "switch 1-port 1-ingress-port-2",
+#         "switch 1-port 2-server 1",
+#         "switch 1-port 3-server 2",
+#         ...
+#     }
+# }
+
 def addr2dec(addr):
     "将点分十进制IP地址转换成十进制整数"
     items = [int(x) for x in addr.split(".")]
@@ -27,10 +60,13 @@ def dec2addr(dec):
 
 app = Flask(__name__)
 chain_id = 0
-server_addr = {
-    "s1": "http://10.149.252.25:8090",
-    "s2": "http://10.149.252.26:8090",
-    "s3": "http://10.149.252.27:8090"
+
+# 这里偷一下，仅维护server/switch addr
+addr_list = {
+    "swtich 1": "http://10.149.252.25:8090",
+    "switch 2": "http://10.149.252.26:8090",
+    "switch 3": "http://10.149.252.27:8090",
+    "server 1": "http://10.149.252.27:8090"
 }
 headers = {
     'Content-Type': 'application/json'
@@ -113,8 +149,8 @@ def deploy_chain():
     chain_length = len(chain_desc)
     nf_groups = parse_chain(chain_desc)
 
-    for location, nfs in nf_groups.iteritems():
-        url = server_addr[location] + "/deploy_chain"
+    for server, nfs in nf_groups.iteritems():
+        url = addr_list[server] + "/deploy_chain"
         payload = {
             "chain_id": chain_id,
             "chain_length": chain_length,
@@ -129,7 +165,7 @@ def deploy_chain():
     route_infos = parse_route(chain_route, nf_groups, chain_id, chain_length)
     complete_time = 0
     for switch, route_info in route_infos.iteritems():
-        url = server_addr[switch] + "/insert_route"
+        url = addr_list[switch] + "/insert_route"
         payload = {
             "chain_id": route_info["chain_id"],
             "chain_length": route_info["chain_length"],
@@ -148,33 +184,9 @@ def deploy_chain():
     chain_id = chain_id + 1
     return jsonify(response_payload)
 
-
-@app.route('/delete_chain', methods=['POST'])
-def delete_chain():
-    receive_time = int(time.time()*1000)
-    global server_addr
-    global headers
-    data = request.get_json()
-    chain_id = data.get("chain_id")
-    payload = {
-        "chain_id": chain_id
-    }
-    complete_time = 0
-    for location, addr in server_addr.iteritems():
-        url = addr + "/delete_chain"
-        response = requests.request("POST", url, headers=headers,
-                                    data=json.dumps(payload))
-        complete_time = max(int(response.text), complete_time)
-
-    response_payload = {
-        "receive_time": receive_time,
-        "complete_time": complete_time
-    }
-
-    return jsonify(response_payload)
-
-
 if __name__ == '__main__':
+
+    # user request example
     app.run(host="0.0.0.0", port='8091')
     {
         "chain_desc": [
@@ -183,26 +195,28 @@ if __name__ == '__main__':
                 "click_config": {
                     "param1": "abc"
                 },
-                "location": "s1"
+                "location": "server 1"
             },
             {
                 "name": "Firewall",
                 "click_config": {
                     "param1": "abc"
                 },
-                "location": "s1"
+                "location": "server 2"
             },
             {
                 "name": "IPRewriter",
                 "click_config": {
                     "param1": "abc"
                 },
-                "location": "s1"
+                "location": "server 2"
             }
         ],
         "route": [
             "ingress",
-            "s1",
+            "switch 1",
+            "switch 3",
+            "switch 2",
             "egress"
         ]
     }
