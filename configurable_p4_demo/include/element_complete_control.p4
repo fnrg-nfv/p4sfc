@@ -9,7 +9,7 @@ control ElementCompleteControl(inout headers hdr,
 
     apply {
         // Element may drop packet, if so, subsequent elements are unnecessary
-        if(standard_metadata.egress_spec == DROP_PORT || standard_metadata.egress_spec == SERVER_PORT) {
+        if(standard_metadata.egress_spec == DROP_PORT || meta.isStageComplete == 0) {
             meta.nextStage = NO_STAGE;
         }
         else {

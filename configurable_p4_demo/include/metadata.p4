@@ -8,5 +8,5 @@ struct metadata {
     bit<8> nextStage;
     bit<16> curNfInstanceId;
     bit<8> stageId;
-    bit<1> isRecirculatePkt;
+    bit<1> isStageComplete; // 0 for table miss & 1 for table hit
 }

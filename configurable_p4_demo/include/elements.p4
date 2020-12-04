@@ -6,20 +6,24 @@
 // full offload element's default action is element specific.
 #include "define.p4"
 
+
+// the default action for each element can be NoAction
+// because the nextStage will be set as NO_STAGE in the
+// element_complete_control logic as the isStageComplete is 0
+
 control IpRewriter(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-
-    action send_to_server() {
-        standard_metadata.egress_spec = (bit<9>) 3;
-        // mark_to_drop(standard_metadata);
-    }
+    direct_counter(CounterType.packets_and_bytes) rule_frequency;
 
     action rewrite(ip4Addr_t srcAddr, ip4Addr_t dstAddr, transport_port_t srcPort, transport_port_t dstPort) {
+        meta.isStageComplete = 1;
         hdr.ipv4.srcAddr = srcAddr;
         hdr.ipv4.dstAddr = dstAddr;
         hdr.tcp_udp.srcPort = srcPort;
         hdr.tcp_udp.dstPort = dstPort;
+        
+        rule_frequency.count();
     }
 
     table IpRewriter_exact {
@@ -33,10 +37,11 @@ control IpRewriter(inout headers hdr,
             hdr.tcp_udp.dstPort: exact;
         }
         actions = {
+            NoAction;
             rewrite;
-            send_to_server;
         }
-        default_action = send_to_server();
+        default_action = NoAction();
+        counters=rule_frequency;
         // size = 1024;
         // const entries = {
             // (0, 0, 0, 0x0AA80001, 0x01010101, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
@@ -56,12 +61,17 @@ control Monitor(inout headers hdr,
 
     // counter(128, CounterType.packets) total_packets;
     counter(128, CounterType.bytes) total_packets;
+    direct_counter(CounterType.packets_and_bytes) rule_frequency;
+
 
     action count_packet() {
+        meta.isStageComplete = 1;
         bit<32> counter_index = ((bit<32>)hdr.sfc.chainId);
         // counter_index = counter_index + ((bit<32>) hdr.nfs[0].nfInstanceId << 8);
         // counter_index = counter_index + (bit<32>) meta.stageId;
         total_packets.count(counter_index);
+
+        rule_frequency.count();        
     }
 
     table Monitor_exact {
@@ -74,6 +84,7 @@ control Monitor(inout headers hdr,
             NoAction;
             count_packet;
         }
+        counters=rule_frequency;
         default_action = NoAction();
         // size = 1024;
         const entries = {
@@ -90,8 +101,13 @@ control Firewall(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     
+    direct_counter(CounterType.packets_and_bytes) rule_frequency;
+    
     action drop() {
+        meta.isStageComplete = 1;
         mark_to_drop(standard_metadata);
+
+        rule_frequency.count();
     }
 
     table Firewall_ternary {
@@ -109,6 +125,7 @@ control Firewall(inout headers hdr,
             NoAction;
             drop;
         }
+        counters=rule_frequency;
         default_action = NoAction();
         // size = 1024;
         const entries = {
@@ -135,12 +152,20 @@ control Classifier(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     
+    direct_counter(CounterType.packets_and_bytes) rule_frequency;
+
     action drop() {
+        meta.isStageComplete = 1;
         mark_to_drop(standard_metadata);
+
+        rule_frequency.count();
     }
 
     action set_next_stage(bit<8> nextStage) {
+        meta.isStageComplete = 1;
         meta.nextStage = nextStage;
+
+        rule_frequency.count();
     }
 
     table Classifier_ternary {
@@ -155,6 +180,7 @@ control Classifier(inout headers hdr,
             drop;
             set_next_stage;
         }
+        counters=rule_frequency;
         default_action = NoAction();
         // size = 1024;
         const entries = {
@@ -171,12 +197,20 @@ control IpRoute(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     
+    direct_counter(CounterType.packets_and_bytes) rule_frequency;
+
     action drop() {
+        meta.isStageComplete = 1;
         mark_to_drop(standard_metadata);
+
+        rule_frequency.count();
     }
     
     action set_output_port(egressSpec_t port) {
+        meta.isStageComplete = 1;
         standard_metadata.egress_spec = port;
+
+        rule_frequency.count();
     }
 
     table IpRoute_ternary {
@@ -191,6 +225,7 @@ control IpRoute(inout headers hdr,
             drop;
             set_output_port;
         }
+        counters=rule_frequency;
         default_action = NoAction();
         // size = 1024;
         const entries = {

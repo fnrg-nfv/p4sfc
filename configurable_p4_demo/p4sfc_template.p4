@@ -19,7 +19,6 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    StageControl() stageControl;
     ElementControl() elementControl_0;
     ElementCompleteControl() elementCompleteControl_0;
     ElementControl() elementControl_1;
@@ -37,10 +36,18 @@ control MyIngress(inout headers hdr,
         }
         else {
             meta.curNfInstanceId = (bit<16>) hdr.nfs[0].nfInstanceId;
-            if(meta.isRecirculatePkt == 0) {
+
+            // Now, the packet will enter the switch under three conditions
+            // 1. first arrive at the switch
+            // 2. enter at the post_server point
+            // 3. enter when processing done
+            // for all the three conditions, packet starts at the stage 0
+            // therefore, there is no need for the stage control, just remove it!
+
+            // if(meta.isRecirculatePkt == 0) {
                 // only new packet need to decide which stage to start
-                stageControl.apply(hdr, meta, standard_metadata);
-            }
+                // stageControl.apply(hdr, meta, standard_metadata);
+            // }
 
             if(meta.nextStage == 0) {
                 elementControl_0.apply(hdr, meta, standard_metadata);
@@ -69,11 +76,10 @@ control MyIngress(inout headers hdr,
 
             // if more elements need to be execute, recirculate the packet
             if(meta.nextStage != NO_STAGE) {
-                meta.isRecirculatePkt = 1;
                 // recirculate(meta);
             }
             else { //otherwise, route the packet
-                if(standard_metadata.egress_spec != DROP_PORT && standard_metadata.egress_spec != SERVER_PORT) {
+                if(standard_metadata.egress_spec != DROP_PORT) {
                    forwardControl.apply(hdr, meta, standard_metadata);
                 }
             }

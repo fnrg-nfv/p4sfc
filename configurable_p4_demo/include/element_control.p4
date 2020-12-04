@@ -9,10 +9,6 @@ control ElementControl(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     
-    action drop() {
-        mark_to_drop(standard_metadata);
-    }
-
     action set_control_data(bit<8> elementId, bit<8> nextStage, boolean_t isNFcomplete) {
         meta.curElement = elementId;
         meta.isNFcomplete = isNFcomplete;
@@ -26,10 +22,10 @@ control ElementControl(inout headers hdr,
             meta.stageId: exact;
         }
         actions = {
+            NoAction;
             set_control_data;
-            drop;
         }
-        default_action = drop;
+        default_action = NoAction();
         // size = 1024;
         const entries = {
             (0, 0, 0): set_control_data(2, 255, 1);
@@ -47,6 +43,12 @@ control ElementControl(inout headers hdr,
     Classifier()  classifier;
     IpRoute()     ipRoute;
     apply {
+        // before the actual element control logic,
+        // we should clear the tag to avoid anomalies
+        // e.g, meta.curElement = last_element if table miss
+        meta.isStageComplete = 0;
+        meta.curElement = ELEMENT_NONE; 
+        
         chainId_stageId_exact.apply();
         if(meta.curElement == ELEMENT_NONE) {
             NoAction();
