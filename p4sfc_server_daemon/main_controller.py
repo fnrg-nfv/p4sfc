@@ -54,78 +54,78 @@ def deploy_chain():
 #     return str(int(time.time() * 1000))
 
 
-def main(p4info_file_path, server_port):
+def main(server_port):
     print 'P4SFC server daemon init successfully...'
-    app.run(host="0.0.0.0", port=server_port)
+    app.run(host="0.0.0.0", port=server_port, debug=True)
     
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(description='P4SFC Server Daemon')
-    # parser.add_argument('--server-port',
-    #                     help='port for RESTful API',
-    #                     type=str,
-    #                     action="store",
-    #                     required=False,
-    #                     default=8090)
-    # args = parser.parse_args()
-    # main(args.p4info, args.server_port)
+    parser = argparse.ArgumentParser(description='P4SFC Server Daemon')
+    parser.add_argument('--server-port',
+                        help='port for RESTful API',
+                        type=str,
+                        action="store",
+                        required=False,
+                        default=8091)
+    args = parser.parse_args()
+    main(args.server_port)
 
 
     # below is for test switch controller
     # server deamon is not started
 
-    chain_id = 0
-    chain_length = 5
-    user_chain = [{
-        "name": "Monitor",
-        "id": 0,
-        "offloadability": const.OFFLOADABLE,
-        "click_file_name": "monitor",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "Firewall",
-        "id": 1,
-        "offloadability": const.OFFLOADABLE,
-        "click_file_name": "firewall",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "VPN",
-        "id": 2,
-        "offloadability": const.UN_OFFLOADABLE,
-        "click_file_name": "vpn",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "VPN",
-        "id": 3,
-        "offloadability": const.UN_OFFLOADABLE,
-        "click_file_name": "vpn",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "IPRewriter",
-        "id": 4,
-        "offloadability": const.PARTIAL_OFFLOADABLE,
-        "click_file_name": "iprewriter",
-        "click_config": {
-            "haha": 666
-        }
-    }]
+    # chain_id = 0
+    # chain_length = 5
+    # user_chain = [{
+    #     "name": "Monitor",
+    #     "id": 0,
+    #     "offloadability": const.OFFLOADABLE,
+    #     "click_file_name": "monitor",
+    #     "click_config": {
+    #         "haha": 666
+    #     }
+    # }, {
+    #     "name": "Firewall",
+    #     "id": 1,
+    #     "offloadability": const.OFFLOADABLE,
+    #     "click_file_name": "firewall",
+    #     "click_config": {
+    #         "haha": 666
+    #     }
+    # }, {
+    #     "name": "VPN",
+    #     "id": 2,
+    #     "offloadability": const.UN_OFFLOADABLE,
+    #     "click_file_name": "vpn",
+    #     "click_config": {
+    #         "haha": 666
+    #     }
+    # }, {
+    #     "name": "VPN",
+    #     "id": 3,
+    #     "offloadability": const.UN_OFFLOADABLE,
+    #     "click_file_name": "vpn",
+    #     "click_config": {
+    #         "haha": 666
+    #     }
+    # }, {
+    #     "name": "IPRewriter",
+    #     "id": 4,
+    #     "offloadability": const.PARTIAL_OFFLOADABLE,
+    #     "click_file_name": "iprewriter",
+    #     "click_config": {
+    #         "haha": 666
+    #     }
+    # }]
 
-    sfc = SFC(chain_id, chain_length, user_chain)
+    # sfc = SFC(chain_id, chain_length, user_chain)
 
-    rules = []
-    rules.extend(generate_entries(sfc))
-    payload = {
-        "type": "insert",
-        "entry_infos": rules
-    }
-    requests.request("POST", switch_controller_addr + "/config_pipeline", headers=headers,
-                         data=json.dumps(payload))
+    # rules = []
+    # rules.extend(generate_entries(sfc))
+    # payload = {
+    #     "type": "insert",
+    #     "entry_infos": rules
+    # }
+    # requests.request("POST", switch_controller_addr + "/config_pipeline", headers=headers,
+    #                      data=json.dumps(payload))

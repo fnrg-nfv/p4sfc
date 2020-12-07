@@ -7,7 +7,6 @@
 #include "include/checksum.p4"
 #include "include/deparser.p4"
 #include "include/element_control.p4"
-#include "include/stage_control.p4"
 #include "include/element_complete_control.p4"
 #include "include/forward_control.p4"
 

@@ -9,10 +9,8 @@ import sys
 # Import P4Runtime lib from parent utils dir
 # Probably there's a better way of doing this.
 sys.path.append(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                 '../utils/'))
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '../utils/'))
 import const
-
 
 # 理论上，在orchestrator中应该维护这样一个全局网络信息
 # 用户的请求只会说明希望把什么网络功能运行在什么server上
@@ -47,6 +45,7 @@ import const
 #     }
 # }
 
+
 def addr2dec(addr):
     "将点分十进制IP地址转换成十进制整数"
     items = [int(x) for x in addr.split(".")]
@@ -61,20 +60,21 @@ def dec2addr(dec):
 app = Flask(__name__)
 chain_id = 0
 
-# 这里偷一下，仅维护server/switch addr
+# below is very simplified version,
+# but is enough for evaluation!
+topo = {"switch 1": "server 1"}
+
 addr_list = {
-    "swtich 1": "http://10.149.252.25:8090",
-    "switch 2": "http://10.149.252.26:8090",
-    "switch 3": "http://10.149.252.27:8090",
-    "server 1": "http://10.149.252.27:8090"
+    "switch 1": "http://localhost:8090",
+    "server 1": "http://localhost:8091"
 }
-headers = {
-    'Content-Type': 'application/json'
-}
+
+headers = {'Content-Type': 'application/json'}
 nf_offlodability = {
     "Monitor": const.OFFLOADABLE,
     "Firewall": const.OFFLOADABLE,
-    "IPRewriter": const.PARTIAL_OFFLOADABLE
+    "IPRewriter": const.PARTIAL_OFFLOADABLE,
+    "IPS": const.UN_OFFLOADABLE
 }
 
 
@@ -95,13 +95,12 @@ def parse_chain(chain_desc):
 
         # assgin offloadability
         nf['offloadability'] = nf_offlodability[nf['name']]
-        
+
         # group by location
         location = nf['location']
         nf_group = nf_groups.get(location, [])
         nf_group.append(nf)
         nf_groups[location] = nf_group
-
 
     #     if location == cur_location:
     #         cur_group.append(nf)
@@ -115,12 +114,20 @@ def parse_chain(chain_desc):
     return nf_groups
 
 
+def get_connected_server(switch):
+    return topo[switch]
+
+
 def parse_route(chain_route, nf_groups, chain_id, chain_length):
+    """Very simplified version !
+    Assuming that a switch only connects to one server
+    """
     route_infos = {}
     for switch in chain_route:
         if switch != "egress" and switch != "ingress":
-            num_nfs = len(nf_groups.get(switch)) if nf_groups.get(
-                switch) != None else 0
+            server = get_connected_server(switch)
+            num_nfs = len(
+                nf_groups.get(server)) if nf_groups.get(server) != None else 0
             chain_length = chain_length - num_nfs
             route_infos[switch] = {
                 "chain_id": chain_id,
@@ -130,7 +137,6 @@ def parse_route(chain_route, nf_groups, chain_id, chain_length):
     return route_infos
 
 
-
 @app.route('/test')
 def test():
     return "Hello from p4sfc ochestrator\n"
@@ -138,7 +144,7 @@ def test():
 
 @app.route('/deploy_chain', methods=['POST'])
 def deploy_chain():
-    receive_time = int(time.time()*1000)
+    receive_time = int(time.time() * 1000)
 
     global chain_id
     global server_addr
@@ -157,7 +163,9 @@ def deploy_chain():
             "nfs": nfs
         }
         chain_length = chain_length - len(nfs)
-        requests.request("POST", url, headers=headers,
+        requests.request("POST",
+                         url,
+                         headers=headers,
                          data=json.dumps(payload))
 
     chain_route = data.get("route")
@@ -172,7 +180,9 @@ def deploy_chain():
             "chain_length": route_info["chain_length"],
             "output_port": route_info["output_port"]
         }
-        response = requests.request("POST", url, headers=headers,
+        response = requests.request("POST",
+                                    url,
+                                    headers=headers,
                                     data=json.dumps(payload))
         complete_time = max(int(response.text), complete_time)
 
@@ -185,40 +195,32 @@ def deploy_chain():
     chain_id = chain_id + 1
     return jsonify(response_payload)
 
+
 if __name__ == '__main__':
 
     # user request example
-    app.run(host="0.0.0.0", port='8091')
-    
+    app.run(host="0.0.0.0", port='8092', debug=True)
+
+    # User request example
     {
-        "chain_desc": [
-            {
-                "name": "Monitor",
-                "click_config": {
-                    "param1": "abc"
-                },
-                "location": "server 1"
+        "chain_desc": [{
+            "name": "Monitor",
+            "click_config": {
+                "param1": "abc"
             },
-            {
-                "name": "Firewall",
-                "click_config": {
-                    "param1": "abc"
-                },
-                "location": "server 2"
+            "location": "server 1"
+        }, {
+            "name": "Firewall",
+            "click_config": {
+                "param1": "abc"
             },
-            {
-                "name": "IPRewriter",
-                "click_config": {
-                    "param1": "abc"
-                },
-                "location": "server 2"
-            }
-        ],
-        "route": [
-            "ingress",
-            "switch 1",
-            "switch 3",
-            "switch 2",
-            "egress"
-        ]
+            "location": "server 1"
+        }, {
+            "name": "IPS",
+            "location": "server 1"
+        }, {
+            "name": "IPRewriter",
+            "location": "server 1"
+        }],
+        "route": ["ingress", "switch 1", "egress"]
     }

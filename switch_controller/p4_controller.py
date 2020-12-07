@@ -17,7 +17,7 @@ import p4runtime_lib.simple_controller
 
 class P4Controller(object):
 
-    def __init__(self, p4info_file_path):
+    def __init__(self, p4info_file_path, bmv2_file_path):
         self.p4info_helper = p4runtime_lib.helper.P4InfoHelper(
             p4info_file_path)
         self.switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
@@ -26,16 +26,17 @@ class P4Controller(object):
             device_id=0,
             proto_dump_file='../configurable_p4_demo/logs/s1-p4runtime-requests.txt'
         )
-        # self.switch_connection.MasterArbitrationUpdate()
+        self.switch_connection.MasterArbitrationUpdate()
+        self.switch_connection.SetForwardingPipelineConfig(p4info=self.p4info_helper.p4info,
+                                       bmv2_json_file_path=bmv2_file_path)
 
     def __get_prefix(self, stage_id):
         return "MyIngress.elementControl_%d" % (stage_id % 5)
 
     def insert_table_entries(self, entries):
         for entry in entries:
-            # self.switch_connection.WriteTableEntry(entry)
-            # for test
             self.showTableEntry(entry)
+            self.switch_connection.WriteTableEntry(entry)
 
     def build_table_entry(self, entry_info):
         table_entry = self.p4info_helper.buildTableEntry(
@@ -73,7 +74,7 @@ class P4Controller(object):
                 "port": output_port
             }
         )
-        self.switch_connection.WriteTableEntry(table_entry)
+        self.insert_table_entries([table_entry])
 
     def insert_entry(self, chain_id, nf_id, stage_index, entry_info):
         # add prefix to table_name and action_name according to stage_id
@@ -158,8 +159,7 @@ class P4Controller(object):
 
 
 if __name__ == '__main__':
-    p4Controller = P4Controller(
-        '../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
+    print "Hello from p4 controller module...."
 
     # test logic for insert
     # entry_info is used to mock message from element

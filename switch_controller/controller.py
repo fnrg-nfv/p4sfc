@@ -48,6 +48,7 @@ def config_route():
     chain_id = data.get("chain_id")
     chain_length = data.get("chain_length")
     output_port = data.get("output_port")
+    
     operation_type = data.get("type")
     if operation_type == "insert":
         p4_controller.insert_route(chain_id, chain_length, output_port)
@@ -55,11 +56,13 @@ def config_route():
     return str(int(time.time() * 1000))
 
 
-def main(p4info_file_path, server_port):
+def main(p4info_file_path, bmv2_file_path, server_port):
     global p4_controller
-    p4_controller = P4Controller(p4info_file_path)
+    p4_controller = P4Controller(p4info_file_path, bmv2_file_path)
     print 'P4SFC server daemon init successfully...'
-    app.run(host="0.0.0.0", port=server_port, debug=True)
+    # Why Open debug will fail?????????????????????????????????????
+    # app.run(host="0.0.0.0", port=server_port, debug=True)
+    app.run(host="0.0.0.0", port=server_port)
 
 
 if __name__ == '__main__':
@@ -71,6 +74,9 @@ if __name__ == '__main__':
         action="store",
         required=False,
         default='../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
+    parser.add_argument('--bmv2-json', help='BMv2 JSON file from p4c',
+                        type=str, action="store", required=False,
+                        default='../configurable_p4_demo/build/p4sfc_template.json')
     parser.add_argument('--server-port',
                         help='port for RESTful API',
                         type=str,
@@ -78,4 +84,4 @@ if __name__ == '__main__':
                         required=False,
                         default=8090)
     args = parser.parse_args()
-    main(args.p4info, args.server_port)
+    main(args.p4info, args.bmv2_json, args.server_port)
