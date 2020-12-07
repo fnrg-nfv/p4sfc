@@ -1,16 +1,14 @@
 import argparse
 import grpc
+
 import os
 import sys
-
 # Import P4Runtime lib from parent utils dir
 # Probably there's a better way of doing this.
 sys.path.append(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), '../utils/'))
-import p4runtime_lib.helper
-from p4runtime_lib.switch import ShutdownAllSwitchConnections
-from p4runtime_lib.error_utils import printGrpcError
-import p4runtime_lib.bmv2
+    os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                 '../utils/'))
+                 
 import const
 
 element_p4_id = {"IPRewriter": 0, "Monitor": 1, "Firewall": 2, "VPN": 3}
@@ -128,190 +126,118 @@ def get_prefix(stage_id):
     return "MyIngress.elementControl_%d" % (stage_id % 5)
 
 
-def generate_element_control_rules(head_nf, tail_nf, chain_id, p4info_helper):
-    """Generate the element control rules for p4 switch in the network
+def generate_element_control_entries(head_nf, tail_nf, chain_id):
+    """Generate the element control entries for p4 switch in the network
     Corresponding file is p4sfc_template.p4 and element_control.p4
     """
     if head_nf is None:
         return []
-    element_control_rules = []
+    element_control_entries = []
     cur_nf = head_nf
     curStage = 0
     while cur_nf is not None and cur_nf != tail_nf:
         nextStage = 255 if cur_nf.next_nf == tail_nf else (curStage + 1) % 5
-        table_entry = p4info_helper.buildTableEntry(
-            table_name=get_prefix(curStage) + ".chainId_stageId_exact",
-            match_fields={
+        table_name = get_prefix(curStage) + ".chainId_stageId_exact"
+        action_name = get_prefix(curStage) + ".set_control_data"
+        table_entry = {
+            "table_name" : table_name,
+            "match_fields" : {
                 "hdr.sfc.chainId": chain_id,
                 "meta.curNfInstanceId": cur_nf.id,
                 "meta.stageId":
                 0  # now assume every NF has only one stage! need to extent!
             },
-            action_name=get_prefix(curStage) + ".set_control_data",
-            action_params={
+            "action_name": action_name,
+            "action_params":{
                 "elementId": element_p4_id[cur_nf.name],
                 "nextStage": nextStage,
                 "isNFcomplete":
                 1  # Constant. the reason is the saem as meta.stageId
-            },
-        )
-        element_control_rules.append(table_entry)
+            }
+        }
+        element_control_entries.append(table_entry)
         if cur_nf == tail_nf:
             break
         curStage = curStage + 1
         cur_nf = cur_nf.next_nf
 
-    print "Generate element control rules successfully...\n  Rules sum: %d" % len(
-        element_control_rules)
-    return element_control_rules
+    print "Generate element control entries successfully...\n  entries sum: %d" % len(
+        element_control_entries)
+    return element_control_entries
 
 
-def generate_forward_control_rules(sfc, p4info_helper):
-    """Generate the forward rules for p4 switch in the network
+def generate_forward_control_entries(sfc):
+    """Generate the forward entries for p4 switch in the network
     For each possible position: [pre_host_head, pre_host_tail]
     & [post_host_head, post_host_tail], we generate one rule.
     """
     cur_nf = sfc.chain_head
     chain_length = sfc.chain_length
     chain_id = sfc.id
-    forwarding_rules = []
+    forwarding_entries = []
     if sfc.pre_host_chain_head is not None:
         while cur_nf != sfc.pre_host_chain_tail:
             # build forward rule for each nf in the pre_server
-            table_entry = p4info_helper.buildTableEntry(
-                table_name="MyIngress.forwardControl.chainId_exact",
-                match_fields={
+            table_entry = {
+                "table_name":"MyIngress.forwardControl.chainId_exact",
+                "match_fields":{
                     "hdr.sfc.chainId": chain_id,
                     "hdr.sfc.chainLength": chain_length,
                 },
-                action_name="MyIngress.forwardControl.send_to_server")
-            forwarding_rules.append(table_entry)
+                "action_name":"MyIngress.forwardControl.send_to_server"
+            }
+            
+            forwarding_entries.append(table_entry)
             cur_nf = cur_nf.next_nf
             chain_length = chain_length - 1
 
     # rule for the first nf in the server_chain
-    table_entry = p4info_helper.buildTableEntry(
-        table_name="MyIngress.forwardControl.chainId_exact",
-        match_fields={
+    table_entry = {
+        "table_name":"MyIngress.forwardControl.chainId_exact",
+        "match_fields":{
             "hdr.sfc.chainId": chain_id,
             "hdr.sfc.chainLength": chain_length,
         },
-        action_name="MyIngress.forwardControl.send_to_server")
-    forwarding_rules.append(table_entry)
+        "action_name":"MyIngress.forwardControl.send_to_server"
+    }
+    forwarding_entries.append(table_entry)
 
     # step to the post_host_chain_head
     while cur_nf != sfc.post_host_chain_head:
         cur_nf = cur_nf.next_nf
         chain_length = chain_length - 1
 
-    # generate the rules for post_host_chain if exist
+    # generate the entries for post_host_chain if exist
     while cur_nf is not None:
-        table_entry = p4info_helper.buildTableEntry(
-            table_name="MyIngress.forwardControl.chainId_exact",
-            match_fields={
+        table_entry = {
+            "table_name":"MyIngress.forwardControl.chainId_exact",
+            "match_fields":{
                 "hdr.sfc.chainId": chain_id,
                 "hdr.sfc.chainLength": chain_length,
             },
-            action_name="MyIngress.forwardControl.send_to_server")
-        forwarding_rules.append(table_entry)
+            "action_name":"MyIngress.forwardControl.send_to_server"
+        }
+        forwarding_entries.append(table_entry)
         cur_nf = cur_nf.next_nf
         chain_length = chain_length - 1
 
-    return forwarding_rules
+    return forwarding_entries
 
+def generate_entries(sfc):
+    entries = []
 
-def showTableEntry(entry, p4info_helper):
-    table_name = p4info_helper.get_tables_name(entry.table_id)
-    print table_name
-    for m in entry.match:
-        print "    %s: %r" % (p4info_helper.get_match_field_name(
-            table_name, m.field_id), p4info_helper.get_match_field_value(m))
-    action = entry.action.action
-    action_name = p4info_helper.get_actions_name(action.action_id)
-    print '        ->', action_name
-    for p in action.params:
-        print "            %s: %r" % (p4info_helper.get_action_param_name(
-            action_name, p.param_id), p.value)
-    print
+    entries.extend(
+        generate_element_control_entries(sfc.pre_host_chain_head,
+                                       sfc.pre_host_chain_tail, sfc.id))
+    entries.extend(
+        generate_element_control_entries(sfc.post_host_chain_head,
+                                       sfc.post_host_chain_tail, sfc.id))
 
-
-def generate_rules(sfc, p4info_helper):
-    rules = []
-
-    rules.extend(
-        generate_element_control_rules(sfc.pre_host_chain_head,
-                                       sfc.pre_host_chain_tail, sfc.id,
-                                       p4info_helper))
-    rules.extend(
-        generate_element_control_rules(sfc.post_host_chain_head,
-                                       sfc.post_host_chain_tail, sfc.id,
-                                       p4info_helper))
-
-    rules.extend(generate_forward_control_rules(sfc, p4info_helper))
+    entries.extend(generate_forward_control_entries(sfc))
 
     print 'Network switch config successfully for chain %d.' % sfc.id
-    return rules
+    return entries
 
 
 if __name__ == '__main__':
-    chain_id = 0
-    chain_length = 5
-    user_chain = [{
-        "name": "Monitor",
-        "id": 0,
-        "offloadability": const.OFFLOADABLE,
-        "click_file_name": "monitor",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "Firewall",
-        "id": 1,
-        "offloadability": const.OFFLOADABLE,
-        "click_file_name": "firewall",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "VPN",
-        "id": 2,
-        "offloadability": const.UN_OFFLOADABLE,
-        "click_file_name": "vpn",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "VPN",
-        "id": 2,
-        "offloadability": const.UN_OFFLOADABLE,
-        "click_file_name": "vpn",
-        "click_config": {
-            "haha": 666
-        }
-    }, {
-        "name": "IPRewriter",
-        "id": 3,
-        "offloadability": const.PARTIAL_OFFLOADABLE,
-        "click_file_name": "iprewriter",
-        "click_config": {
-            "haha": 666
-        }
-    }]
-    sfc = SFC(chain_id, chain_length, user_chain)
-
-    p4info_helper = p4runtime_lib.helper.P4InfoHelper(
-        '../configurable_p4_demo/build/p4sfc_template.p4.p4info.txt')
-    # switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
-    #     name='s2',
-    #     address='127.0.0.1:50052',
-    #     device_id=1,
-    #     proto_dump_file='../configurable_p4_demo/logs/s2-p4runtime-requests.txt'
-    # )
-    # switch_connection.MasterArbitrationUpdate()
-
-    rules = []
-    rules.extend(generate_rules(sfc, p4info_helper))
-
-    for rule in rules:
-        # switch_connection.WriteTableEntry(rule)
-        showTableEntry(rule, p4info_helper)
+    print "Hello from pipeline entry generator..."

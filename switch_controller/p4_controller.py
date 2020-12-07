@@ -18,21 +18,51 @@ import p4runtime_lib.simple_controller
 class P4Controller(object):
 
     def __init__(self, p4info_file_path):
-        # self.network_switch_p4info_helper = p4runtime_lib.helper.P4InfoHelper(
-        #     p4info_file_path)
-        self.network_switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
+        self.p4info_helper = p4runtime_lib.helper.P4InfoHelper(
+            p4info_file_path)
+        self.switch_connection = p4runtime_lib.bmv2.Bmv2SwitchConnection(
             name='s1',
             address='127.0.0.1:50051',
             device_id=0,
             proto_dump_file='../configurable_p4_demo/logs/s1-p4runtime-requests.txt'
         )
-        self.network_switch_connection.MasterArbitrationUpdate()
+        # self.switch_connection.MasterArbitrationUpdate()
 
     def __get_prefix(self, stage_id):
         return "MyIngress.elementControl_%d" % (stage_id % 5)
 
+    def insert_table_entries(self, entries):
+        for entry in entries:
+            # self.switch_connection.WriteTableEntry(entry)
+            # for test
+            self.showTableEntry(entry)
+
+    def build_table_entry(self, entry_info):
+        table_entry = self.p4info_helper.buildTableEntry(
+            table_name=entry_info["table_name"],
+            match_fields=entry_info["match_fields"],
+            action_name=entry_info["action_name"],
+            action_params=entry_info.get("action_params", {}),
+            priority=entry_info.get("priority")
+        )
+        return table_entry
+
+    def showTableEntry(self, entry):
+        table_name = self.p4info_helper.get_tables_name(entry.table_id)
+        print table_name
+        for m in entry.match:
+            print "    %s: %r" % (self.p4info_helper.get_match_field_name(
+                table_name, m.field_id), self.p4info_helper.get_match_field_value(m))
+        action = entry.action.action
+        action_name = self.p4info_helper.get_actions_name(action.action_id)
+        print '        ->', action_name
+        for p in action.params:
+            print "            %s: %r" % (self.p4info_helper.get_action_param_name(
+                action_name, p.param_id), p.value)
+        print
+
     def insert_route(self, chain_id, chain_length, output_port):
-        table_entry = self.network_switch_p4info_helper.buildTableEntry(
+        table_entry = self.p4info_helper.buildTableEntry(
             table_name="MyIngress.forwardControl.chainId_exact",
             match_fields={
                 "hdr.sfc.chainId": chain_id,
@@ -43,8 +73,7 @@ class P4Controller(object):
                 "port": output_port
             }
         )
-        self.network_switch_connection.WriteTableEntry(table_entry)
-        self.config_rule_record[chain_id].append(table_entry)
+        self.switch_connection.WriteTableEntry(table_entry)
 
     def insert_entry(self, chain_id, nf_id, stage_index, entry_info):
         # add prefix to table_name and action_name according to stage_id

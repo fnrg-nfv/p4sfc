@@ -165,8 +165,9 @@ def deploy_chain():
     route_infos = parse_route(chain_route, nf_groups, chain_id, chain_length)
     complete_time = 0
     for switch, route_info in route_infos.iteritems():
-        url = addr_list[switch] + "/insert_route"
+        url = addr_list[switch] + "/config_route"
         payload = {
+            "type": "insert",
             "chain_id": route_info["chain_id"],
             "chain_length": route_info["chain_length"],
             "output_port": route_info["output_port"]
@@ -188,6 +189,7 @@ if __name__ == '__main__':
 
     # user request example
     app.run(host="0.0.0.0", port='8091')
+    
     {
         "chain_desc": [
             {
