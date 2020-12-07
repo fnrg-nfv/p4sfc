@@ -16,6 +16,10 @@ control IpRewriter(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
     direct_counter(CounterType.packets_and_bytes) rule_frequency;
 
+    action p4sfcNoAction() {
+        rule_frequency.count();
+    }
+
     action rewrite(ip4Addr_t srcAddr, ip4Addr_t dstAddr, transport_port_t srcPort, transport_port_t dstPort) {
         meta.isStageComplete = 1;
         hdr.ipv4.srcAddr = srcAddr;
@@ -37,10 +41,10 @@ control IpRewriter(inout headers hdr,
             hdr.tcp_udp.dstPort: exact;
         }
         actions = {
-            NoAction;
+            p4sfcNoAction;
             rewrite;
         }
-        default_action = NoAction();
+        default_action = p4sfcNoAction();
         counters=rule_frequency;
         // size = 1024;
         // const entries = {
@@ -63,6 +67,9 @@ control Monitor(inout headers hdr,
     counter(128, CounterType.bytes) total_packets;
     direct_counter(CounterType.packets_and_bytes) rule_frequency;
 
+    action p4sfcNoAction() {
+        rule_frequency.count();
+    }
 
     action count_packet() {
         meta.isStageComplete = 1;
@@ -81,11 +88,11 @@ control Monitor(inout headers hdr,
             meta.stageId: exact;
         }
         actions = {
-            NoAction;
+            p4sfcNoAction;
             count_packet;
         }
         counters=rule_frequency;
-        default_action = NoAction();
+        default_action = p4sfcNoAction();
         // size = 1024;
         const entries = {
             (0, 0, 0): count_packet();
@@ -103,6 +110,10 @@ control Firewall(inout headers hdr,
     
     direct_counter(CounterType.packets_and_bytes) rule_frequency;
     
+    action p4sfcNoAction() {
+        rule_frequency.count();
+    }
+
     action drop() {
         meta.isStageComplete = 1;
         mark_to_drop(standard_metadata);
@@ -122,11 +133,11 @@ control Firewall(inout headers hdr,
             hdr.tcp_udp.dstPort: ternary;
         }
         actions = {
-            NoAction;
+            p4sfcNoAction;
             drop;
         }
         counters=rule_frequency;
-        default_action = NoAction();
+        default_action = p4sfcNoAction();
         // size = 1024;
         const entries = {
             (0, 0, 0, 0x00000000 &&& 0x00000000, 0x0a000301 &&& 0xffffffff, 0x00 &&& 0x00, 0x0000 &&& 0x0000, 0x0000 &&& 0x0000): drop();
@@ -154,6 +165,10 @@ control Classifier(inout headers hdr,
     
     direct_counter(CounterType.packets_and_bytes) rule_frequency;
 
+    action p4sfcNoAction() {
+        rule_frequency.count();
+    }
+
     action drop() {
         meta.isStageComplete = 1;
         mark_to_drop(standard_metadata);
@@ -176,12 +191,12 @@ control Classifier(inout headers hdr,
             hdr.ipv4.srcAddr: ternary;
         }
         actions = {
-            NoAction;
+            p4sfcNoAction;
             drop;
             set_next_stage;
         }
         counters=rule_frequency;
-        default_action = NoAction();
+        default_action = p4sfcNoAction();
         // size = 1024;
         const entries = {
             (0, 0, 0, 0x0AA80001 &&& 0xffffffff): set_next_stage(255);
@@ -198,6 +213,10 @@ control IpRoute(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
     
     direct_counter(CounterType.packets_and_bytes) rule_frequency;
+
+    action p4sfcNoAction() {
+        rule_frequency.count();
+    }
 
     action drop() {
         meta.isStageComplete = 1;
@@ -221,12 +240,12 @@ control IpRoute(inout headers hdr,
             hdr.ipv4.dstAddr: ternary;
         }
         actions = {
-            NoAction;
+            p4sfcNoAction;
             drop;
             set_output_port;
         }
         counters=rule_frequency;
-        default_action = NoAction();
+        default_action = p4sfcNoAction();
         // size = 1024;
         const entries = {
             (0, 0, 0, 0x01010101 &&& 0xffffffff): set_output_port(132);
