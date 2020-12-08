@@ -24,7 +24,7 @@ class P4Controller(object):
             name='s1',
             address='127.0.0.1:50051',
             device_id=0,
-            proto_dump_file='../configurable_p4_demo/logs/s1-p4runtime-requests.txt'
+            proto_dump_file='../configurable_p4_dp/logs/s1-p4runtime-requests.txt'
         )
         self.switch_connection.MasterArbitrationUpdate()
         self.switch_connection.SetForwardingPipelineConfig(p4info=self.p4info_helper.p4info,
