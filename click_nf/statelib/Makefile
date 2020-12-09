@@ -7,12 +7,16 @@ LDFLAGS += -L/usr/local/lib `pkg-config --libs grpc++ grpc`       \
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed \
            -lprotobuf -lpthread -ldl
 
+PROTOSRC = p4sfcstate.proto
+
 PROTOC = protoc
 GRPC_CPP_PLUGIN = grpc_cpp_plugin
 GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
+GRPC_PY_PLUGIN = grpc_python_plugin
+GRPC_PY_PLUGIN_PATH ?= `which $(GRPC_PY_PLUGIN)`
 
 
-all: libstate.so client server test
+all: libstate.so client server test proto_py
 
 libstate.so: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o
 	$(CXX) $^ $(LDFLAGS) -shared -o $@
@@ -40,5 +44,10 @@ server: p4sfcstate.pb.o p4sfcstate.grpc.pb.o server.o
 
 proto: p4sfcstate.pb.cc p4sfcstate.grpc.pb.cc 
 
+%_pb2_grpc.py: %.proto
+	$(PROTOC) -I $(PROTOS_PATH) --python_out=. --grpc_out=. --plugin=protoc-gen-grpc=$(GRPC_PY_PLUGIN_PATH) $<
+
+proto_py: p4sfcstate_pb2_grpc.py
+
 clean:
-	rm -f *.o *.so *.pb.cc *.pb.h client server test
+	rm -f *.o *.so *.pb.cc *.pb.h *_pb2_grpc.py *_pb2.py client server test
