@@ -38,7 +38,7 @@ control ElementControl(inout headers hdr,
     }
 
     IpRewriter()  ipRewriter;
-    Monitor()     monitor;
+    // Monitor()     monitor;
     Firewall()    firewall;
     Classifier()  classifier;
     IpRoute()     ipRoute;
@@ -56,9 +56,9 @@ control ElementControl(inout headers hdr,
         else if(meta.curElement == ELEMENT_IPREWRITER) {
             ipRewriter.apply(hdr, meta, standard_metadata);
         }
-        else if (meta.curElement == ELEMENT_MONITOR) {
-            monitor.apply(hdr, meta, standard_metadata);
-        }
+        // else if (meta.curElement == ELEMENT_MONITOR) {
+        //     monitor.apply(hdr, meta, standard_metadata);
+        // }
         else if(meta.curElement == ELEMENT_FIREWALL) {
             firewall.apply(hdr, meta, standard_metadata);
         }
