@@ -15,9 +15,9 @@ const bit<8> NO_STAGE = 255;
 const bit<16> TYPE_IPV4 = 0x800;
 
 // support ipv4 protocol type
-const bit<16> PROTOCOL_ICMP = 0x0001;
-const bit<16> PROTOCOL_TCP = 0x0006;
-const bit<16> PROTOCOL_UDP = 0x0007;
+const bit<8> PROTOCOL_ICMP = 0x01;
+const bit<8> PROTOCOL_TCP = 0x06;
+const bit<8> PROTOCOL_UDP = 0x07;
 
 #define MAX_SFC_LENGTH 10
 

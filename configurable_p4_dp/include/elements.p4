@@ -64,7 +64,7 @@ control Monitor(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     // counter(128, CounterType.packets) total_packets;
-    counter(128, CounterType.bytes) total_packets;
+    // counter(128, CounterType.bytes) total_packets;
     direct_counter(CounterType.packets_and_bytes) rule_frequency;
 
     action p4sfcNoAction() {
@@ -73,10 +73,10 @@ control Monitor(inout headers hdr,
 
     action count_packet() {
         meta.isStageComplete = 1;
-        bit<32> counter_index = ((bit<32>)hdr.sfc.chainId);
+        // bit<32> counter_index = ((bit<32>)hdr.sfc.chainId);
         // counter_index = counter_index + ((bit<32>) hdr.nfs[0].nfInstanceId << 8);
         // counter_index = counter_index + (bit<32>) meta.stageId;
-        total_packets.count(counter_index);
+        // total_packets.count(counter_index);
 
         rule_frequency.count();        
     }
