@@ -13,7 +13,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 
-switch_controller_addr = "http://localhost:8090"
+switch_controller_addr = "http://10.176.35.32:8090"
 
 @app.route('/test')
 def test():

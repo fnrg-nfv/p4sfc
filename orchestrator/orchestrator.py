@@ -66,7 +66,7 @@ chain_id = 0
 topo = {"switch 1": "server 1"}
 
 addr_list = {
-    "switch 1": "http://localhost:8090",
+    "switch 1": "http://10.176.35.32:8090",
     "server 1": "http://localhost:8091"
 }
 
