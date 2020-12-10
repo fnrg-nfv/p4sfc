@@ -134,25 +134,25 @@ void flow2entry_action(const IPFlowID& flow, P4SFCState::TableEntry *e) {
 void flow2entry_match(const IPFlowID& flow, P4SFCState::TableEntry *e) {
   {
     auto m = e->add_match();
-    m->set_field_name(P4H_IP_SADDR); // can be eliminated
+    m->set_field_name(P4H_IP_SADDR);
     auto ex = m->mutable_exact();
     ex->set_value(flow.saddr().s().c_str());
   }
   {
     auto m = e->add_match();
-    m->set_field_name(P4H_IP_DADDR); // can be eliminated
+    m->set_field_name(P4H_IP_DADDR);
     auto ex = m->mutable_exact();
     ex->set_value(flow.daddr().s().c_str());
   }
   {
     auto m = e->add_match();
-    m->set_field_name(P4H_IP_SPORT); // can be eliminated
+    m->set_field_name(P4H_IP_SPORT);
     auto ex = m->mutable_exact();
     ex->set_value(std::to_string(ntohs(flow.sport())));
   }
   {
     auto m = e->add_match();
-    m->set_field_name(P4H_IP_DPORT); // can be eliminated
+    m->set_field_name(P4H_IP_DPORT);
     auto ex = m->mutable_exact();
     ex->set_value(std::to_string(ntohs(flow.dport())));
   }
@@ -181,12 +181,12 @@ void apply(WritablePacket* p, const P4SFCState::TableEntry& e) {
   {
     auto p = a.params(2);
     std::string val = p.value();
-    udph->uh_sport = (uint16_t)std::stoi(val);
+    udph->uh_sport = htons((uint16_t)std::stoi(val));
   }
   {
     auto p = a.params(3);
     std::string val = p.value();
-    udph->uh_dport = (uint16_t)std::stoi(val);
+    udph->uh_dport = htons((uint16_t)std::stoi(val));
   }
   // IP header
   // iph->ip_src = rw_flowid.saddr();
@@ -247,10 +247,10 @@ P4SFCState::TableEntry *P4IPRewriter::add_flow(const IPFlowID &flowid, const IPF
   entry->set_table_name(P4_TABLE_NAME);
   entry_r->set_table_name(P4_TABLE_NAME);
   flow2entry_match(flowid, entry);
-  flow2entry_match(rewritten_flowid, entry_r);
+  flow2entry_match(rewritten_flowid.reverse(), entry_r);
 
   flow2entry_action(rewritten_flowid, entry);
-  flow2entry_action(flowid, entry_r);
+  flow2entry_action(flowid.reverse(), entry_r);
 
   _map.insert(*entry);
   _map.insert(*entry_r);
