@@ -45,7 +45,6 @@
 CLICK_DECLS
 
 P4IPRewriter::P4IPRewriter() {
-  P4SFCState::startServer();
 }
 
 P4IPRewriter::~P4IPRewriter() {
@@ -55,7 +54,8 @@ P4IPRewriter::~P4IPRewriter() {
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh) {
   // std::cout << "Specs Len: " << conf.size() << std::endl;
 
-  _instance_id = atoi(conf[0].c_str());
+  int click_instance_id = atoi(conf[0].c_str());
+  P4SFCState::startServer(click_instance_id);
 
   for (int i = 1; i < conf.size(); ++i) {
     P4IPRewriterInput is;

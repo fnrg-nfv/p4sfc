@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
 
   TableEntryReply teReply;
   client.GetState(&teReply);
+  std::cout << teReply.click_instance_id() << std::endl;
   int size = teReply.entries_size();
   for (size_t i = 0; i < size; i++) {
     auto e = teReply.entries(i);

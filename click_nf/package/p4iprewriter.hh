@@ -19,8 +19,8 @@ class P4IPRewriterEntry;
 class P4IPRewriter;
 
 class P4Element : public Element {
-protected:
-  int _instance_id;
+// protected:
+//   int _click_instance_id;
 };
 
 class P4IPRewriterPattern {

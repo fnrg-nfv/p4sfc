@@ -20,7 +20,6 @@ bool isInit = false;
 
 // Logic and data behind the server's behavior.
 class ServiceImpl final : public RPC::Service {
-
     Status SayHello(ServerContext* context, const HelloRequest* request,
                     HelloReply* reply) override {
         std::string prefix("Hello ");
@@ -33,6 +32,7 @@ class ServiceImpl final : public RPC::Service {
         // 1. move on cur_pos;
         // 2. return a k-ranked list;
         // 3. clear old slots;
+        reply->set_click_instance_id(_click_instance_id);
         for(auto i = tables.begin(); i != tables.cend(); i++) {
             Table* table = *i;
             for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
@@ -43,12 +43,16 @@ class ServiceImpl final : public RPC::Service {
         }
         return Status::OK;
     }
+    public:
+        ServiceImpl(int click_instance_id): _click_instance_id(click_instance_id) {}
+    private:
+        int _click_instance_id;
 
 };
 std::unique_ptr<Server> server;
 
-void runServer(string addr) {
-    ServiceImpl service;
+void runServer(string addr, int click_instance_id) {
+    ServiceImpl service(click_instance_id);
     ServerBuilder builder;
     builder.AddListeningPort(addr, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
@@ -62,10 +66,10 @@ void runServer(string addr) {
 
 thread* server_thread;
 
-void startServer(string addr) {
+void startServer(int click_instance_id, string addr) {
     if (server_thread)
         return;
-    server_thread = new thread(runServer, addr);
+    server_thread = new thread(runServer, addr, click_instance_id);
 }
 
 void shutdownServer() {

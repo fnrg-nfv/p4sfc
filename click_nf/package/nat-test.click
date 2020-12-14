@@ -1,6 +1,6 @@
 require(package "p4sfc");
 
-rw :: P4IPRewriter(0, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
+rw :: P4IPRewriter(10, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 
 
 src :: InfiniteSource( DATA \< 
