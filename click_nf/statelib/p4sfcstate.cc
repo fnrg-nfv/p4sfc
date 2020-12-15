@@ -17,31 +17,47 @@ int getSum(TableEntry *);
 vector<Table*> tables;
 int curPos = 0;
 bool isInit = false;
+const int k = 10;
 
 // Logic and data behind the server's behavior.
 class ServiceImpl final : public RPC::Service {
-    Status SayHello(ServerContext* context, const HelloRequest* request,
-                    HelloReply* reply) override {
-        std::string prefix("Hello ");
-        reply->set_message(prefix + request->name());
-        return Status::OK;
-    }
-
-    Status GetState(ServerContext* context, const Empty* request, TableEntryReply* reply) {
-        // TODO: return a k-ranked list;
-        reply->set_click_instance_id(_click_instance_id);
-        for(auto i = tables.begin(); i != tables.cend(); i++) {
-            Table* table = *i;
-            for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
-            {
-                TableEntry* entry = reply->add_entries();
-                entry->CopyFrom(j->second);
-            }
+        Status SayHello(ServerContext* context, const HelloRequest* request,
+                        HelloReply* reply) override {
+            std::string prefix("Hello ");
+            reply->set_message(prefix + request->name());
+            return Status::OK;
         }
-        move_window_forward();
 
-        return Status::OK;
-    }
+        Status GetState(ServerContext* context, const Empty* request, TableEntryReply* reply) {
+            reply->set_click_instance_id(_click_instance_id);
+            int size = 0;
+            for(auto i = tables.begin(); i != tables.cend(); i++) {
+                Table* table = *i;
+                for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
+                {
+                        TableEntry* entry = reply->add_entries();
+                        entry->CopyFrom(j->second);
+                }
+            }
+            // TODO: need optimize
+            std::sort(reply->mutable_entries()->begin(), reply->mutable_entries()->end(),
+                    [this](const TableEntry& a, const TableEntry& b){
+                        return window_sum(a) < window_sum(b);
+                    });
+            // sort table entry
+            move_window_forward();
+
+            return Status::OK;
+        }
+
+        int window_sum(const TableEntry& e) {
+            auto w = e.window();
+            int sum = 0;
+            for (size_t i = 0; i < w.slot_size(); i++)
+                sum += w.slot(i);
+            return sum;
+        }
+
     public:
         ServiceImpl(int click_instance_id): _click_instance_id(click_instance_id) {}
     private:
@@ -55,6 +71,7 @@ class ServiceImpl final : public RPC::Service {
                     j->second.mutable_window()->set_slot(curPos, 0);
             }
         }
+
 
 };
 std::unique_ptr<Server> server;
