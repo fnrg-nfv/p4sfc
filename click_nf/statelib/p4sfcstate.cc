@@ -28,10 +28,7 @@ class ServiceImpl final : public RPC::Service {
     }
 
     Status GetState(ServerContext* context, const Empty* request, TableEntryReply* reply) {
-        // TODO: 
-        // 1. move on cur_pos;
-        // 2. return a k-ranked list;
-        // 3. clear old slots;
+        // TODO: return a k-ranked list;
         reply->set_click_instance_id(_click_instance_id);
         for(auto i = tables.begin(); i != tables.cend(); i++) {
             Table* table = *i;
@@ -41,12 +38,23 @@ class ServiceImpl final : public RPC::Service {
                 entry->CopyFrom(j->second);
             }
         }
+        move_window_forward();
+
         return Status::OK;
     }
     public:
         ServiceImpl(int click_instance_id): _click_instance_id(click_instance_id) {}
     private:
         int _click_instance_id;
+
+        void move_window_forward() {
+            curPos = (curPos + 1) % WINDOW_SIZE; 
+            for(auto i = tables.begin(); i != tables.cend(); i++) {
+                Table* table = *i;
+                for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
+                    j->second.mutable_window()->set_slot(curPos, 0);
+            }
+        }
 
 };
 std::unique_ptr<Server> server;
