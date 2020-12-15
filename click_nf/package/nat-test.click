@@ -21,7 +21,7 @@ ip :: IPClassifier(src net intern and dst net intern,
                    dst host extern,
                    -);
 
-src -> Print(ip)
+src -> Print(in)
     -> Strip(14)
     -> CheckIPHeader
     -> IPPrint(in_ip)

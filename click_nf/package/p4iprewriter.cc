@@ -33,10 +33,10 @@
 
 #define P4H_IP_SADDR "hdr.ipv4.srcAddr"
 #define P4H_IP_DADDR "hdr.ipv4.dstAddr"
-#define P4H_IP_SPORT "hdr.ipv4.srcPort"
-#define P4H_IP_DPORT "hdr.ipv4.dstPort"
-#define P4_TABLE_NAME "nat_exact"
-#define P4_IPRW_ACTION_NAME "flow_rewrite"
+#define P4H_IP_SPORT "hdr.tcp_udp.srcPort"
+#define P4H_IP_DPORT "hdr.tcp_udp.dstPort"
+#define P4_TABLE_NAME "IpRewriter_exact"
+#define P4_IPRW_ACTION_NAME "rewrite"
 #define P4_IPRW_PARAM_SA "srcAddr"
 #define P4_IPRW_PARAM_DA "dstAddr"
 #define P4_IPRW_PARAM_SP "srcPort"
@@ -216,9 +216,11 @@ void P4IPRewriter::push(int port, Packet *p_in) {
   // 1. check in map
   P4SFCState::TableEntry* entry = _map.lookup(lookup_entry);
   // P4IPRewriterEntry *entry = _map.get(flowid);
-
+  if (entry) {
+    // print the match entry
+    std::cout << "[match]\t";
+  } else {
   // 2. if not in map, inputspec.output
-  if (!entry) {
     P4IPRewriterInput &is = _input_specs.at(port);
     IPFlowID rewritten_flowid = IPFlowID::uninitialized_t();
     int result = is.rewrite_flowid(flowid, rewritten_flowid);
@@ -228,9 +230,11 @@ void P4IPRewriter::push(int port, Packet *p_in) {
         checked_output_push(port, p);
         return;
       }
+      std::cout << "[new]\t";
     } else if (result == rw_drop)
       return;
   }
+  std::cout << toString(entry) << std::endl;
 
   // update the header
   apply(p, *entry);
