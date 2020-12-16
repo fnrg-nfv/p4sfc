@@ -26,22 +26,22 @@ control ElementControl(inout headers hdr,
             set_control_data;
         }
         default_action = NoAction();
-        size = 1024;
-        // const entries = {
-        //     (0, 0, 0): set_control_data(2, 255, 1);
+        // size = 1024;
+        const entries = {
+            (0, 0, 0): set_control_data(0, 255, 1);
             // (0, 2, 0): set_control_data(2, 2, 1);
             // (0, 3, 0): set_control_data(0, 255, 1);
             // (1, 1, 1): set_control_data(0, 255, 1);
             // (0, 1, 1): set_control_data(2, 2, 1);
             // (0, 2, 2): set_control_data(0, 255, 1);
-        // }
+        }
     }
 
     IpRewriter()  ipRewriter;
-    // Monitor()     monitor;
+    Monitor()     monitor;
     Firewall()    firewall;
     Classifier()  classifier;
-    IpRoute()     ipRoute;
+    // IpRoute()     ipRoute;
     apply {
         // before the actual element control logic,
         // we should clear the tag to avoid anomalies
@@ -56,17 +56,17 @@ control ElementControl(inout headers hdr,
         else if(meta.curElement == ELEMENT_IPREWRITER) {
             ipRewriter.apply(hdr, meta, standard_metadata);
         }
-        // else if (meta.curElement == ELEMENT_MONITOR) {
-        //     monitor.apply(hdr, meta, standard_metadata);
-        // }
+        else if (meta.curElement == ELEMENT_MONITOR) {
+            monitor.apply(hdr, meta, standard_metadata);
+        }
         else if(meta.curElement == ELEMENT_FIREWALL) {
             firewall.apply(hdr, meta, standard_metadata);
         }
         else if(meta.curElement == ELEMENT_CLASSIFIER) {
             classifier.apply(hdr, meta, standard_metadata);
         }
-        else if(meta.curElement == ELEMENT_IPROUTE) {
-            ipRoute.apply(hdr, meta, standard_metadata);
-        }
+        // else if(meta.curElement == ELEMENT_IPROUTE) {
+        //     ipRoute.apply(hdr, meta, standard_metadata);
+        // }
     }
 }
