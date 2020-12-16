@@ -46,7 +46,7 @@ control IpRewriter(inout headers hdr,
         }
         default_action = p4sfcNoAction();
         counters=rule_frequency;
-        // size = 1024;
+        size = 1024;
         // const entries = {
             // (0, 0, 0, 0x0AA80001, 0x01010101, 0x162E, 0x04d2): rewrite(0x0a0a0a0a, 0x0b0b0b0b, 0x1111, 0x2222);
             // (0, 2, 2, 0x0a000101, 0x0a000303, 0x162E, 0x04d2): rewrite(0x0c0c0c0c, 0x0d0d0d0d, 0x3333, 0x4444);
@@ -93,10 +93,10 @@ control Monitor(inout headers hdr,
         }
         counters=rule_frequency;
         default_action = p4sfcNoAction();
-        // size = 1024;
-        const entries = {
-            (0, 0, 0): count_packet();
-        }
+        size = 1024;
+        // const entries = {
+        //     (0, 0, 0): count_packet();
+        // }
     }
     
     apply{
