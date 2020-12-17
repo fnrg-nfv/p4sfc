@@ -13,6 +13,7 @@ const bit<8> NO_STAGE = 255;
 
 // support ethernet type
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> TYPE_P4SFC = 0x1234;
 
 // support ipv4 protocol type
 const bit<8> PROTOCOL_ICMP = 0x01;

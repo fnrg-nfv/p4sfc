@@ -9,7 +9,16 @@ parser MyParser(packet_in packet,
                 inout standard_metadata_t standard_metadata) {
 
     state start {
-        transition parse_sfc;
+        transition parse_ethernet;
+    }
+
+    state parse_ethernet {
+        packet.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            TYPE_IPV4: parse_ipv4;
+            TYPE_P4SFC: parse_sfc;
+            default: accept;
+        }
     }
 
     state parse_sfc {
@@ -24,17 +33,10 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.nfs.next);
         transition select(hdr.nfs.last.isLast) {
             0: parse_nf;
-            default: parse_ethernet;
+            default: parse_ipv4;
         }
     }
 
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            TYPE_IPV4: parse_ipv4;
-            default: accept;
-        }
-    }
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);

@@ -3,6 +3,12 @@
 *************************************************************************/
 #include "define.p4"
 
+header ethernet_t {
+    macAddr_t dstAddr;
+    macAddr_t srcAddr;
+    bit<16>   etherType;
+}
+
 header sfc_t {
     bit<16> chainId;
     bit<16> chainLength;
@@ -11,12 +17,6 @@ header sfc_t {
 header nf_t {
     bit<15> nfInstanceId;
     bit<1>  isLast;
-}
-
-header ethernet_t {
-    macAddr_t dstAddr;
-    macAddr_t srcAddr;
-    bit<16>   etherType;
 }
 
 header ipv4_t {
@@ -40,9 +40,9 @@ header tcp_udp_t {
 }
 
 struct headers {
+    ethernet_t  ethernet;
     sfc_t sfc;
     nf_t[MAX_SFC_LENGTH] nfs;
-    ethernet_t  ethernet;
     ipv4_t      ipv4;
     tcp_udp_t   tcp_udp;
 }
