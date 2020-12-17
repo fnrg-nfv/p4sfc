@@ -337,7 +337,6 @@ struct p4sfc_chain_header
 {
 	uint16_t chain_id;
 	uint16_t chain_length;
-	uint8_t is_frequent;
 };
 
 struct p4sfc_nf_header
@@ -348,15 +347,17 @@ struct p4sfc_nf_header
 static uint16_t
 get_first_nf_instance_id(struct rte_mbuf *m)
 {
+	struct rte_ether_hdr *eth_hdr;
+	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *);
+	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
 	if (hdr->chain_length == 0)
 	{
 		return -1;
 	}
 	struct p4sfc_nf_header *nf;
 	nf = rte_pktmbuf_mtod_offset(m, struct p4sfc_nf_header *,
-								 sizeof(struct p4sfc_chain_header));
+								 sizeof(struct rte_ether_hdr) + sizeof(struct p4sfc_chain_header));
 	uint16_t nf_instance_id;
 	nf_instance_id = rte_be_to_cpu_16(nf->nf_id);
 	nf_instance_id = nf_instance_id >> 1;
@@ -367,25 +368,31 @@ get_first_nf_instance_id(struct rte_mbuf *m)
 static void
 p4sfc_tag_packet(struct rte_mbuf *m)
 {
+	struct rte_ether_hdr *eth_hdr;
+	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *);
-	hdr->is_frequent = 1;
+	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	hdr->chain_id |= 0x8000;
 }
 
 static void
 p4sfc_untag_packet(struct rte_mbuf *m)
 {
+	struct rte_ether_hdr *eth_hdr;
+	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *);
-	hdr->is_frequent = 0;
+	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	hdr->chain_id &= 0x7fff;
 }
 
 static bool
 p4sfc_is_packet_tag(struct rte_mbuf *m)
 {
+	struct rte_ether_hdr *eth_hdr;
+	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *);
-	return hdr->is_frequent == 1;
+	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	return hdr->chain_id & 0x8000;
 }
 
 // 代码中注释了两处if是为了收到包立马就发出去，但这样可能会影响速度
@@ -1253,10 +1260,10 @@ kni_free_kni(uint16_t port_id)
 static void set_hashtable_for_test(void)
 {
 	struct nf_info *nf_info = (struct nf_info *)rte_malloc(NULL, sizeof(*nf_info), 0);
-	nf_info->is_tag_position = true;
-	nf_info->is_post_head = true;
+	nf_info->is_tag_position = false;
+	nf_info->is_post_head = false;
 	nf_info->port_index = 0;
-	nf_info->kni_index = 1;
+	nf_info->kni_index = 0;
 	uint16_t nf_instance_id = 0;
 	int hash_index = rte_hash_add_key((const struct rte_hash *)nf_instance_id_2_kni, (const void *)&nf_instance_id);
 	nf_infos[hash_index] = nf_info;
