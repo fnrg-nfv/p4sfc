@@ -1,6 +1,13 @@
+CLICK CONFIG
+
+DIRECTORY STRUCTURE:
+.                : normal click files including source, NFs, and pipe;
+encap            : network functions implemented with p4sfcencap;
+dpdk             : src_and_rcv and pipe implemented by DPDK.
+
 CLICK-BASED NETWORK FUNCTION: 
 
-- NAT            : nat.click, nat-p4.click, nat-p4-encap.click
+- NAT            : nat.click, nat-p4.click
 - firewall       : firewall.click
 - monitor        : monitor.click
 - IPS            : ips.click                                        # based on snort
@@ -8,5 +15,5 @@ CLICK-BASED NETWORK FUNCTION:
 - load balancer  : lb.click
 - forwarder      : forwarder.click
 
-BUG:
-- P4SFCEncap does not handle the DROP situation: DROP packets should retrieve their headers.
+TODO:
+- (BUG) P4SFCEncap does not handle the DROP situation: DROP packets should retrieve their headers.

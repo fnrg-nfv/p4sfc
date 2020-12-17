@@ -42,9 +42,9 @@ class ServiceImpl final : public RPC::Service {
             // TODO: need optimize
             std::sort(reply->mutable_entries()->begin(), reply->mutable_entries()->end(),
                     [this](const TableEntry& a, const TableEntry& b){
-                        return window_sum(a) < window_sum(b);
+                        return window_sum(a) > window_sum(b);
                     });
-            // sort table entry
+            // delete more table entries
             move_window_forward();
 
             return Status::OK;

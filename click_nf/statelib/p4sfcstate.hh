@@ -25,7 +25,7 @@ class Table {
         TableEntry* lookup(const TableEntry&);
 };
 
-void startServer(int click_instance_id=1, string addr="localhost:28282");
+void startServer(int click_instance_id=1, string addr="0.0.0.0:28282");
 void shutdownServer();
 TableEntry* newTableEntry();
 string toString(TableEntry *entry);
