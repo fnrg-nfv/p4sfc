@@ -347,10 +347,8 @@ struct p4sfc_nf_header
 static uint16_t
 get_first_nf_instance_id(struct rte_mbuf *m)
 {
-	struct rte_ether_hdr *eth_hdr;
-	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	hdr = rte_pktmbuf_mtod_offset(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
 	if (hdr->chain_length == 0)
 	{
 		return -1;
@@ -368,30 +366,24 @@ get_first_nf_instance_id(struct rte_mbuf *m)
 static void
 p4sfc_tag_packet(struct rte_mbuf *m)
 {
-	struct rte_ether_hdr *eth_hdr;
-	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	hdr = rte_pktmbuf_mtod_offset(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
 	hdr->chain_id |= 0x8000;
 }
 
 static void
 p4sfc_untag_packet(struct rte_mbuf *m)
 {
-	struct rte_ether_hdr *eth_hdr;
-	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	hdr = rte_pktmbuf_mtod_offset(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
 	hdr->chain_id &= 0x7fff;
 }
 
 static bool
 p4sfc_is_packet_tag(struct rte_mbuf *m)
 {
-	struct rte_ether_hdr *eth_hdr;
-	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 	struct p4sfc_chain_header *hdr;
-	hdr = rte_pktmbuf_mtod(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
+	hdr = rte_pktmbuf_mtod_offset(m, struct p4sfc_chain_header *, sizeof(struct rte_ether_hdr));
 	return hdr->chain_id & 0x8000;
 }
 
