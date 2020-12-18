@@ -359,7 +359,7 @@ get_first_nf_instance_id(struct rte_mbuf *m)
 	uint16_t nf_instance_id;
 	nf_instance_id = rte_be_to_cpu_16(nf->nf_id);
 	nf_instance_id = nf_instance_id >> 1;
-	// printf("nf_instance_id:  %d\n", nf_instance_id);
+	//	printf("nf_instance_id:  %d\n", nf_instance_id);
 	return nf_instance_id;
 }
 
@@ -408,10 +408,15 @@ p4sfc_forward(struct rte_mbuf **m, unsigned num, struct kni_port_params *port, b
 			// nf not in server, send to switch
 			p4sfc_untag_packet(m[i]);
 			port->port_buffer[port->port_buffer_size++] = m[i];
-			// if (port->port_buffer_size == 32) {
-			nb_tx = rte_eth_tx_burst(port->port_id, 0, port->port_buffer, port->port_buffer_size);
-			port->port_buffer_size = 0;
-			// }
+			if (port->port_buffer_size == PKT_BURST_SZ)
+			{
+				nb_tx = rte_eth_tx_burst(port->port_id, 0, port->port_buffer, PKT_BURST_SZ);
+				if (unlikely(nb_tx < PKT_BURST_SZ))
+				{
+					my_kni_burst_free_mbufs(&port->port_buffer[nb_tx], PKT_BURST_SZ - nb_tx);
+				}
+				port->port_buffer_size = 0;
+			}
 			return;
 		}
 
@@ -428,26 +433,30 @@ p4sfc_forward(struct rte_mbuf **m, unsigned num, struct kni_port_params *port, b
 		{
 			p4sfc_untag_packet(m[i]);
 			port->port_buffer[port->port_buffer_size++] = m[i];
-			// if (port->port_buffer_size == 32) {
-			nb_tx = rte_eth_tx_burst(port->port_id, 0, port->port_buffer, port->port_buffer_size);
-			port->port_buffer_size = 0;
-			// }
+			if (port->port_buffer_size == PKT_BURST_SZ)
+			{
+				nb_tx = rte_eth_tx_burst(port->port_id, 0, port->port_buffer, PKT_BURST_SZ);
+				if (unlikely(nb_tx < PKT_BURST_SZ))
+				{
+					my_kni_burst_free_mbufs(&port->port_buffer[nb_tx], PKT_BURST_SZ - nb_tx);
+				}
+				port->port_buffer_size = 0;
+			}
 			return;
 		}
 
 		p = kni_port_params_array[nf_info->port_index];
 		kni_index = nf_info->kni_index;
 		p->buffer[kni_index]->pkts[p->buffer[kni_index]->size++] = m[i];
-		// if (p->buffer[kni_index]->size == 32) {
-		nb_tx = rte_kni_tx_burst(p->kni[kni_index], p->buffer[kni_index]->pkts, p->buffer[kni_index]->size);
-		// if (unlikely(nb_tx < 32)) {
-		if (unlikely(nb_tx < 1))
+		if (p->buffer[kni_index]->size == PKT_BURST_SZ)
 		{
-			// my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], 32 - nb_tx);
-			my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], 1);
+			nb_tx = rte_kni_tx_burst(p->kni[kni_index], p->buffer[kni_index]->pkts, PKT_BURST_SZ);
+			if (unlikely(nb_tx < PKT_BURST_SZ))
+			{
+				my_kni_burst_free_mbufs(&p->buffer[kni_index]->pkts[nb_tx], PKT_BURST_SZ - nb_tx);
+			}
+			p->buffer[kni_index]->size = 0;
 		}
-		p->buffer[kni_index]->size = 0;
-		// }
 	}
 }
 
