@@ -1,4 +1,5 @@
-// Run: sudo click --dpdk -l 0-3 -n 4 --proc-type primary -v -- distributor.click
+// Run: sudo bash
+// Run: click --dpdk -l 0-3 -n 4 --proc-type=primary -v -- distributor.click
 define(
 	$dev	   0,
 	$queueSize 1024,
@@ -50,7 +51,7 @@ from_nf5 -> Print("After-NF5", ACTIVE $debug) -> NFClf
 
 
 Script( TYPE ACTIVE,
-        debug "TX: $(nicIn.count), RX: $(nicOut.count)",
+        print "TX: $(nicIn.count), RX: $(nicOut.count)",
         wait $interval,
 	    loop
         );

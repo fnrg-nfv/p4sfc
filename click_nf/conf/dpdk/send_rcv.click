@@ -1,3 +1,4 @@
+// Run: sudo click --dpdk -l 0-3 -n 4 --proc-type=primary -v -- distributor.click
 define(
 	$dev 0,
 	$header "00 00 00 01 00 00",

@@ -1,4 +1,5 @@
-// require(package "p4sfc");
+// Run: sudo bash
+// Run: click --dpdk -l 4-7 -n 4 --proc-type=secondary -v -- monitor.click
 define(
     $nf_id 0,
     $queueSize 1024,
