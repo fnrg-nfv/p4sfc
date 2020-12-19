@@ -1,40 +1,44 @@
-define($dev 0);
-define($header "00 00 00 01 00 00 00");
-define($dstip "4D 4D 4D 4D");
-define($interval 1);
-define($rate 1);
-define($limit -1);
-define($length 64);
-define($print false);
-define($counter ACTIVE);
-
-// rcv
-rx :: FromDPDKDevice($dev, PROMISC true)
-//   	-> Print(in, ACTIVE $print)
-//	-> Strip(14)
-//	-> Strip(4)
-//	-> CheckIPHeader
-//	-> IPPrint(in_ip, ACTIVE $print)
-	-> Discard; 
-
-
+define(
+	$dev 0,
+	$header "00 00 00 01 00 00",
+	$srcip "0A 00 00 01",
+	$dstip "4D 4D 4D 4D",
+	$srcport "00 00",
+	$dstport "00 00",
+	$interval 1,
+	$rate 1,
+	$limit -1,
+	$length 64,
+	$debug false
+);
 
 // send
 src :: RatedSource( DATA \< 
+// ethernet(14)
 00 00 00 00 00 00 00 00 00 00 00 00 08 00
-00 00 00 00 
-45 00 00 2E 00 00 40 00 40 06 96 2F 0A 00
-00 01 
+$header
+45 00 00 2E 00 00 40 00 40 06 96 2F 
+$srcip
 $dstip 
-00 00 00 00 00 00 00 00
-00 00 00 00 50 00 FF FC 0B 47 00 00 00 00
-00 00 00 00>, LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
-//	-> Print(out, ACTIVE $print)
+$srcport
+$dstport 
+00 00 00 00 00 00 00 00 50 00 FF FC 0B 47
+00 00 00 00 00 00 00 00>,
+LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
+	-> Print(out, ACTIVE $debug)
 	-> tx :: ToDPDKDevice($dev);
 
+// rcv
+rx :: FromDPDKDevice($dev, PROMISC true)
+   	-> Print(in, ACTIVE $debug)
+	-> Strip(18)
+	-> CheckIPHeader
+	-> IPPrint(in_ip, ACTIVE $debug)
+	-> Discard;
+
 Script( 
-	TYPE $counter,
-      	print "TX: $(tx.count); RX: $(rx.count)",
-      	wait $interval,
+	TYPE ACTIVE,
+	print "TX: $(tx.count); RX: $(rx.count)",
+	wait $interval,
 	loop
-      );
+	);
