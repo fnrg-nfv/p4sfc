@@ -1,4 +1,4 @@
-// Run: sudo click --dpdk -l 0-3 -n 4 --proc-type=primary -v -- distributor.click
+// Run: sudo click --dpdk -l 0-3 -n 4 -- send_rcv.click
 define(
 	$dev 0,
 	$header "00 00 00 01 00 00",
@@ -14,27 +14,21 @@ define(
 );
 
 // send
-// src :: RatedSource( DATA \< 
-// ethernet(14)
-// 00 00 00 00 00 00 00 00 00 00 00 00 08 00
-// $header
-// 45 00 00 2E 00 00 40 00 40 06 96 2F 
-// $srcip
-// $dstip 
-// $srcport
-// $dstport 
-// 00 00 00 00 00 00 00 00 50 00 FF FC 0B 47
-// 00 00 00 00 00 00 00 00>,
-// LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
-
-src::FastUDPSource($rate, $limit, $length, 0:0:0:0:0:0, 1.0.0.1, 1234, 1:1:1:1:1:1, 2.0.0.2, 1234)
+src :: RatedSource( DATA \< 
+00 00 00 00 00 00 00 00 00 00 00 00 12 34 
+$header
+45 00 00 2E 00 00 40 00 40 06 96 2F
+$srcip $dstip $srcport $dstport 
+00 00 00 00 00 00 00 00 50 00 FF FC 0B 47 
+00 00 00 00 00 00 00 00
+>, LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
 	-> Print(out, ACTIVE $debug)
 	-> tx :: ToDPDKDevice($dev);
 
 // rcv
 rx :: FromDPDKDevice($dev, PROMISC true)
    	-> Print(in, ACTIVE $debug)
-	-> Strip(18)
+	-> Strip(20)
 	-> CheckIPHeader
 	-> IPPrint(in_ip, ACTIVE $debug)
 	-> Discard;
