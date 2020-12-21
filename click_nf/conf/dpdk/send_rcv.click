@@ -14,18 +14,20 @@ define(
 );
 
 // send
-src :: RatedSource( DATA \< 
+// src :: RatedSource( DATA \< 
 // ethernet(14)
-00 00 00 00 00 00 00 00 00 00 00 00 08 00
-$header
-45 00 00 2E 00 00 40 00 40 06 96 2F 
-$srcip
-$dstip 
-$srcport
-$dstport 
-00 00 00 00 00 00 00 00 50 00 FF FC 0B 47
-00 00 00 00 00 00 00 00>,
-LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
+// 00 00 00 00 00 00 00 00 00 00 00 00 08 00
+// $header
+// 45 00 00 2E 00 00 40 00 40 06 96 2F 
+// $srcip
+// $dstip 
+// $srcport
+// $dstport 
+// 00 00 00 00 00 00 00 00 50 00 FF FC 0B 47
+// 00 00 00 00 00 00 00 00>,
+// LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
+
+src::FastUDPSource($rate, $limit, $length, 0:0:0:0:0:0, 1.0.0.1, 1234, 1:1:1:1:1:1, 2.0.0.2, 1234)
 	-> Print(out, ACTIVE $debug)
 	-> tx :: ToDPDKDevice($dev);
 
