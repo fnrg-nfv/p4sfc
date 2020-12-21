@@ -21,8 +21,7 @@ $header
 $srcip $dstip $srcport $dstport 
 00 00 00 00 00 00 00 00 50 00 FF FC 0B 47 
 00 00 00 00 00 00 00 00
->,
-LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
+>, LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
 	-> Print(out, ACTIVE $debug)
 	-> tx :: ToDPDKDevice($dev);
 
