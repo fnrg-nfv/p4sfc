@@ -17,7 +17,7 @@ nicOut	::	ToDPDKDevice	($dev, IQUEUE $queueSize, BURST $burst);
 NFClf :: Classifier(16/0000, 18/0001, 18/0002, 18/0003, 18/0004, 18/0005, -)
 
 // Tx ring from Main (primary) to NF1 (secondary)
-to_nf1   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf1_rx, IQUEUE $queueSize, NDESC $queueSize);
+to_nf1   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf1_rx, IQUEUE $queueSize);
 to_nf2   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf2_rx, IQUEUE $queueSize);
 to_nf3   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf3_rx, IQUEUE $queueSize);
 to_nf4   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf4_rx, IQUEUE $queueSize);
