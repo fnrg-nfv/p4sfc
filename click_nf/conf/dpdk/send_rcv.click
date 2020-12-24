@@ -27,10 +27,6 @@ $srcip $dstip $srcport $dstport
 
 // rcv
 rx :: FromDPDKDevice($dev, PROMISC true)
-   	-> Print(in, ACTIVE $debug)
-	-> Strip(20)
-	-> CheckIPHeader
-	-> IPPrint(in_ip, ACTIVE $debug)
 	-> Discard;
 
 Script( 

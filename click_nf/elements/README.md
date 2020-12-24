@@ -5,7 +5,7 @@ These elements should be built together with fastclick.
 
 ## Dependency
 
-1. *.[cc]/[hh] be symbolically linked in <fastclick>/elements/local.
+1. *.[cc]/[hh] must be symbolically linked in <fastclick>/elements/local.
 
 2. Add the following library dependency statements into <fastclick>/userlevel/Makefile.in.
 
