@@ -14,10 +14,10 @@ nicOut	::	ToDPDKDevice	($dev, IQUEUE $queueSize, BURST $burst);
 
 // NF Classifier
 // TODO: NF ids need to be confiurable
-NFClf :: Classifier(16/0000, 18/0001, 18/0002, 18/0003, 18/0004, 18/0005, -)
+NFClf :: Classifier(16/0000, 18/0002%fffe, 18/0004%fffe, 18/0006%fffe, 18/0008%fffe, 18/000a%fffe, -)
 
 // Tx ring from Main (primary) to NF1 (secondary)
-to_nf1   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf1_rx, IQUEUE $queueSize, NDESC $queueSize);
+to_nf1   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf1_rx, IQUEUE $queueSize);
 to_nf2   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf2_rx, IQUEUE $queueSize);
 to_nf3   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf3_rx, IQUEUE $queueSize);
 to_nf4   :: ToDPDKRing  (MEM_POOL 1, FROM_PROC main_tx, TO_PROC nf4_rx, IQUEUE $queueSize);
@@ -35,8 +35,8 @@ nicIn -> Print("Before-NFs", ACTIVE $debug) -> NFClf
 
 // Classifier --> NFs 
 NFClf[0] -> nicOut
-NFClf[1] -> to_nf1
-NFClf[2] -> to_nf2
+NFClf[1] -> Print("Before-NF1", ACTIVE $debug) -> to_nf1
+NFClf[2] -> Print("Before-NF2", ACTIVE $debug) -> to_nf2
 NFClf[3] -> to_nf3
 NFClf[4] -> to_nf4
 NFClf[5] -> to_nf5

@@ -22,6 +22,9 @@
 #include "customencap.hh"
 
 CLICK_DECLS
+
+CustomEncap::CustomEncap() {}
+
 int CustomEncap::configure(Vector<String> &conf, ErrorHandler *errh) {
   if (conf.size() != 1) {
     errh->warning("error configuration");
@@ -71,6 +74,21 @@ void CustomEncap::parse_pattern(String &s) {
 //   p = simple_action(p);
 //   output(0).push(p);
 // }
+
+// #if HAVE_BATCH
+PacketBatch *
+CustomEncap::simple_action_batch(PacketBatch *head)
+{
+	Packet* p = head;
+	while (p != NULL) {
+    p = p->push(_len);
+    const unsigned char *pdata = p->data();
+    memcpy((char *)pdata, _header, _len);
+		p = p->next();
+	}
+	return head;
+}
+// #endif
 
 Packet* CustomEncap::simple_action(Packet *p) {
   p = p->push(_len);
