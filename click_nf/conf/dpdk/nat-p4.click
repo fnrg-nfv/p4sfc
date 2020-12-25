@@ -1,14 +1,15 @@
 // Run: sudo bash
 // Run: click --dpdk -l 8-11 -n 4 --proc-type=secondary -v -- nat-p4.click
 define(
-      $id 2,
+      $nf_id 2,
+      $iprw_id 2,
       $queueSize 1024
       );
 
-nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(id)_rx, TO_PROC main_tx);
-nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(id)_tx, TO_PROC main_rx, IQUEUE $queueSize);
+nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);
+nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(nf_id)_tx, TO_PROC main_rx, IQUEUE $queueSize);
 
-rw :: P4IPRewriter($id, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
+rw :: P4IPRewriter($iprw_id, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 ec :: P4SFCEncap();
 
 nf_from -> Print(in)
