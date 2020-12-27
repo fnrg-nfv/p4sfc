@@ -1,16 +1,24 @@
+define(
+	$header "00 00 00 01 00 00",
+	$srcmac 0:0:0:0:0:0,
+	$dstmac 0:0:0:0:0:0,
+	$debug false
+);
 
 P4SFCSimuFlow(
-SRCETH 0:0:0:0:0:0,
-DSTETH 0:0:0:0:0:0,
-STOP false, DEBUG true, 
+SRCETH $srcmac,
+DSTETH $dstmac,
+STOP false, DEBUG $debug, 
 LIMIT -1, RATE 1, BURST 32,
-SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE 1, LENGTH 1500,
+SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE 1, LENGTH 1494,
 FLOWSIZE 15,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
-    // -> Print(out)
-    -> Strip(14)
+	-> Strip(14)
     -> CheckIPHeader
-    // -> IPPrint(ip)
+	-> Print(ip, ACTIVE $debug)
+	-> CustomEncap($header)
+	-> EtherEncap(0x1234, $srcmac, $dstmac)
+	-> Print(out, ACTIVE $debug)
     -> tx::ToDPDKDevice(0)
 
 rx::FromDPDKDevice(0)
