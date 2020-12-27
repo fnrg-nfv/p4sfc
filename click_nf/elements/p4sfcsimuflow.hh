@@ -44,25 +44,23 @@ protected:
     TokenBucket _tb;
     ucounter_t _count;
     ucounter_t _limit;
-#if HAVE_BATCH
     unsigned _batch_size;
-#endif
-    int _len;
+    unsigned _len;
     bool _active;
     bool _stop;
-    Packet *_packet;
-    int _headroom;
     Task _task;
     Timer _timer;
-    String _data;
+    bool _rate_limit;
+
+    unsigned _major_flowsize;
+    unsigned _major_data;
+    unsigned _flowsize;
 
     click_ether _ethh;
     struct in_addr _sipaddr;
     struct in_addr _dipaddr;
     unsigned _range;
-    unsigned _flowsize;
-    unsigned _ratio;
-    int _seed;
+    unsigned _seed;
     bool _debug;
 
     struct flow_t
@@ -72,10 +70,11 @@ protected:
     };
     flow_t *_flows;
 
-    void setup_packets();
+    void setup_packets(ErrorHandler *);
 
 private:
-    Packet *next_packet();
+    inline Packet *next_packet();
+    void print_cnt();
 };
 
 CLICK_ENDDECLS

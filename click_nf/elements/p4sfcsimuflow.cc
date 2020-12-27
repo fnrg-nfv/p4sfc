@@ -15,7 +15,45 @@ CLICK_DECLS
 const unsigned P4SFCSimuFlow::NO_LIMIT;
 const unsigned P4SFCSimuFlow::DEF_BATCH_SIZE;
 
-P4SFCSimuFlow::P4SFCSimuFlow() : _packet(0), _task(this), _timer(&_task)
+struct xorshift128p_state
+{
+    uint64_t a, b;
+};
+
+static struct xorshift128p_state state;
+
+/* The state must be seeded so that it is not all zero */
+inline uint64_t xorshift128p(struct xorshift128p_state &state)
+{
+    uint64_t t = state.a;
+    uint64_t const s = state.b;
+    state.a = s;
+    t ^= t << 23;       // a
+    t ^= t >> 17;       // b
+    t ^= s ^ (s >> 26); // c
+    state.b = t;
+    return t + s;
+}
+
+inline uint32_t qrand()
+{
+    return (uint32_t)xorshift128p(state) % RAND_MAX;
+    // static uint32_t store = 0;
+    // if (store)
+    // {
+    //     uint32_t ret = store;
+    //     store = 0;
+    //     return ret;
+    // }
+    // else
+    // {
+    //     uint64_t ret = xorshift128p(state);
+    //     store = ret >> 32;
+    //     return (uint32_t)ret;
+    // }
+}
+
+P4SFCSimuFlow::P4SFCSimuFlow() : _task(this), _timer(&_task)
 {
 #if HAVE_BATCH
     in_batch_mode = BATCH_MODE_YES;
@@ -25,23 +63,20 @@ P4SFCSimuFlow::P4SFCSimuFlow() : _packet(0), _task(this), _timer(&_task)
 
 int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
 {
-    String data =
-        "Random bullshit in a packet, at least 64 bytes long. Well, now it is.";
-    unsigned rate = 10;
-    unsigned bandwidth = 0;
+    String data = "Random bullshit in a packet, at least 64 bytes long. Well, now it is.";
+    int rate = 10;
+    unsigned burst = 32;
     int limit = -1;
-    int datasize = 64;
-    bool active = true, stop = false;
-    _headroom = Packet::default_headroom;
-    _range = 0;
-    _flowsize = 100;
-    _ratio = 81;
-    _seed = 0;
-    _debug = false;
 
-    // default address
+    double major_flow = 0.1;
+    double major_data = 0.9;
+
+    // default value
+    _active = true, _stop = false, _debug = false;
+    _len = 64, _range = 0, _flowsize = 100, _count = 0;
     _sipaddr.s_addr = 0x0100000A;
     _dipaddr.s_addr = 0x4D4D4D4D;
+    _seed = 0xABCDABCD;
 
     if (Args(conf, this, errh)
             .read_mp("SRCETH", EtherAddressArg(), _ethh.ether_shost)
@@ -52,21 +87,45 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
             .read("RANGE", _range)
             .read("FLOWSIZE", _flowsize)
             .read("SEED", _seed)
-            .read("RATIO", _ratio)
             .read("RATE", rate)
+            .read("BURST", burst)
             .read("LIMIT", limit)
-            .read("ACTIVE", active)
-            .read("HEADROOM", _headroom)
-            .read("LENGTH", datasize)
-            .read("STOP", stop)
+            .read("ACTIVE", _active)
+            .read("LENGTH", _len)
+            .read("STOP", _stop)
+            .read("MAJORFLOW", major_flow)
+            .read("MAJORDATA", major_data)
             .complete() < 0)
         return -1;
 
     _ethh.ether_type = htons(0x0800);
-    _data = data;
-    _len = datasize;
 
-    int burst = rate < 200 ? 2 : rate / 100;
+    if (rate < 0)
+        _rate_limit = false;
+    else
+    {
+        _rate_limit = true;
+        if (rate < burst)
+            burst = rate;
+        _tb.assign(rate, burst);
+    }
+
+    if (burst < (int)_batch_size)
+        _batch_size = burst;
+
+    _limit = (limit >= 0 ? unsigned(limit) : NO_LIMIT);
+    _major_data = (major_data >= 0 ? major_data <= 1 ? major_data : .9 : .1) * RAND_MAX;
+    major_flow = major_flow >= 0 ? major_flow <= 1 ? major_flow : .9 : .1;
+    _major_flowsize = _flowsize * major_flow;
+
+    if (_major_flowsize == 0 && _major_data == 1)
+    {
+        errh->error("major flowsize is 0 but data is 1");
+    }
+    else if (_major_flowsize == _flowsize && _major_data == 0)
+    {
+        errh->error("major flowsize is 1 but data is 0");
+    }
 
     // for debug
     if (_debug)
@@ -76,48 +135,39 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
         errh->debug("sipaddr: %s\n", buffer);
         inet_ntop(AF_INET, &_dipaddr, buffer, sizeof(buffer));
         errh->debug("dipaddr: %s\n", buffer);
-        errh->debug("range: %d\tflowsize: %d\tseed: %d\n", _range, _flowsize, _seed);
+        errh->debug("range: %d\tflowsize: %d\tseed: %u\tbatchsize: %u\n", _range, _flowsize, _seed, _batch_size);
+        errh->debug("major data: %u\n", _major_data);
+        errh->debug("major flow size: %u\n", _major_flowsize);
     }
-
-#if HAVE_BATCH
-    if (burst < (int)_batch_size)
-        _batch_size = burst;
-#endif
-
-    _tb.assign(rate, burst);
-    _limit = (limit >= 0 ? unsigned(limit) : NO_LIMIT);
-    _active = active;
-    _stop = stop;
 
     return 0;
 }
 
 int P4SFCSimuFlow::initialize(ErrorHandler *errh)
 {
-    setup_packets();
+    click_srandom(_seed);
+    state.a = (uint64_t)_seed << 32 | _seed;
+    state.b = (uint64_t)_seed << 16 + _seed;
+    setup_packets(errh);
 
-    _count = 0;
     if (output_is_push(0))
         ScheduleInfo::initialize_task(this, &_task, errh);
 
-#if HAVE_BATCH
     _tb.set(_batch_size);
-#else
-    _tb.set(1);
-#endif
 
     _timer.initialize(this);
 
     return 0;
 }
 
-void
-    P4SFCSimuFlow::cleanup(CleanupStage)
+void P4SFCSimuFlow::cleanup(CleanupStage)
 {
-    if (_packet)
-        _packet->kill();
-
-    _packet = 0;
+    for (size_t i = 0; i < _flowsize; i++)
+    {
+        if (_flows[i].packet)
+            _flows[i].packet->kill();
+        _flows[i].packet = 0;
+    }
 }
 
 bool P4SFCSimuFlow::run_task(Task *)
@@ -131,104 +181,79 @@ bool P4SFCSimuFlow::run_task(Task *)
         return false;
     }
 
-    // Refill the token bucket
-    _tb.refill();
-
-#if HAVE_BATCH
     PacketBatch *head = 0;
     Packet *last;
-
     unsigned n = _batch_size;
-    unsigned count = 0;
-
     if (_limit != NO_LIMIT && n + _count >= _limit)
         n = _limit - _count;
 
-    // Create a batch
-    for (int i = 0; i < (int)n; i++)
+    if (!_rate_limit)
     {
-        if (_tb.remove_if(1))
+        for (int i = 0; i < n; i++)
         {
             Packet *p = next_packet()->clone();
-            // Packet *p = _packet->clone();
             p->set_timestamp_anno(Timestamp::now());
 
             if (head == NULL)
-            {
                 head = PacketBatch::start_head(p);
+            else
+                last->set_next(p);
+            last = p;
+        }
+        output_push_batch(0, head->make_tail(last, n));
+        _count += n;
+
+        _task.fast_reschedule();
+        return true;
+    }
+    else
+    {
+        // Refill the token bucket
+        _tb.refill();
+
+        // Create a batch
+        for (int i = 0; i < (int)n; i++)
+        {
+            if (_tb.remove_if(1))
+            {
+                Packet *p = next_packet()->clone();
+                p->set_timestamp_anno(Timestamp::now());
+
+                if (head == NULL)
+                    head = PacketBatch::start_head(p);
+                else
+                    last->set_next(p);
+                last = p;
             }
             else
             {
-                last->set_next(p);
+                _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(_batch_size)));
+                return false;
             }
-            last = p;
+        }
 
-            count++;
+        // Push the batch
+        if (head)
+        {
+            output_push_batch(0, head->make_tail(last, n));
+            if (_debug)
+                print_cnt();
+
+            _count += n;
+
+            _task.fast_reschedule();
+            return true;
         }
         else
         {
-            _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(_batch_size)));
+            _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(1)));
             return false;
         }
     }
-
-    // Push the batch
-    if (head)
-    {
-        output_push_batch(0, head->make_tail(last, count));
-        _count += count;
-
-        _task.fast_reschedule();
-        return true;
-    }
-    else
-    {
-        _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(1)));
-
-        return false;
-    }
-#else
-    if (_tb.remove_if(1))
-    {
-        Packet *p = _packet->clone();
-        p->set_timestamp_anno(Timestamp::now());
-        output(0).push(p);
-        _count++;
-        _task.fast_reschedule();
-        return true;
-    }
-    else
-    {
-        _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(1)));
-
-        return false;
-    }
-#endif
 }
 
-void P4SFCSimuFlow::setup_packets()
+void P4SFCSimuFlow::setup_packets(ErrorHandler *errh)
 {
-    if (_packet)
-        _packet->kill();
-
-    // TOOD: different meaning now
-    if (_len < 0)
-    {
-        _packet = Packet::make(_headroom, _data.data(), _data.length(), 0);
-    }
-    else if (_len <= _data.length())
-    {
-        _packet = Packet::make(_headroom, _data.data(), _len, 0);
-    }
-    else
-    {
-        // make up some data to fill extra space
-        StringAccum sa;
-        while (sa.length() < _len)
-            sa << _data;
-        _packet = Packet::make(_headroom, sa.data(), _len, 0);
-    }
-
     _flows = new flow_t[_flowsize];
     for (unsigned i = 0; i < _flowsize; i++)
     {
@@ -262,14 +287,35 @@ void P4SFCSimuFlow::setup_packets()
         udp->uh_ulen = htons(len);
         udp->uh_sum = 0;
         _flows[i].flow_count = 0;
+
+        if (_debug)
+            errh->debug("Flow %d: %s:%u -> %s:%u\n", i, IPAddress(ip->ip_src).unparse().c_str(), ntohs(udp->uh_sport),
+                        IPAddress(ip->ip_dst).unparse().c_str(), ntohs(udp->uh_dport));
     }
 }
 
-Packet *P4SFCSimuFlow::next_packet()
+inline Packet *P4SFCSimuFlow::next_packet()
 {
-    static int cur = 0;
-    cur %= _flowsize;
-    return _flows[cur++].packet;
+    unsigned next;
+
+    // click_random() not efficient
+    const uint32_t rand = qrand();
+    if (_major_flowsize == 0)
+        next = rand % _flowsize;
+    else if (rand <= _major_data)
+        next = rand % _major_flowsize;
+    else
+        next = (rand % (_flowsize - _major_flowsize)) + _major_flowsize;
+    _flows[next].flow_count++;
+
+    return _flows[next].packet;
+}
+
+void P4SFCSimuFlow::print_cnt()
+{
+    for (size_t i = 0; i < _flowsize; i++)
+        printf("%u\t", _flows[i].flow_count);
+    printf("\n");
 }
 
 CLICK_ENDDECLS
