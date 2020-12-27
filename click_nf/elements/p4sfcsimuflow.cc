@@ -5,9 +5,7 @@
 #include <click/router.hh>
 #include <click/straccum.hh>
 #include <click/standard/scheduleinfo.hh>
-#include <click/glue.hh>
 #include <click/etheraddress.hh>
-#include <click/handlercall.hh>
 
 #include <arpa/inet.h>
 CLICK_DECLS
@@ -38,19 +36,6 @@ inline uint64_t xorshift128p(struct xorshift128p_state &state)
 inline uint32_t qrand()
 {
     return (uint32_t)xorshift128p(state) % RAND_MAX;
-    // static uint32_t store = 0;
-    // if (store)
-    // {
-    //     uint32_t ret = store;
-    //     store = 0;
-    //     return ret;
-    // }
-    // else
-    // {
-    //     uint64_t ret = xorshift128p(state);
-    //     store = ret >> 32;
-    //     return (uint32_t)ret;
-    // }
 }
 
 P4SFCSimuFlow::P4SFCSimuFlow() : _task(this), _timer(&_task)
@@ -63,10 +48,10 @@ P4SFCSimuFlow::P4SFCSimuFlow() : _task(this), _timer(&_task)
 
 int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
 {
-    String data = "Random bullshit in a packet, at least 64 bytes long. Well, now it is.";
     int rate = 10;
     unsigned burst = 32;
     int limit = -1;
+    unsigned eth_type = 0x1234;
 
     double major_flow = 0.1;
     double major_data = 0.9;
@@ -77,6 +62,7 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
     _sipaddr.s_addr = 0x0100000A;
     _dipaddr.s_addr = 0x4D4D4D4D;
     _seed = 0xABCDABCD;
+    String sfch = "";
 
     if (Args(conf, this, errh)
             .read_mp("SRCETH", EtherAddressArg(), _ethh.ether_shost)
@@ -87,6 +73,8 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
             .read("RANGE", _range)
             .read("FLOWSIZE", _flowsize)
             .read("SEED", _seed)
+            .read("SFCH", sfch)
+            .read("ETHTYPE", eth_type)
             .read("RATE", rate)
             .read("BURST", burst)
             .read("LIMIT", limit)
@@ -98,7 +86,7 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
             .complete() < 0)
         return -1;
 
-    _ethh.ether_type = htons(0x0800);
+    _ethh.ether_type = htons(eth_type);
 
     if (rate < 0)
         _rate_limit = false;
@@ -118,14 +106,11 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
     major_flow = major_flow >= 0 ? major_flow <= 1 ? major_flow : .9 : .1;
     _major_flowsize = _flowsize * major_flow;
 
-    if (_major_flowsize == 0 && _major_data == 1)
-    {
-        errh->error("major flowsize is 0 but data is 1");
-    }
-    else if (_major_flowsize == _flowsize && _major_data == 0)
-    {
-        errh->error("major flowsize is 1 but data is 0");
-    }
+    if (_major_flowsize == 0 && major_data == 1)
+        errh->error("major flow is 0 but data is 1");
+    else if (_major_flowsize == _flowsize && major_data == 0)
+        errh->error("major flow is 1 but data is 0");
+    _sfch = sfch;
 
     // for debug
     if (_debug)
@@ -138,6 +123,7 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
         errh->debug("range: %d\tflowsize: %d\tseed: %u\tbatchsize: %u\n", _range, _flowsize, _seed, _batch_size);
         errh->debug("major data: %u\n", _major_data);
         errh->debug("major flow size: %u\n", _major_flowsize);
+        errh->debug("sfch(%d): %s\n", _sfch.length(), _sfch.c_str());
     }
 
     return 0;
@@ -259,8 +245,11 @@ void P4SFCSimuFlow::setup_packets(ErrorHandler *errh)
     {
         WritablePacket *q = Packet::make(_len);
         _flows[i].packet = q;
-        memcpy(q->data(), &_ethh, 14);
-        click_ip *ip = reinterpret_cast<click_ip *>(q->data() + 14);
+        unsigned char *data = q->data();
+        memcpy(data, &_ethh, 14);
+        data += 14;
+        memcpy(data, _sfch.data(), _sfch.length());
+        click_ip *ip = reinterpret_cast<click_ip *>(data + _sfch.length());
         click_udp *udp = reinterpret_cast<click_udp *>(ip + 1);
 
         // set up IP header
@@ -299,13 +288,15 @@ inline Packet *P4SFCSimuFlow::next_packet()
     unsigned next;
 
     // click_random() not efficient
-    const uint32_t rand = qrand();
+    const uint64_t rand = xorshift128p(state);
+    const uint32_t rand1 = rand % RAND_MAX;
+    const uint32_t rand2 = (rand >> 32) % RAND_MAX;
     if (_major_flowsize == 0)
-        next = rand % _flowsize;
-    else if (rand <= _major_data)
-        next = rand % _major_flowsize;
+        next = rand2 % _flowsize;
+    else if (rand1 <= _major_data)
+        next = rand2 % _major_flowsize;
     else
-        next = (rand % (_flowsize - _major_flowsize)) + _major_flowsize;
+        next = (rand2 % (_flowsize - _major_flowsize)) + _major_flowsize;
     _flows[next].flow_count++;
 
     return _flows[next].packet;

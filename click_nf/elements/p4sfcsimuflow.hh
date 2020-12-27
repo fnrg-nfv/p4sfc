@@ -3,7 +3,6 @@
 #include <click/batchelement.hh>
 #include <click/tokenbucket.hh>
 #include <click/task.hh>
-#include <click/notifier.hh>
 #include <clicknet/ether.h>
 
 CLICK_DECLS
@@ -56,6 +55,7 @@ protected:
     unsigned _major_data;
     unsigned _flowsize;
 
+    String _sfch;
     click_ether _ethh;
     struct in_addr _sipaddr;
     struct in_addr _dipaddr;
@@ -70,10 +70,8 @@ protected:
     };
     flow_t *_flows;
 
-    void setup_packets(ErrorHandler *);
-
-private:
     inline Packet *next_packet();
+    void setup_packets(ErrorHandler *);
     void print_cnt();
 };
 
