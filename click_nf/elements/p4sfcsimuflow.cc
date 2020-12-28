@@ -255,7 +255,7 @@ void P4SFCSimuFlow::setup_packets(ErrorHandler *errh)
         // set up IP header
         ip->ip_v = 4;
         ip->ip_hl = sizeof(click_ip) >> 2;
-        ip->ip_len = htons(_len - 14);
+        ip->ip_len = htons(_len - 14 - _sfch.length());
         ip->ip_id = 0;
         ip->ip_p = IP_PROTO_UDP;
         ip->ip_src.s_addr = htonl(ntohl(_sipaddr.s_addr) + (click_random() % (_range + 1)));
