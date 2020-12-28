@@ -25,24 +25,30 @@ CLICK_DECLS
 
 CustomEncap::CustomEncap() {}
 
-int CustomEncap::configure(Vector<String> &conf, ErrorHandler *errh) {
-  if (conf.size() != 1) {
+int CustomEncap::configure(Vector<String> &conf, ErrorHandler *errh)
+{
+  if (conf.size() != 1)
+  {
     errh->warning("error configuration");
     _len = 0;
-  } else {
+  }
+  else
+  {
     parse_pattern(conf[0]);
     errh->debug("CE config: %s\n", conf[0].c_str());
   }
   return 0;
 }
 
-void CustomEncap::parse_pattern(String &s) {
+void CustomEncap::parse_pattern(String &s)
+{
   char *data = (char *)malloc(s.length() / 2);
   uint32_t cur_p = 0;
   unsigned char cur_v = 0;
 
   bool first = true;
-  for (int i = 0; i < s.length(); ++i) {
+  for (int i = 0; i < s.length(); ++i)
+  {
     char c = s.at(i);
 
     if (c >= '0' && c <= '9')
@@ -54,9 +60,12 @@ void CustomEncap::parse_pattern(String &s) {
     else
       continue;
 
-    if (first) {
+    if (first)
+    {
       cur_v = c, first = false;
-    } else {
+    }
+    else
+    {
       data[cur_p++] = (cur_v << 4) + c;
       cur_v = 0, first = true;
     }
@@ -75,22 +84,24 @@ void CustomEncap::parse_pattern(String &s) {
 //   output(0).push(p);
 // }
 
-// #if HAVE_BATCH
+#if HAVE_BATCH
 PacketBatch *
 CustomEncap::simple_action_batch(PacketBatch *head)
 {
-	Packet* p = head;
-	while (p != NULL) {
+  Packet *p = head;
+  while (p != NULL)
+  {
     p = p->push(_len);
     const unsigned char *pdata = p->data();
     memcpy((char *)pdata, _header, _len);
-		p = p->next();
-	}
-	return head;
+    p = p->next();
+  }
+  return head;
 }
-// #endif
+#endif
 
-Packet* CustomEncap::simple_action(Packet *p) {
+Packet *CustomEncap::simple_action(Packet *p)
+{
   p = p->push(_len);
   const unsigned char *pdata = p->data();
   memcpy((char *)pdata, _header, _len);

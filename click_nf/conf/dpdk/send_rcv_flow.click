@@ -28,8 +28,8 @@ FastUDPFlows(RATE $rate, LIMIT $limit, LENGTH $length, SRCETH $srcmac,
 	-> tx :: ToDPDKDevice($dev);
 
 // rcv
-// rx :: FromDPDKDevice($dev)
-// 	-> Discard;
+rx :: FromDPDKDevice($dev)
+	-> Discard;
 
 Script( 
 	TYPE ACTIVE,

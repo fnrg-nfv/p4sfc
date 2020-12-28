@@ -18,12 +18,14 @@ class P4IPRewriterInput;
 class P4IPRewriterEntry;
 class P4IPRewriter;
 
-class P4Element : public Element {
-// protected:
-//   int _click_instance_id;
+class P4Element : public Element
+{
+  // protected:
+  //   int _click_instance_id;
 };
 
-class P4IPRewriterPattern {
+class P4IPRewriterPattern
+{
 public:
   P4IPRewriterPattern(const IPAddress &saddr, int sport, const IPAddress &daddr,
                       int dport, bool sequential, bool same_first,
@@ -32,7 +34,8 @@ public:
                                Element *context, ErrorHandler *errh);
 
   void use() { _refcount++; }
-  void unuse() {
+  void unuse()
+  {
     if (--_refcount <= 0)
       delete this;
   }
@@ -59,9 +62,14 @@ private:
   int _refcount;
 };
 
-class P4IPRewriterInput {
+class P4IPRewriterInput
+{
 public:
-  enum { i_drop, i_pattern };
+  enum
+  {
+    i_drop,
+    i_pattern
+  };
   P4IPRewriter *owner;
   int kind;
   uint32_t count;
@@ -79,9 +87,14 @@ public:
   void unparse(StringAccum &sa) const;
 };
 
-class P4IPRewriter : public P4Element {
+class P4IPRewriter : public P4Element
+{
 public:
-  enum { rw_drop = -1, rw_addmap = -2 }; // rw result
+  enum
+  {
+    rw_drop = -1,
+    rw_addmap = -2
+  }; // rw result
 
   P4IPRewriter();
   ~P4IPRewriter();
@@ -99,11 +112,11 @@ public:
 
   void push(int, Packet *);
 
-
 protected:
   // HashContainer<P4IPRewriterEntry> _map;
   P4SFCState::Table _map;
   Vector<P4IPRewriterInput> _input_specs;
+  bool _debug;
 
 private:
   int parse_input_spec(const String &line, P4IPRewriterInput &is,

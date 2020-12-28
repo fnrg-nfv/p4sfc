@@ -5,7 +5,8 @@
 #include <queue>
 CLICK_DECLS
 
-class CustomEncap : public BatchElement {
+class CustomEncap : public BatchElement
+{
 public:
   CustomEncap() CLICK_COLD;
 
@@ -15,16 +16,15 @@ public:
   // const char *flow_code() const { return "x/y"; }
 
   int configure(Vector<String> &conf, ErrorHandler *errh) CLICK_COLD;
-  // #if HAVE_BATCH
+#if HAVE_BATCH
   PacketBatch *simple_action_batch(PacketBatch *);
-  // #endif
+#endif
   Packet *simple_action(Packet *);
 
-
 protected:
-  char* _header; 
+  char *_header;
   int _len;
-  
+
 private:
   void parse_pattern(String &s);
 };
