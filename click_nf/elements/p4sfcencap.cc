@@ -11,66 +11,52 @@ int P4SFCEncap::configure(Vector<String> &conf, ErrorHandler *errh)
   in_batch_mode = BATCH_MODE_YES;
 }
 
-inline bool P4SFCEncap::smaction(int input, Packet *p)
+inline Packet *P4SFCEncap::process(int input, Packet *p)
 {
   p4sfc_header_t *sfch;
   if (input == 0)
   {
     int result = pull_p4sfc_header(p, sfch);
     if (result == pull_fail)
-      return false;
+    {
+      p->kill();
+      return 0;
+    }
     _sfch_queue.push(sfch);
-    return true;
+    return p;
   }
   else if (input == 1)
   {
     // assert(!_sfch_queue.empty());
     if (_sfch_queue.empty())
-      return false;
+    {
+      p->kill();
+      return 0;
+    }
 
     sfch = _sfch_queue.front();
     _sfch_queue.pop();
     p = push_p4sfc_header(p, sfch);
     free(sfch);
-    return true;
+    return p;
   }
-  return false;
+  p->kill();
+  return 0;
 }
 
 void P4SFCEncap::push(int input, Packet *p)
 {
-  if (smaction(input, p))
-    output(0).push(p);
-  else
-    p->kill();
+  Packet *q = process(input, p);
+  if (q)
+    output(input).push(q);
 }
 
 void P4SFCEncap::push_batch(int input, PacketBatch *batch)
 {
-  Packet *head = batch;
-  Packet *current = head;
-  Packet *last = NULL;
-  while (current != NULL)
-  {
-    if (smaction(input, current))
-    {
-      last = current;
-    }
-    else
-    {
-      if (current == head)
-        head = current->next();
-      else
-        last->set_next(current->next());
-      current->kill();
-    }
-    current = current->next();
-  }
-
-  if (likely(head == batch))
+  auto fnt = [this, input](Packet *p) { return process(input, p); };
+  EXECUTE_FOR_EACH_PACKET_DROPPABLE(fnt, batch, [](Packet *p) {})
+  if (batch)
     output(input).push_batch(batch);
-  else
-    output(input).push_batch(static_cast<PacketBatch *>(head));
 }
 
 inline int P4SFCEncap::pull_p4sfc_header(Packet *p, p4sfc_header_t *&sfch)

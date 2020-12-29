@@ -60,7 +60,7 @@ protected:
   std::queue<p4sfc_header_t *> _sfch_queue;
 
 private:
-  inline bool smaction(int, Packet *);
+  inline Packet *process(int, Packet *);
   inline int pull_p4sfc_header(Packet *, p4sfc_header_t *&);
   inline Packet *push_p4sfc_header(Packet *, p4sfc_header_t *);
 };

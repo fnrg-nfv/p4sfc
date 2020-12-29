@@ -1,12 +1,12 @@
 #ifndef P4IPREWRITER_HH
 #define P4IPREWRITER_HH
 #include <click/bitvector.hh>
-#include <click/element.hh>
+#include <click/batchelement.hh>
 #include <click/hashtable.hh>
 #include <click/ipflowid.hh>
 #include <click/timer.hh>
 
-#include "p4sfcstate.hh"
+#include "/home/sonic/p4sfc/click_nf/statelib/p4sfcstate.hh"
 
 CLICK_DECLS
 
@@ -18,7 +18,7 @@ class P4IPRewriterInput;
 class P4IPRewriterEntry;
 class P4IPRewriter;
 
-class P4Element : public Element
+class P4Element : public BatchElement
 {
   // protected:
   //   int _click_instance_id;
@@ -110,10 +110,12 @@ public:
   P4SFCState::TableEntry *add_flow(const IPFlowID &flowid, const IPFlowID &rewritten_flowid, int input);
   // void destroy_flow(P4IPRewriterFlow *flow);
 
-  void push(int, Packet *);
+  Packet *process(int, Packet *);
+
+  void push(int, Packet *) override;
+  void push_batch(int port, PacketBatch *batch) override;
 
 protected:
-  // HashContainer<P4IPRewriterEntry> _map;
   P4SFCState::Table _map;
   Vector<P4IPRewriterInput> _input_specs;
   bool _debug;

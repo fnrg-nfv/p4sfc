@@ -9,27 +9,61 @@
 
 #define WINDOW_SIZE 5
 
-namespace P4SFCState {
+namespace P4SFCState
+{
+    using namespace std;
 
-using namespace std;
-
-class Table {
-    private:
+    // declare
+    class Table
+    {
     public:
-        map<string, TableEntry> _map; // TODO: should be private. Try not to use it.
         Table();
         int size();
 
-        void insert(const TableEntry&);
-        void remove(const TableEntry&);
-        TableEntry* lookup(const TableEntry&);
-};
+        void insert(const string &, const TableEntry &);
+        void insert(const TableEntry &);
+        void remove(const string &);
+        TableEntry *lookup(const string &);
+        TableEntry *lookup(const TableEntry &);
 
-void startServer(int click_instance_id=1, string addr="0.0.0.0:28282");
-void shutdownServer();
-TableEntry* newTableEntry();
-string toString(TableEntry *entry);
-// extern vector<Table*> tables;
-}
+        map<string, TableEntry> _map;
+    };
+
+    string buildKey(const TableEntry &entry);
+    TableEntry *newTableEntry();
+    void startServer(int click_instance_id = 1, string addr = "0.0.0.0:28282");
+    void shutdownServer();
+    string toString(const TableEntry &entry);
+
+    // inline definition
+    inline int Table::size()
+    {
+        return _map.size();
+    }
+
+    inline void
+    Table::insert(const string &key, const TableEntry &entry)
+    {
+        _map.insert({key, entry});
+    }
+
+    inline void Table::insert(const TableEntry &entry)
+    {
+        string key = buildKey(entry);
+        _map.insert({key, entry});
+    }
+
+    inline TableEntry *Table::lookup(const TableEntry &e)
+    {
+        string key = buildKey(e);
+        return lookup(key);
+    }
+
+    inline void Table::remove(const string &key)
+    {
+        _map.erase(key);
+    }
+
+} // namespace P4SFCState
 
 #endif

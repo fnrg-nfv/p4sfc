@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   int size = teReply.entries_size();
   for (size_t i = 0; i < size; i++) {
     auto e = teReply.entries(i);
-    std::cout << toString(&e) << std::endl;
+    std::cout << toString(e) << std::endl;
   }
 
   return 0;
