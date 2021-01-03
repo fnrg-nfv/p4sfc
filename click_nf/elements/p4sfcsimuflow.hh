@@ -45,6 +45,7 @@ protected:
     ucounter_t _limit;
     unsigned _batch_size;
     unsigned _len;
+    unsigned _header_len;
     bool _active;
     bool _stop;
     Task _task;
@@ -65,7 +66,8 @@ protected:
 
     struct flow_t
     {
-        Packet *packet;
+        // Packet *packet;
+        unsigned char* data;
         unsigned flow_count;
     };
     flow_t *_flows;

@@ -3,9 +3,10 @@ define(
 	$srcmac		0:0:0:0:0:0,
 	$dstmac		0:0:0:0:0:0,
 	$debug		false,
-	$rate		1,
+	$rate		-1,
+	$range		10,
 	$iprw_id	1,
-	$flowsize	2,
+	$flowsize	10000,
 );
 
 ec :: P4SFCEncap();
@@ -27,7 +28,7 @@ SRCETH $srcmac,
 DSTETH $dstmac,
 STOP false, DEBUG $debug, 
 LIMIT -1, RATE $rate, BURST 32,
-SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE 1, LENGTH 1400,
+SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE $range, LENGTH 1400,
 FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 

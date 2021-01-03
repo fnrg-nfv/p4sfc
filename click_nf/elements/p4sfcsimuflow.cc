@@ -1,6 +1,7 @@
 #include <click/config.h>
 #include "p4sfcsimuflow.hh"
 #include <click/args.hh>
+#include <click/glue.hh>
 #include <click/error.hh>
 #include <click/router.hh>
 #include <click/straccum.hh>
@@ -150,9 +151,10 @@ void P4SFCSimuFlow::cleanup(CleanupStage)
 {
     for (size_t i = 0; i < _flowsize; i++)
     {
-        if (_flows[i].packet)
-            _flows[i].packet->kill();
-        _flows[i].packet = 0;
+        // if (_flows[i].packet)
+        //     _flows[i].packet->kill();
+        // _flows[i].packet = 0;
+        free(_flows[i].data);
     }
 }
 
@@ -177,7 +179,7 @@ bool P4SFCSimuFlow::run_task(Task *)
     {
         for (int i = 0; i < n; i++)
         {
-            Packet *p = next_packet()->clone();
+            Packet *p = next_packet();
             p->set_timestamp_anno(Timestamp::now());
 
             if (head == NULL)
@@ -241,11 +243,12 @@ bool P4SFCSimuFlow::run_task(Task *)
 void P4SFCSimuFlow::setup_packets(ErrorHandler *errh)
 {
     _flows = new flow_t[_flowsize];
+    _header_len = 14 + _sfch.length() + sizeof(click_ip) + sizeof(click_udp);
     for (unsigned i = 0; i < _flowsize; i++)
     {
-        WritablePacket *q = Packet::make(_len);
-        _flows[i].packet = q;
-        unsigned char *data = q->data();
+        // WritablePacket *q = Packet::make(_len);
+        unsigned char *data = (unsigned char *)malloc(_header_len);
+        _flows[i].data = data;
         memcpy(data, &_ethh, 14);
         data += 14;
         memcpy(data, _sfch.data(), _sfch.length());
@@ -265,14 +268,14 @@ void P4SFCSimuFlow::setup_packets(ErrorHandler *errh)
         ip->ip_ttl = 250;
         ip->ip_sum = 0;
         ip->ip_sum = click_in_cksum((unsigned char *)ip, sizeof(click_ip));
-        _flows[i].packet->set_dst_ip_anno(IPAddress(_dipaddr));
-        _flows[i].packet->set_ip_header(ip, sizeof(click_ip));
+        // _flows[i].packet->set_dst_ip_anno(IPAddress(_dipaddr));
+        // _flows[i].packet->set_ip_header(ip, sizeof(click_ip));
 
         // set up UDP header
         udp->uh_sport = (click_random() >> 2) % 0xFFFF;
         udp->uh_dport = (click_random() >> 2) % 0xFFFF;
         udp->uh_sum = 0;
-        unsigned short len = _len - 14 - sizeof(click_ip);
+        unsigned short len = _len - 14 - _sfch.length() - sizeof(click_ip);
         udp->uh_ulen = htons(len);
         udp->uh_sum = 0;
         _flows[i].flow_count = 0;
@@ -290,7 +293,7 @@ inline Packet *P4SFCSimuFlow::next_packet()
     // click_random() not efficient
     const uint64_t rand = xorshift128p(state);
     const uint32_t rand1 = rand % RAND_MAX;
-    const uint32_t rand2 = (rand >> 32) % RAND_MAX;
+    const uint32_t rand2 = (rand >> 32);
     if (_major_flowsize == 0)
         next = rand2 % _flowsize;
     else if (rand1 <= _major_data)
@@ -299,7 +302,9 @@ inline Packet *P4SFCSimuFlow::next_packet()
         next = (rand2 % (_flowsize - _major_flowsize)) + _major_flowsize;
     _flows[next].flow_count++;
 
-    return _flows[next].packet;
+    WritablePacket *p = Packet::make(_len);
+    memcpy(p->data(), _flows[next].data, _header_len);
+    return p;
 }
 
 void P4SFCSimuFlow::print_cnt()

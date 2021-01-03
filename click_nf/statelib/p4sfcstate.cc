@@ -1,6 +1,13 @@
 #include <thread>
 #include <grpc++/grpc++.h>
 
+#ifdef DEBUG
+#include <iostream>
+#include <iomanip>
+#include <chrono>
+#include <ctime>
+#endif
+
 #include "p4sfcstate.hh"
 
 #include "p4sfcstate.grpc.pb.h"
@@ -12,7 +19,7 @@ namespace P4SFCState
 
     vector<Table *> tables;
     int curPos;
-    const int k = 10;
+    const int k = 1000;
 
     void incSlot(TableEntry *);
 
@@ -27,27 +34,48 @@ namespace P4SFCState
             return Status::OK;
         }
 
+        typedef struct
+        {
+            TableEntry *e;
+            uint64_t sum;
+        } entry;
+
         Status GetState(ServerContext *context, const Empty *request, TableEntryReply *reply)
         {
+#ifdef DEBUG
+            auto t_start = std::chrono::high_resolution_clock::now();
+#endif
             reply->set_click_instance_id(_click_instance_id);
-            int size = 0;
+
+            size_t size = 0;
+            vector<entry> entries;
             for (auto i = tables.begin(); i != tables.cend(); i++)
             {
                 Table *table = *i;
                 for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
                 {
-                    TableEntry *entry = reply->add_entries();
-                    entry->CopyFrom(j->second);
+                    entries.push_back({&(j->second), window_sum(j->second)});
+                    size++;
                 }
             }
-            // TODO: need optimize
-            std::sort(reply->mutable_entries()->begin(), reply->mutable_entries()->end(),
-                      [this](const TableEntry &a, const TableEntry &b) {
-                          return window_sum(a) > window_sum(b);
+
+            std::sort(entries.begin(), entries.end(),
+                      [this](const entry &a, const entry &b) {
+                          return a.sum > b.sum;
                       });
-            // delete more table entries
+
+            size = k < size ? k : size;
+            for (size_t i = 0; i < size; i++)
+                reply->add_entries()->CopyFrom(*(entries[i].e));
+
             move_window_forward();
 
+#ifdef DEBUG
+            auto t_end = std::chrono::high_resolution_clock::now();
+            std::cout << std::fixed << std::setprecision(2)
+                      << "Get state time passed:"
+                      << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
+#endif
             return Status::OK;
         }
 
@@ -59,19 +87,20 @@ namespace P4SFCState
 
         void move_window_forward()
         {
-            curPos = (curPos + 1) % WINDOW_SIZE;
+            int nextPos = (curPos + 1) % WINDOW_SIZE;
             for (auto i = tables.begin(); i != tables.cend(); i++)
             {
                 Table *table = *i;
                 for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
-                    j->second.mutable_window()->set_slot(curPos, 0);
+                    j->second.mutable_window()->set_slot(nextPos, 0);
             }
+            curPos = nextPos;
         }
 
-        int window_sum(const TableEntry &e)
+        uint64_t window_sum(const TableEntry &e)
         {
             auto w = e.window();
-            int sum = 0;
+            uint64_t sum = 0;
             for (size_t i = 0; i < w.slot_size(); i++)
                 sum += w.slot(i);
             return sum;
