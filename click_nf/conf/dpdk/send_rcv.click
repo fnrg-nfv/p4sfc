@@ -13,6 +13,8 @@ define(
 	$debug false
 );
 
+latency :: Latency
+
 // send
 src :: RatedSource( DATA \< 
 00 00 00 00 00 00 00 00 00 00 00 00 12 34 
@@ -23,10 +25,14 @@ $srcip $dstip $srcport $dstport
 00 00 00 00 00 00 00 00
 >, LENGTH $length,  LIMIT $limit, RATE $rate, STOP false) 
 	-> Print(out, ACTIVE $debug)
+	-> latency
 	-> tx :: ToDPDKDevice($dev);
 
 // rcv
 rx :: FromDPDKDevice($dev, PROMISC true)
+	-> [1]latency
+
+latency[1]
 	-> Discard;
 
 Script( 

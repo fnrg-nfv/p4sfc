@@ -1,3 +1,4 @@
+// Run: sudo click --dpdk -l 0-3 -n 4 -- simuflow.click
 define(
 	$header "AA BB 00 01 00 00",
 	$srcmac 0:0:0:0:0:0,
@@ -16,7 +17,6 @@ FLOWSIZE 15,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 	-> Print(out, ACTIVE $debug)
-
 	-> tx::ToDPDKDevice(0)
 
 rx::FromDPDKDevice(0)

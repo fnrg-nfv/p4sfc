@@ -1,5 +1,5 @@
 // Run: sudo bash
-// Run: click --dpdk -l 8-11 -n 4 --proc-type=secondary -v -- nat-p4.click
+// Run: click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- nat-p4.click
 define(
       $nf_id 2,
       $iprw_id 2,
@@ -13,14 +13,6 @@ nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(nf_id)_tx, TO_PROC main_rx, 
 rw :: P4IPRewriter($iprw_id, $debug, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 ec :: P4SFCEncap();
 
-nf_from -> Print(in, ACTIVE $debug)
-	-> Strip(14)
-	-> [0]ec;
-ec[1] -> Print(before_eth, ACTIVE $debug)
-      -> EtherEncap(0x1234, extern:eth, extern_next_hop:eth)
-      -> Print(out, ACTIVE $debug)
-      -> nf_to;
-
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
   extern	66.66.66.66  00:a0:b0:c0:d0:e0,
@@ -32,7 +24,10 @@ ip :: IPClassifier(src net intern and dst net intern,
                    dst host extern,
                    -);
 
-ec[0] -> Print(in_decap, ACTIVE $debug)
+nf_from -> Print(in, ACTIVE $debug)
+	-> Strip(14)
+	-> ec;
+      -> Print(in_decap, ACTIVE $debug)
       -> CheckIPHeader
       -> Print(after_checkiph, ACTIVE $debug)
       -> IPPrint(in_ip, ACTIVE $debug)
@@ -46,3 +41,8 @@ ip[3] -> [1]rw;
 rw[0] -> IPPrint(out_ip, ACTIVE $debug)
       -> Print(before_p4sfcencap, ACTIVE $debug)
       -> [1]ec;
+
+ec[1] -> Print(before_eth, ACTIVE $debug)
+      -> EtherEncap(0x1234, extern:eth, extern_next_hop:eth)
+      -> Print(out, ACTIVE $debug)
+      -> nf_to;

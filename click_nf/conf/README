@@ -1,19 +1,19 @@
-CLICK CONFIG
+CLICK CONFIGURATION
 
 DIRECTORY STRUCTURE:
-.                : normal click files including sources, NFs, and pipe;
-encap            : network functions implemented with p4sfcencap;
-dpdk             : interfaces are in DPDK styles, including From/ToDPDKDevice, From/ToDPDKRing.
+simple          : normal click files including sources, NFs, and pipe;
+encap           : network functions implemented with p4sfcencap;
+dpdk            : interfaces are in DPDK styles, including From/ToDPDKDevice, From/ToDPDKRing.
 
 CLICK-BASED NETWORK FUNCTION: 
 
-- NAT            : nat.click, nat-p4.click
-- firewall       : firewall.click
-- monitor        : monitor.click
-- IPS            : ips.click                    # based on snort
-* VPN            : vpn.click
-- load balancer  : lb.click
-- forwarder      : forwarder.click
+- NAT           : nat.click, nat-p4.click
+- firewall      : firewall.click
+- monitor       : monitor.click
+- IPS           : ips.click                    # based on snort
+* VPN           : vpn.click
+- load balancer : lb.click
+- forwarder     : forwarder.click
 
 TODO:
 - (BUG) P4SFCEncap does not handle the DROP situation: DROP packets should
