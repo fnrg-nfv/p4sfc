@@ -1,6 +1,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 
 #include <grpc++/grpc++.h>
 
@@ -70,7 +73,12 @@ int main(int argc, char **argv)
   std::cout << "Greeter received: " << reply << std::endl;
 
   TableEntryReply teReply;
+  auto t_start = std::chrono::high_resolution_clock::now();
   client.GetState(&teReply);
+  auto t_end = std::chrono::high_resolution_clock::now();
+  std::cout << std::fixed << std::setprecision(2)
+            << "Get state time passed:"
+            << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
   std::cout << teReply.click_instance_id() << std::endl;
   int size = teReply.entries_size();
   if (size <= 100)

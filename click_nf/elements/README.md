@@ -5,7 +5,13 @@ These elements should be built together with fastclick.
 
 ## Dependency
 
-*.[cc]/[hh] must be symbolically linked in <fastclick>/elements/local.
+\*.[cc]/[hh] must be symbolically linked in <fastclick>/elements/local.
+
+```bash
+cd <fastclick>/elements/local
+ln -s <p4sfc>/click_nf/elements/*.cc .
+ln -s <p4sfc>/click_nf/elements/*.hh .
+```
 
 ## Building command in fastclick
 
