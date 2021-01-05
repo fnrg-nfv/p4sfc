@@ -1,6 +1,7 @@
 #include <thread>
 #include <grpc++/grpc++.h>
 
+#define DEBUG
 #ifdef DEBUG
 #include <iostream>
 #include <iomanip>
@@ -71,6 +72,7 @@ namespace P4SFCState
             move_window_forward();
 
 #ifdef DEBUG
+            std::cout << "Get size:" << size << std::endl;
             auto t_end = std::chrono::high_resolution_clock::now();
             std::cout << std::fixed << std::setprecision(2)
                       << "Get state time passed:"
