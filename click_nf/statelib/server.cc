@@ -12,27 +12,29 @@ using namespace grpc;
 using namespace P4SFCState;
 
 // Logic and data behind the server's behavior.
-class ServiceImpl final : public RPC::Service {
+class ServiceImpl final : public RPC::Service
+{
 
-  Status SayHello(ServerContext* context, const HelloRequest* request,
-                  HelloReply* reply) override {
+  Status SayHello(ServerContext *context, const HelloRequest *request,
+                  HelloReply *reply) override
+  {
     std::string prefix("Hello ");
     reply->set_message(prefix + request->name());
     return Status::OK;
   }
 
-  Status GetState(ServerContext* context, const Empty* request, TableEntryReply* response) {
-    TableEntry* entry = response->add_entries();
+  Status GetState(ServerContext *context, const Empty *request, TableEntryReply *response)
+  {
+    TableEntry *entry = response->add_entries();
 
     // entry->CopyFrom()
 
-
     return Status::OK;
   }
-
 };
 
-void RunServer() {
+void RunServer()
+{
   std::string server_address("0.0.0.0:28282");
   ServiceImpl service;
 
@@ -51,9 +53,11 @@ void RunServer() {
   server->Wait();
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
   std::thread th(RunServer);
-  while (true) {
+  while (true)
+  {
     std::this_thread::sleep_for(std::chrono::seconds(2));
   }
   return 0;
