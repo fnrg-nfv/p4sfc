@@ -26,7 +26,7 @@ ip :: IPClassifier(src net intern and dst net intern,
 
 nf_from -> Print(in, ACTIVE $debug)
 	-> Strip(14)
-	-> ec;
+	-> ec
       -> Print(in_decap, ACTIVE $debug)
       -> CheckIPHeader
       -> Print(after_checkiph, ACTIVE $debug)
