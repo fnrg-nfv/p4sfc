@@ -10,27 +10,29 @@ define(
 	$length		1500,
 	$debug		false,
 	$flowsize	1,
+	$rate		1,
 );
+
+// latency :: Latency
 
 P4SFCSimuFlow(
 SRCETH $srcmac,
 DSTETH $dstmac,
 STOP false, DEBUG $debug, 
-LIMIT -1, RATE 1, BURST 32,
+LIMIT -1, RATE $rate, BURST 32,
 SRCIP $srcip, DSTIP $dstip, RANGE $range, LENGTH $length,
 FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 	-> Print(out, ACTIVE $debug)
-	-> latency
+//	-> latency
 	-> tx::ToDPDKDevice($dev)
 
-latency :: Latency
 
 rx :: FromDPDKDevice($dev, PROMISC true)
-	-> [1]latency
+//	-> [1]latency
 
-latency[1]
+//latency[1]
 	-> Discard;
 
 Script( 

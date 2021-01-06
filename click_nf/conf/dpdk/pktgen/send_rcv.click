@@ -29,7 +29,7 @@ $srcip $dstip $srcport $dstport
 	-> tx :: ToDPDKDevice($dev);
 
 // rcv
-rx :: FromDPDKDevice($dev, PROMISC true)
+rx :: FromDPDKDevice($dev)
 	-> [1]latency
 
 latency[1]
