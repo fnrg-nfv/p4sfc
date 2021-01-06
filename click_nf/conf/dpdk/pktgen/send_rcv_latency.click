@@ -13,7 +13,7 @@ define(
 	$rate		1,
 );
 
-// latency :: Latency
+latency :: Latency
 
 P4SFCSimuFlow(
 SRCETH $srcmac,
@@ -24,11 +24,13 @@ SRCIP $srcip, DSTIP $dstip, RANGE $range, LENGTH $length,
 FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
-	-> Print(out, ACTIVE $debug)
+	-> latency
 	-> tx::ToDPDKDevice($dev)
 
 rx :: FromDPDKDevice($dev, PROMISC true)
-	-> Discard;
+	-> [1]latency
+
+latency[1] -> Discard;
 
 Script( 
 	TYPE ACTIVE,

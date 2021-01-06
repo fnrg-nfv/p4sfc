@@ -1,8 +1,9 @@
 #include <click/config.h>
-
 #include "printtime.hh"
 #include <click/error.hh>
 #include <click/args.hh>
+#include <click/glue.hh>
+#include <click/straccum.hh>
 CLICK_DECLS
 
 PrintTime::PrintTime() {}
@@ -21,7 +22,7 @@ int PrintTime::configure(Vector<String> &conf, ErrorHandler *errh)
 
 Packet *PrintTime::simple_action(Packet *p)
 {
-    click_chatter("%s: %s", _label, Timestamp::now().unparse().c_str());
+    click_chatter("%s: %s", _label.c_str(), Timestamp::now().unparse().c_str());
     return p;
 }
 
