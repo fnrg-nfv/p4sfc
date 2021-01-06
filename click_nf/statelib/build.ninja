@@ -1,0 +1,23 @@
+// only build for libstate
+ninja_required_version=1.1
+
+cxx = g++
+cppflags = -I/usr/local/include -pthread -fPIC
+cxxflags = -std=c++11
+ldflags = -L/usr/local/lib `pkg-config --libs grpc++ grpc` -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed -lprotobuf -lpthread -ldl
+
+rule cc
+    command = $cxx $cxxflags $cppflags -c $in -o $out
+
+rule shared
+    command = $cxx $in $ldflags -shared -o $out
+
+build p4sfcstate.pb.o: cc p4sfcstate.pb.cc
+
+build p4sfcstate.grpc.pb.o: cc p4sfcstate.grpc.pb.cc
+
+build p4sfcstate.o: cc p4sfcstate.cc
+
+build libstate.so: shared p4sfcstate.o p4sfcstate.pb.o p4sfcstate.grpc.pb.o
+
+default libstate.so

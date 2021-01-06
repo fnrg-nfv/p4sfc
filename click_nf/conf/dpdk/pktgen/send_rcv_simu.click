@@ -25,14 +25,11 @@ FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 	-> Print(out, ACTIVE $debug)
-//	-> latency
+	-> PrintTime
 	-> tx::ToDPDKDevice($dev)
 
-
 rx :: FromDPDKDevice($dev, PROMISC true)
-//	-> [1]latency
-
-//latency[1]
+	-> PrintTime
 	-> Discard;
 
 Script( 
