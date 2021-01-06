@@ -40,4 +40,4 @@ Script(
 	print "TX: $(tx.count); RX: $(rx.count)",
 	wait $interval,
 	loop
-	);
+);
