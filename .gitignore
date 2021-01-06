@@ -9,3 +9,5 @@ switch.log
 *.swp
 *.pyc
 *.pcap
+click_nf/statelib/.ninja_log
+click_nf/statelib/.ninja_deps
