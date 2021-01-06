@@ -1,4 +1,4 @@
-// Run: sudo click --dpdk -l 0-3 -n 4 -- simuflow.click
+// Run: sudo click --dpdk -l 0-1 -n 4 -- simuflow.click
 define(
 	$dev		0,
 	$header		"00 00 00 01 00 00",
