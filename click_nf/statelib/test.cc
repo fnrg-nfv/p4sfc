@@ -7,8 +7,8 @@
 using namespace P4SFCState;
 using namespace std;
 
-
-void insertOneEntry(Table* t) {
+void insertOneEntry(Table *t)
+{
     auto e = newTableEntry();
     e->set_table_name("ipv4_fwd");
     {
@@ -41,9 +41,9 @@ int main(int argc, char const *argv[])
     startServer();
     Table t;
     // auto t = new Table();
-    for (size_t i = 0; i < 100; i++) 
+    for (size_t i = 0; i < 100; i++)
         insertOneEntry(&t);
-    
+
     cout << "Table size: " << t.size() << endl;
     this_thread::sleep_for(std::chrono::seconds(1));
     // for(auto i = tables.begin(); i != tables.cend(); i++) {

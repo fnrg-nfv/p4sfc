@@ -1,5 +1,5 @@
-#ifndef CLICK_P4SFCSIMUFLOW_HH
-#define CLICK_P4SFCSIMUFLOW_HH
+#ifndef CLICK_P4SFCVARIFLOW_HH
+#define CLICK_P4SFCVARIFLOW_HH
 #include <click/batchelement.hh>
 #include <click/tokenbucket.hh>
 #include <click/task.hh>
@@ -8,12 +8,12 @@
 CLICK_DECLS
 class HandlerCall;
 
-class P4SFCSimuFlow : public BatchElement
+class P4SFCVariFlow : public BatchElement
 {
 public:
-    P4SFCSimuFlow() CLICK_COLD;
+    P4SFCVariFlow() CLICK_COLD;
 
-    const char *class_name() const override { return "P4SFCSimuFlow"; }
+    const char *class_name() const override { return "P4SFCVariFlow"; }
     const char *port_count() const override { return PORTS_0_1; }
 
     int configure(Vector<String> &conf, ErrorHandler *errh) CLICK_COLD;
@@ -22,11 +22,6 @@ public:
     void cleanup(CleanupStage) CLICK_COLD;
 
     bool run_task(Task *task);
-
-    //     Packet *pull(int);
-    // #if HAVE_BATCH
-    //     PacketBatch *pull_batch(int, unsigned);
-    // #endif
 
 protected:
     static const unsigned NO_LIMIT = 0xFFFFFFFFU;
@@ -56,6 +51,9 @@ protected:
     unsigned _major_data;
     unsigned _flowsize;
 
+    unsigned _short_prop;
+    unsigned _short_time;
+
     String _sfch;
     click_ether _ethh;
     struct in_addr _sipaddr;
@@ -63,18 +61,26 @@ protected:
     unsigned _range;
     unsigned _seed;
     bool _debug;
+    Timestamp _now;
 
     struct flow_t
     {
         // Packet *packet;
-        unsigned char* data;
+        unsigned char *data;
         unsigned flow_count;
+        Timestamp duration;
+        Timestamp end_time;
     };
     flow_t *_flows;
 
-    inline Packet *next_packet();
+    void new_header(unsigned char *);
+    Timestamp random_duration();
     void setup_flows(ErrorHandler *);
+
     void print_flow_counts();
+
+    Packet *next_packet();
+    void update_flow(flow_t &);
 };
 
 CLICK_ENDDECLS

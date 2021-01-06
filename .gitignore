@@ -3,6 +3,8 @@ build/
 pcaps/
 logs/
 
+etc/
+
 switch.log
 *.swp
 *.pyc
