@@ -124,7 +124,11 @@ void P4SFCSimuFlow::cleanup(CleanupStage)
 {
     for (size_t i = 0; i < _flowsize; i++)
     {
-        free(_flows[i].data);
+        if (_flows[i].data)
+        {
+            CLICK_LFREE(_flows[i].data, _header_len);
+            _flows[i].data = 0;
+        }
     }
 }
 
@@ -217,7 +221,7 @@ void P4SFCSimuFlow::setup_flows(ErrorHandler *errh)
     for (unsigned i = 0; i < _flowsize; i++)
     {
         // WritablePacket *q = Packet::make(_len);
-        unsigned char *data = (unsigned char *)malloc(_header_len);
+        unsigned char *data = (unsigned char *)CLICK_LALLOC(_header_len);
         _flows[i].data = data;
         memcpy(data, &_ethh, 14);
         data += 14;

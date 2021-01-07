@@ -136,7 +136,7 @@ void P4SFCVariFlow::cleanup(CleanupStage)
     {
         if (_flows[i].data)
         {
-            free(_flows[i].data);
+            CLICK_LFREE(_flows[i].data, _header_len);
             _flows[i].data = 0;
         }
     }
@@ -284,7 +284,7 @@ void P4SFCVariFlow::setup_flows(ErrorHandler *errh)
         _flows[i].flow_count = 0;
         _flows[i].duration = duration;
         _flows[i].end_time = _now + duration;
-        unsigned char *data = (unsigned char *)malloc(_header_len);
+        unsigned char *data = (unsigned char *)CLICK_LALLOC(_header_len);
         _flows[i].data = data;
         new_header(data);
         if (_debug)
