@@ -9,16 +9,17 @@ define(
 );
 
 AddressInfo(
-  intern 	10.0.0.1	10.0.0.0/8,
+  intern	10.0.0.1	10.0.0.0/8,
   extern	66.66.66.66  00:a0:b0:c0:d0:e0,
   extern_next_hop	00:10:20:30:40:50,
 );
 
 // do not deny
-ipfilter :: P4SFCIPFilter(allow src net intern && dst net intern,
-                     	  1 src net intern,
-                     	  1 dst host extern,
-                     	  allow all)
+// <action srcip:port dstip:port proto>
+ipfilter :: P4SFCIPFilter(allow 10.0.0.0/8:80 10.0.0.0/8 TCP,
+                          1 10.0.0.0/8 - -,
+                          1 - 66.66.66.66 -,
+                          2 - - -)
 
 src::P4SFCSimuFlow(
 SRCETH $srcmac,
@@ -38,6 +39,7 @@ out ::	EtherEncap(0x1234, 0:0:0:0:0:0, 0:0:0:0:0:0)
 
 ipfilter[0] -> out;
 ipfilter[1] -> Print(alert) -> out;
+ipfilter[2] -> Print(drop) -> out;
 
 rx :: FromDPDKDevice(0) 
 ->Discard

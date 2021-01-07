@@ -30,17 +30,7 @@
 #include <arpa/inet.h>
 
 #include "p4iprewriter.hh"
-
-#define P4H_IP_SADDR "hdr.ipv4.srcAddr"
-#define P4H_IP_DADDR "hdr.ipv4.dstAddr"
-#define P4H_IP_SPORT "hdr.tcp_udp.srcPort"
-#define P4H_IP_DPORT "hdr.tcp_udp.dstPort"
-#define P4_TABLE_NAME "IpRewriter_exact"
-#define P4_IPRW_ACTION_NAME "rewrite"
-#define P4_IPRW_PARAM_SA "srcAddr"
-#define P4_IPRW_PARAM_DA "dstAddr"
-#define P4_IPRW_PARAM_SP "srcPort"
-#define P4_IPRW_PARAM_DP "dstPort"
+#include "p4header.hh"
 
 CLICK_DECLS
 
@@ -298,8 +288,8 @@ P4SFCState::TableEntry *P4IPRewriter::add_flow(const IPFlowID &flowid, const IPF
 {
   P4SFCState::TableEntry *entry = P4SFCState::newTableEntry();
   P4SFCState::TableEntry *entry_r = P4SFCState::newTableEntry();
-  entry->set_table_name(P4_TABLE_NAME);
-  entry_r->set_table_name(P4_TABLE_NAME);
+  entry->set_table_name(P4_IPRW_TABLE_NAME);
+  entry_r->set_table_name(P4_IPRW_TABLE_NAME);
   flow2entry_match(flowid, entry);
   flow2entry_match(rewritten_flowid.reverse(), entry_r);
 

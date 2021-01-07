@@ -66,9 +66,14 @@ message FieldMatch {
   message Exact {
     bytes value = 1;
   }
+  message Ternary {
+    bytes value = 1;
+    bytes mask = 2;
+  }
 
   oneof field_match_type {
     Exact exact = 2;
+    Ternary ternary = 3;
     // TODO: only exact is supported currently. 
   }
 }

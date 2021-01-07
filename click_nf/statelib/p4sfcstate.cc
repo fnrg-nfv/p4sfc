@@ -3,7 +3,9 @@
 
 #define DEBUG
 #ifdef DEBUG
+#include <string>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <chrono>
 #include <ctime>
@@ -142,33 +144,59 @@ namespace P4SFCState
         tables.push_back(this);
     }
 
+    string bigint_to_hexstr(const string &s)
+    {
+        typedef uint8_t unit;
+        const unit *i = (const unit *)s.data();
+        std::stringstream stream;
+        stream << "0x";
+        int len = s.length() / sizeof(unit);
+        for (size_t j = 0; j < len; j++)
+        {
+            stream << std::setfill('0') << std::setw(sizeof(unit) * 2)
+                   << std::hex << unsigned(i[j]);
+        }
+        return stream.str();
+    }
+
     string
     toString(const TableEntry &entry)
     {
         string ret("");
-        ret += "TableName: " + entry.table_name();
-        ret += "\tMatch: ";
+        std::stringstream stream;
+        stream << "TableName: " << entry.table_name();
+        stream << "\tMatch: ";
         int size = entry.match_size();
         for (size_t i = 0; i < size; i++)
         {
             auto m = entry.match(i);
-            ret += m.field_name() + ": " + m.exact().value() + "; ";
+            stream << m.field_name() << ": ";
+            if (m.has_exact())
+                stream << "exact: "
+                       << bigint_to_hexstr(m.exact().value());
+            else if (m.has_ternary())
+                stream << "ternary: "
+                       << bigint_to_hexstr(m.ternary().value()) << "/"
+                       << bigint_to_hexstr(m.ternary().mask());
+            //    << int_to_hexstr(m.ternary().value().data()) << "/"
+            //    << int_to_hexstr(m.ternary().mask().data());
+            stream << "; ";
         }
         auto a = entry.action();
         size = a.params_size();
-        ret += "\tAction: " + a.action() + " param: ";
+        stream << "\tAction: " << a.action() << " param: ";
         for (size_t i = 0; i < size; i++)
         {
             auto p = a.params(i);
-            ret += p.param() + ": " + p.value() + "; ";
+            stream << p.param() << ": " << p.value() << "; ";
         }
-        ret += "\tPriority: " + to_string(entry.priority());
+        stream << "\tPriority: " << to_string(entry.priority());
         auto w = entry.window();
         size = w.slot_size();
-        ret += "\tSlidingWindow(" + to_string(size) + "): ";
+        stream << "\tSlidingWindow(" + to_string(size) + "): ";
         for (size_t i = 0; i < size; i++)
-            ret += to_string(w.slot(i)) + " ";
-        return ret;
+            stream << to_string(w.slot(i)) << " ";
+        return stream.str();
     }
 
     TableEntry *Table::lookup(const string &key)
