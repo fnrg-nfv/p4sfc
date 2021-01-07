@@ -13,45 +13,42 @@
 CLICK_DECLS
 
 static const StaticNameDB::Entry type_entries[] = {
-    { "ce", P4SFCIPFilter::TYPE_IPCE },
-    { "dest", P4SFCIPFilter::TYPE_SYNTAX },
-    { "dscp", P4SFCIPFilter::FIELD_DSCP },
-    { "dst", P4SFCIPFilter::TYPE_SYNTAX },
-    { "ect", P4SFCIPFilter::TYPE_IPECT },
-    { "ether", P4SFCIPFilter::TYPE_SYNTAX },
-    { "frag", P4SFCIPFilter::TYPE_IPFRAG },
-    { "hl", P4SFCIPFilter::FIELD_HL },
-    { "host", P4SFCIPFilter::TYPE_HOST },
-    { "id", P4SFCIPFilter::FIELD_ID },
-    { "ip", P4SFCIPFilter::TYPE_SYNTAX },
-    { "len", P4SFCIPFilter::FIELD_IPLEN },
-    { "net", P4SFCIPFilter::TYPE_NET },
-    { "not", P4SFCIPFilter::TYPE_SYNTAX },
-    { "opt", P4SFCIPFilter::TYPE_TCPOPT },
-    { "port", P4SFCIPFilter::TYPE_PORT },
-    { "proto", P4SFCIPFilter::TYPE_PROTO },
-    { "src", P4SFCIPFilter::TYPE_SYNTAX },
-    { "tos", P4SFCIPFilter::FIELD_TOS },
-    { "ttl", P4SFCIPFilter::FIELD_TTL },
-    { "type", P4SFCIPFilter::FIELD_ICMP_TYPE },
-    { "unfrag", P4SFCIPFilter::TYPE_IPUNFRAG },
-    { "vers", P4SFCIPFilter::FIELD_VERSION },
-    { "win", P4SFCIPFilter::FIELD_TCP_WIN }
-};
+    {"ce", P4SFCIPFilter::TYPE_IPCE},
+    {"dest", P4SFCIPFilter::TYPE_SYNTAX},
+    {"dscp", P4SFCIPFilter::FIELD_DSCP},
+    {"dst", P4SFCIPFilter::TYPE_SYNTAX},
+    {"ect", P4SFCIPFilter::TYPE_IPECT},
+    {"ether", P4SFCIPFilter::TYPE_SYNTAX},
+    {"frag", P4SFCIPFilter::TYPE_IPFRAG},
+    {"hl", P4SFCIPFilter::FIELD_HL},
+    {"host", P4SFCIPFilter::TYPE_HOST},
+    {"id", P4SFCIPFilter::FIELD_ID},
+    {"ip", P4SFCIPFilter::TYPE_SYNTAX},
+    {"len", P4SFCIPFilter::FIELD_IPLEN},
+    {"net", P4SFCIPFilter::TYPE_NET},
+    {"not", P4SFCIPFilter::TYPE_SYNTAX},
+    {"opt", P4SFCIPFilter::TYPE_TCPOPT},
+    {"port", P4SFCIPFilter::TYPE_PORT},
+    {"proto", P4SFCIPFilter::TYPE_PROTO},
+    {"src", P4SFCIPFilter::TYPE_SYNTAX},
+    {"tos", P4SFCIPFilter::FIELD_TOS},
+    {"ttl", P4SFCIPFilter::FIELD_TTL},
+    {"type", P4SFCIPFilter::FIELD_ICMP_TYPE},
+    {"unfrag", P4SFCIPFilter::TYPE_IPUNFRAG},
+    {"vers", P4SFCIPFilter::FIELD_VERSION},
+    {"win", P4SFCIPFilter::FIELD_TCP_WIN}};
 
 static const StaticNameDB::Entry tcp_opt_entries[] = {
-    { "ack", TH_ACK },
-    { "fin", TH_FIN },
-    { "psh", TH_PUSH },
-    { "rst", TH_RST },
-    { "syn", TH_SYN },
-    { "urg", TH_URG }
-};
+    {"ack", TH_ACK},
+    {"fin", TH_FIN},
+    {"psh", TH_PUSH},
+    {"rst", TH_RST},
+    {"syn", TH_SYN},
+    {"urg", TH_URG}};
 
 static const uint32_t db2type[] = {
     P4SFCIPFilter::TYPE_PROTO, P4SFCIPFilter::TYPE_PORT, P4SFCIPFilter::TYPE_PORT,
-    P4SFCIPFilter::TYPE_TCPOPT, P4SFCIPFilter::FIELD_ICMP_TYPE
-};
+    P4SFCIPFilter::TYPE_TCPOPT, P4SFCIPFilter::FIELD_ICMP_TYPE};
 
 static String
 unparse_word(int type, int proto, const String &word)
@@ -65,9 +62,8 @@ unparse_word(int type, int proto, const String &word)
     return tn + tr + word;
 }
 
-int
-P4SFCIPFilter::lookup(String word, int type, int proto, uint32_t &data,
-         const Element *context, ErrorHandler *errh)
+int P4SFCIPFilter::lookup(String word, int type, int proto, uint32_t &data,
+                          const Element *context, ErrorHandler *errh)
 {
     // type queries always win if they occur
     if (type == 0 || type == TYPE_TYPE)
@@ -90,14 +86,10 @@ P4SFCIPFilter::lookup(String word, int type, int proto, uint32_t &data,
     // filter
     int tgot[5];
     tgot[0] = got[0] && (type == 0 || type == TYPE_PROTO);
-    tgot[1] = got[1] && (type == 0 || type == TYPE_PORT)
-            && (proto == UNKNOWN || proto == IP_PROTO_TCP || proto == IP_PROTO_TCP_OR_UDP);
-    tgot[2] = got[2] && (type == 0 || type == TYPE_PORT)
-            && (proto == UNKNOWN || proto == IP_PROTO_UDP || proto == IP_PROTO_TCP_OR_UDP);
-    tgot[3] = got[3] && (type == 0 || type == TYPE_TCPOPT)
-            && (proto == UNKNOWN || proto == IP_PROTO_TCP || proto == IP_PROTO_TCP_OR_UDP);
-    tgot[4] = got[4] && (type == 0 || type == FIELD_ICMP_TYPE)
-            && (proto == UNKNOWN || proto == IP_PROTO_ICMP);
+    tgot[1] = got[1] && (type == 0 || type == TYPE_PORT) && (proto == UNKNOWN || proto == IP_PROTO_TCP || proto == IP_PROTO_TCP_OR_UDP);
+    tgot[2] = got[2] && (type == 0 || type == TYPE_PORT) && (proto == UNKNOWN || proto == IP_PROTO_UDP || proto == IP_PROTO_TCP_OR_UDP);
+    tgot[3] = got[3] && (type == 0 || type == TYPE_TCPOPT) && (proto == UNKNOWN || proto == IP_PROTO_TCP || proto == IP_PROTO_TCP_OR_UDP);
+    tgot[4] = got[4] && (type == 0 || type == FIELD_ICMP_TYPE) && (proto == UNKNOWN || proto == IP_PROTO_ICMP);
 
     // remove one of TCP and UDP port if they give the same value
     if (tgot[1] && tgot[2] && val[1] == val[2])
@@ -105,19 +97,22 @@ P4SFCIPFilter::lookup(String word, int type, int proto, uint32_t &data,
 
     // return
     int ngot = tgot[0] + tgot[1] + tgot[2] + tgot[3] + tgot[4];
-    if (ngot == 1) {
+    if (ngot == 1)
+    {
         for (int i = 0; i < 5; i++)
-            if (tgot[i]) {
+            if (tgot[i])
+            {
                 data = val[i];
                 return db2type[i];
             }
     }
     StringAccum sa;
     for (int i = 0; i < 5; i++)
-        if (got[i]) {
+        if (got[i])
+        {
             if (sa)
                 sa << ", ";
-                sa << '\'' << unparse_word(db2type[i], proto, word) << '\'';
+            sa << '\'' << unparse_word(db2type[i], proto, word) << '\'';
         }
     if (errh)
         errh->error("%<%s%> is %s; try %s", unparse_word(type, proto, word).c_str(), (ngot > 1 ? "ambiguous" : "meaningless"), sa.c_str());
@@ -126,8 +121,7 @@ P4SFCIPFilter::lookup(String word, int type, int proto, uint32_t &data,
 
 static NameDB *dbs[2];
 
-void
-P4SFCIPFilter::static_initialize()
+void P4SFCIPFilter::static_initialize()
 {
     dbs[0] = new StaticNameDB(NameInfo::T_IPFILTER_TYPE, String(), type_entries, sizeof(type_entries) / sizeof(type_entries[0]));
     dbs[1] = new StaticNameDB(NameInfo::T_TCP_OPT, String(), tcp_opt_entries, sizeof(tcp_opt_entries) / sizeof(tcp_opt_entries[0]));
@@ -135,8 +129,7 @@ P4SFCIPFilter::static_initialize()
     NameInfo::installdb(dbs[1], 0);
 }
 
-void
-P4SFCIPFilter::static_cleanup()
+void P4SFCIPFilter::static_cleanup()
 {
     delete dbs[0];
     delete dbs[1];
@@ -146,7 +139,6 @@ P4SFCIPFilter::P4SFCIPFilter() : _caching(false), _cache()
 {
 }
 
-
 P4SFCIPFilter::~P4SFCIPFilter()
 {
 }
@@ -155,52 +147,48 @@ P4SFCIPFilter::~P4SFCIPFilter()
 // CONFIGURATION
 //
 
-void
-P4SFCIPFilter::Primitive::clear()
+void P4SFCIPFilter::Primitive::clear()
 {
-  _type = _srcdst = 0;
-  _transp_proto = UNKNOWN;
-  _data = 0;
-  _op = OP_EQ;
-  _op_negated = false;
+    _type = _srcdst = 0;
+    _transp_proto = UNKNOWN;
+    _data = 0;
+    _op = OP_EQ;
+    _op_negated = false;
 }
 
-void
-P4SFCIPFilter::Primitive::set_type(int x, ErrorHandler *errh)
+void P4SFCIPFilter::Primitive::set_type(int x, ErrorHandler *errh)
 {
     if (_type)
         errh->error("type specified twice");
     _type = x;
 }
 
-void
-P4SFCIPFilter::Primitive::set_srcdst(int x, ErrorHandler *errh)
+void P4SFCIPFilter::Primitive::set_srcdst(int x, ErrorHandler *errh)
 {
     if (_srcdst)
         errh->error("%<src%> or %<dst%> specified twice");
     _srcdst = x;
 }
 
-void
-P4SFCIPFilter::Primitive::set_transp_proto(int x, ErrorHandler *errh)
+void P4SFCIPFilter::Primitive::set_transp_proto(int x, ErrorHandler *errh)
 {
     if (_transp_proto != UNKNOWN && _transp_proto != x)
         errh->error("transport protocol specified twice");
     _transp_proto = x;
 }
 
-int
-P4SFCIPFilter::Primitive::set_mask(uint32_t full_mask, int shift, uint32_t provided_mask, ErrorHandler *errh)
+int P4SFCIPFilter::Primitive::set_mask(uint32_t full_mask, int shift, uint32_t provided_mask, ErrorHandler *errh)
 {
     uint32_t data = _u.u;
     uint32_t this_mask = (provided_mask ? provided_mask : full_mask);
     if ((this_mask & full_mask) != this_mask)
         return errh->error("%<%s%>: mask out of range, bound 0x%X", unparse_type().c_str(), full_mask);
 
-    if (_op == OP_GT || _op == OP_LT) {
+    if (_op == OP_GT || _op == OP_LT)
+    {
         // Check for comparisons that are always true or false.
-        if ((_op == OP_LT && (data == 0 || data > this_mask))
-            || (_op == OP_GT && data >= this_mask)) {
+        if ((_op == OP_LT && (data == 0 || data > this_mask)) || (_op == OP_GT && data >= this_mask))
+        {
             bool will_be = (_op == OP_LT && data > this_mask ? !_op_negated : _op_negated);
             errh->warning("relation %<%s %u%> is always %s (range 0-%u)", unparse_op().c_str(), data, (will_be ? "true" : "false"), this_mask);
             _u.u = _mask.u = 0;
@@ -210,7 +198,8 @@ P4SFCIPFilter::Primitive::set_mask(uint32_t full_mask, int shift, uint32_t provi
         }
 
         // value < X == !(value > (X - 1))
-        if (_op == OP_LT) {
+        if (_op == OP_LT)
+        {
             _u.u--;
             _op_negated = !_op_negated;
             _op = OP_GT;
@@ -222,7 +211,8 @@ P4SFCIPFilter::Primitive::set_mask(uint32_t full_mask, int shift, uint32_t provi
         // So change 'tcp[0] & 5 > 2' into the equivalent 'tcp[0] & 5 > 1':
         // find the highest bit in _u that is not set in _mask,
         // and turn on all lower bits.
-        if ((_u.u & _mask.u) != _u.u) {
+        if ((_u.u & _mask.u) != _u.u)
+        {
             uint32_t full_mask_u = (full_mask << shift) | ((1 << shift) - 1);
             uint32_t missing_bits = (_u.u & _mask.u) ^ (_u.u & full_mask_u);
             uint32_t add_mask = 0xFFFFFFFFU >> ffs_msb(missing_bits);
@@ -242,68 +232,131 @@ P4SFCIPFilter::Primitive::set_mask(uint32_t full_mask, int shift, uint32_t provi
 String
 P4SFCIPFilter::Primitive::unparse_type(int srcdst, int type)
 {
-  StringAccum sa;
+    StringAccum sa;
 
-    switch (srcdst) {
-        case SD_SRC: sa << "src "; break;
-        case SD_DST: sa << "dst "; break;
-        case SD_OR: sa << "src or dst "; break;
-        case SD_AND: sa << "src and dst "; break;
+    switch (srcdst)
+    {
+    case SD_SRC:
+        sa << "src ";
+        break;
+    case SD_DST:
+        sa << "dst ";
+        break;
+    case SD_OR:
+        sa << "src or dst ";
+        break;
+    case SD_AND:
+        sa << "src and dst ";
+        break;
     }
 
-    switch (type) {
-        case TYPE_NONE: sa << "<none>"; break;
-        case TYPE_HOST: sa << "ip host"; break;
-        case TYPE_PROTO: sa << "proto"; break;
-        case TYPE_ETHER: sa << "ether host"; break;
-        case TYPE_IPFRAG: sa << "ip frag"; break;
-        case TYPE_PORT: sa << "port"; break;
-        case TYPE_TCPOPT: sa << "tcp opt"; break;
-        case TYPE_NET: sa << "ip net"; break;
-        case TYPE_IPUNFRAG: sa << "ip unfrag"; break;
-        case TYPE_IPECT: sa << "ip ect"; break;
-        case TYPE_IPCE: sa << "ip ce"; break;
-        default:
-            if (type & TYPE_FIELD) {
-                switch (type) {
-                    case FIELD_IPLEN: sa << "ip len"; break;
-                    case FIELD_ID: sa << "ip id"; break;
-                    case FIELD_VERSION: sa << "ip vers"; break;
-                    case FIELD_HL: sa << "ip hl"; break;
-                    case FIELD_TOS: sa << "ip tos"; break;
-                    case FIELD_DSCP: sa << "ip dscp"; break;
-                    case FIELD_TTL: sa << "ip ttl"; break;
-                    case FIELD_TCP_WIN: sa << "tcp win"; break;
-                    case FIELD_ICMP_TYPE: sa << "icmp type"; break;
-                    default:
-                        if (type & FIELD_PROTO_MASK)
-                            sa << unparse_transp_proto((type & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT);
-                        else
-                            sa << "ip";
-                        sa << "[...]";
-                        break;
-                }
-            } else
-                sa << "<unknown type " << type << ">";
-            break;
+    switch (type)
+    {
+    case TYPE_NONE:
+        sa << "<none>";
+        break;
+    case TYPE_HOST:
+        sa << "ip host";
+        break;
+    case TYPE_PROTO:
+        sa << "proto";
+        break;
+    case TYPE_ETHER:
+        sa << "ether host";
+        break;
+    case TYPE_IPFRAG:
+        sa << "ip frag";
+        break;
+    case TYPE_PORT:
+        sa << "port";
+        break;
+    case TYPE_TCPOPT:
+        sa << "tcp opt";
+        break;
+    case TYPE_NET:
+        sa << "ip net";
+        break;
+    case TYPE_IPUNFRAG:
+        sa << "ip unfrag";
+        break;
+    case TYPE_IPECT:
+        sa << "ip ect";
+        break;
+    case TYPE_IPCE:
+        sa << "ip ce";
+        break;
+    default:
+        if (type & TYPE_FIELD)
+        {
+            switch (type)
+            {
+            case FIELD_IPLEN:
+                sa << "ip len";
+                break;
+            case FIELD_ID:
+                sa << "ip id";
+                break;
+            case FIELD_VERSION:
+                sa << "ip vers";
+                break;
+            case FIELD_HL:
+                sa << "ip hl";
+                break;
+            case FIELD_TOS:
+                sa << "ip tos";
+                break;
+            case FIELD_DSCP:
+                sa << "ip dscp";
+                break;
+            case FIELD_TTL:
+                sa << "ip ttl";
+                break;
+            case FIELD_TCP_WIN:
+                sa << "tcp win";
+                break;
+            case FIELD_ICMP_TYPE:
+                sa << "icmp type";
+                break;
+            default:
+                if (type & FIELD_PROTO_MASK)
+                    sa << unparse_transp_proto((type & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT);
+                else
+                    sa << "ip";
+                sa << "[...]";
+                break;
+            }
+        }
+        else
+            sa << "<unknown type " << type << ">";
+        break;
     }
 
-  return sa.take_string();
+    return sa.take_string();
 }
 
 String
 P4SFCIPFilter::Primitive::unparse_transp_proto(int transp_proto)
 {
-    switch (transp_proto) {
-        case UNKNOWN: return "";
-        case IP_PROTO_ICMP: return "icmp";
-        case IP_PROTO_IGMP: return "igmp";
-        case IP_PROTO_IPIP: return "ipip";
-        case IP_PROTO_TCP: return "tcp";
-        case IP_PROTO_UDP: return "udp";
-        case IP_PROTO_TCP_OR_UDP: return "tcpudp";
-        case IP_PROTO_TRANSP: return "transp";
-        default: return "ip proto " + String(transp_proto);
+    switch (transp_proto)
+    {
+    case UNKNOWN:
+        return "";
+    case IP_PROTO_ICMP:
+        return "icmp";
+    case IP_PROTO_IGMP:
+        return "igmp";
+    case IP_PROTO_IPIP:
+        return "ipip";
+    case IP_PROTO_TCP:
+        return "tcp";
+    case IP_PROTO_UDP:
+        return "udp";
+    case IP_PROTO_TCP_OR_UDP:
+        return "tcpudp";
+    case IP_PROTO_TRANSP:
+        return "transp";
+    default:
+        return "ip proto " + String(transp_proto);
     }
 }
 
@@ -324,8 +377,7 @@ P4SFCIPFilter::Primitive::unparse_op() const
         return (_op_negated ? "!=" : "=");
 }
 
-void
-P4SFCIPFilter::Primitive::simple_negate()
+void P4SFCIPFilter::Primitive::simple_negate()
 {
     assert(negation_is_simple());
     _op_negated = !_op_negated;
@@ -333,16 +385,14 @@ P4SFCIPFilter::Primitive::simple_negate()
         _transp_proto = (_op_negated ? UNKNOWN : _u.i);
 }
 
-int
-P4SFCIPFilter::Primitive::type_error(ErrorHandler *errh, const char *msg) const
+int P4SFCIPFilter::Primitive::type_error(ErrorHandler *errh, const char *msg) const
 {
     return errh->error("%<%s%>: %s", unparse_type().c_str(), msg);
 }
 
-int
-P4SFCIPFilter::Primitive::check(const Primitive &prev_prim, int header,
-               int mask_dt, const PrimitiveData &mask,
-               ErrorHandler *errh)
+int P4SFCIPFilter::Primitive::check(const Primitive &prev_prim, int header,
+                                    int mask_dt, const PrimitiveData &mask,
+                                    ErrorHandler *errh)
 {
     int old_srcdst = _srcdst;
 
@@ -351,55 +401,56 @@ P4SFCIPFilter::Primitive::check(const Primitive &prev_prim, int header,
         return -1;
 
     // set _type if it was not specified
-    if (!_type) {
+    if (!_type)
+    {
 
     retry:
-        switch (_data) {
-            case TYPE_HOST:
-            case TYPE_NET:
-            case TYPE_TCPOPT:
-            case TYPE_ETHER:
-                _type = _data;
-                if (!_srcdst)
-                    _srcdst = prev_prim._srcdst;
-                break;
+        switch (_data)
+        {
+        case TYPE_HOST:
+        case TYPE_NET:
+        case TYPE_TCPOPT:
+        case TYPE_ETHER:
+            _type = _data;
+            if (!_srcdst)
+                _srcdst = prev_prim._srcdst;
+            break;
 
-            case TYPE_PROTO:
+        case TYPE_PROTO:
+            _type = TYPE_PROTO;
+            break;
+
+        case TYPE_PORT:
+            _type = TYPE_PORT;
+            if (!_srcdst)
+                _srcdst = prev_prim._srcdst;
+            if (_transp_proto == UNKNOWN)
+                _transp_proto = prev_prim._transp_proto;
+            break;
+
+        case TYPE_INT:
+            if (!(prev_prim._type & TYPE_FIELD) && prev_prim._type != TYPE_PROTO && prev_prim._type != TYPE_PORT)
+                return errh->error("specify header field or %<port%>");
+            _data = prev_prim._type;
+            goto retry;
+
+        case TYPE_NONE:
+            if (_transp_proto != UNKNOWN)
                 _type = TYPE_PROTO;
-                break;
+            else
+                return errh->error("partial directive");
+            break;
 
-            case TYPE_PORT:
-                _type = TYPE_PORT;
-                if (!_srcdst)
-                    _srcdst = prev_prim._srcdst;
-                if (_transp_proto == UNKNOWN)
-                    _transp_proto = prev_prim._transp_proto;
-                break;
-
-            case TYPE_INT:
-                if (!(prev_prim._type & TYPE_FIELD)
-                    && prev_prim._type != TYPE_PROTO
-                    && prev_prim._type != TYPE_PORT)
-                    return errh->error("specify header field or %<port%>");
-                _data = prev_prim._type;
-                goto retry;
-
-            case TYPE_NONE:
-                if (_transp_proto != UNKNOWN)
-                    _type = TYPE_PROTO;
-                else
-                    return errh->error("partial directive");
-                break;
-
-            default:
-                if (_data & TYPE_FIELD) {
-                    _type = _data;
+        default:
+            if (_data & TYPE_FIELD)
+            {
+                _type = _data;
                 if ((_type & FIELD_PROTO_MASK) && _transp_proto == UNKNOWN)
                     _transp_proto = (_type & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT;
-                } else
-                    return errh->error("unknown type %<%s%>", unparse_type(0, _data).c_str());
-                break;
-
+            }
+            else
+                return errh->error("unknown type %<%s%>", unparse_type(0, _data).c_str());
+            break;
         }
     }
 
@@ -412,178 +463,186 @@ P4SFCIPFilter::Primitive::check(const Primitive &prev_prim, int header,
         _type = TYPE_ETHER;
 
     // check that _data and _type agree
-    switch (_type) {
-        case TYPE_HOST:
-            if (header != 'i' || _data != TYPE_HOST)
-                return type_error(errh, "address missing");
-            if (_op != OP_EQ)
-                goto operator_not_supported;
-            _mask.u = 0xFFFFFFFFU;
-            goto set_host_mask;
+    switch (_type)
+    {
+    case TYPE_HOST:
+        if (header != 'i' || _data != TYPE_HOST)
+            return type_error(errh, "address missing");
+        if (_op != OP_EQ)
+            goto operator_not_supported;
+        _mask.u = 0xFFFFFFFFU;
+        goto set_host_mask;
 
-        case TYPE_NET:
-            if (header != 'i' || _data != TYPE_NET)
-                return type_error(errh, "address missing");
-            if (_op != OP_EQ)
-                goto operator_not_supported;
-            _type = TYPE_HOST;
-            set_host_mask:
-            if (mask_dt && mask_dt != TYPE_INT && mask_dt != TYPE_HOST)
-                goto bad_mask;
-            else if (mask_dt)
-                _mask.u = mask.u;
-            break;
+    case TYPE_NET:
+        if (header != 'i' || _data != TYPE_NET)
+            return type_error(errh, "address missing");
+        if (_op != OP_EQ)
+            goto operator_not_supported;
+        _type = TYPE_HOST;
+    set_host_mask:
+        if (mask_dt && mask_dt != TYPE_INT && mask_dt != TYPE_HOST)
+            goto bad_mask;
+        else if (mask_dt)
+            _mask.u = mask.u;
+        break;
 
-        case TYPE_ETHER:
-            if (header != 'e' || _data != TYPE_ETHER)
-                return type_error(errh, "address missing");
-            if (_op != OP_EQ)
-                goto operator_not_supported;
-            memset(_mask.c, 0xFF, 6);
-            memset(_mask.c + 6, 0, 2);
-            if (mask_dt && mask_dt != TYPE_ETHER)
-                goto bad_mask;
-            else if (mask_dt)
-                memcpy(_mask.c, mask.c, 6);
-            break;
+    case TYPE_ETHER:
+        if (header != 'e' || _data != TYPE_ETHER)
+            return type_error(errh, "address missing");
+        if (_op != OP_EQ)
+            goto operator_not_supported;
+        memset(_mask.c, 0xFF, 6);
+        memset(_mask.c + 6, 0, 2);
+        if (mask_dt && mask_dt != TYPE_ETHER)
+            goto bad_mask;
+        else if (mask_dt)
+            memcpy(_mask.c, mask.c, 6);
+        break;
 
-        case TYPE_PROTO:
-            if (header != 'i')
-                goto ip_only;
-            if (_data == TYPE_INT || _data == TYPE_PROTO) {
-                if (_transp_proto != UNKNOWN && _transp_proto != _u.i)
+    case TYPE_PROTO:
+        if (header != 'i')
+            goto ip_only;
+        if (_data == TYPE_INT || _data == TYPE_PROTO)
+        {
+            if (_transp_proto != UNKNOWN && _transp_proto != _u.i)
                 return type_error(errh, "specified twice");
-                _data = TYPE_NONE;
-            } else
-                _u.i = _transp_proto;
-            _transp_proto = UNKNOWN;
-            if (_data != TYPE_NONE || _u.i == UNKNOWN)
-                goto value_missing;
-            if (_u.i >= 256) {
-                if (_op != OP_EQ || mask_dt)
+            _data = TYPE_NONE;
+        }
+        else
+            _u.i = _transp_proto;
+        _transp_proto = UNKNOWN;
+        if (_data != TYPE_NONE || _u.i == UNKNOWN)
+            goto value_missing;
+        if (_u.i >= 256)
+        {
+            if (_op != OP_EQ || mask_dt)
                 return errh->error("%<%s%>: operator or mask not supported", unparse_transp_proto(_u.i).c_str());
-                _mask.u = 0xFF;
-            } else if (mask_dt && mask_dt != TYPE_INT)
-                goto bad_mask;
-            else if (set_mask(0xFF, 0, mask_dt ? mask.u : 0, errh) < 0)
-                return -1;
-            if (_op == OP_EQ && _mask.u == 0xFF && !_op_negated) // set _transp_proto if allowed
-                _transp_proto = _u.i;
-            break;
+            _mask.u = 0xFF;
+        }
+        else if (mask_dt && mask_dt != TYPE_INT)
+            goto bad_mask;
+        else if (set_mask(0xFF, 0, mask_dt ? mask.u : 0, errh) < 0)
+            return -1;
+        if (_op == OP_EQ && _mask.u == 0xFF && !_op_negated) // set _transp_proto if allowed
+            _transp_proto = _u.i;
+        break;
 
-        case TYPE_PORT:
-            if (header != 'i')
-                goto ip_only;
-            if (_data == TYPE_INT)
-                _data = TYPE_PORT;
-            if (_data != TYPE_PORT)
-                goto value_missing;
-            if (_transp_proto == UNKNOWN)
-                _transp_proto = IP_PROTO_TCP_OR_UDP;
-            else if (_transp_proto != IP_PROTO_TCP && _transp_proto != IP_PROTO_UDP
-                 && _transp_proto != IP_PROTO_TCP_OR_UDP
-                 && _transp_proto != IP_PROTO_DCCP)
-                return errh->error("%<port%>: bad protocol %d", _transp_proto);
-            else if (mask_dt && mask_dt != TYPE_INT)
-                goto bad_mask;
-            if (set_mask(0xFFFF, 0, mask_dt ? mask.u : 0, errh) < 0)
-                return -1;
-            break;
+    case TYPE_PORT:
+        if (header != 'i')
+            goto ip_only;
+        if (_data == TYPE_INT)
+            _data = TYPE_PORT;
+        if (_data != TYPE_PORT)
+            goto value_missing;
+        if (_transp_proto == UNKNOWN)
+            _transp_proto = IP_PROTO_TCP_OR_UDP;
+        else if (_transp_proto != IP_PROTO_TCP && _transp_proto != IP_PROTO_UDP && _transp_proto != IP_PROTO_TCP_OR_UDP && _transp_proto != IP_PROTO_DCCP)
+            return errh->error("%<port%>: bad protocol %d", _transp_proto);
+        else if (mask_dt && mask_dt != TYPE_INT)
+            goto bad_mask;
+        if (set_mask(0xFFFF, 0, mask_dt ? mask.u : 0, errh) < 0)
+            return -1;
+        break;
 
-        case TYPE_TCPOPT:
-            if (header != 'i')
-                goto ip_only;
-            if (_data == TYPE_INT)
-                _data = TYPE_TCPOPT;
-            if (_data != TYPE_TCPOPT)
-                goto value_missing;
-            if (_transp_proto == UNKNOWN)
-                _transp_proto = IP_PROTO_TCP;
-            else if (_transp_proto != IP_PROTO_TCP)
-                return errh->error("%<tcp opt%>: bad protocol %d", _transp_proto);
-            if (_op != OP_EQ || _op_negated || mask_dt)
-                return type_error(errh, "operator or mask not supported");
-            if (_u.i < 0 || _u.i > 255)
-                return errh->error("%<tcp opt%>: value %d out of range", _u.i);
-            _mask.i = _u.i;
-            break;
+    case TYPE_TCPOPT:
+        if (header != 'i')
+            goto ip_only;
+        if (_data == TYPE_INT)
+            _data = TYPE_TCPOPT;
+        if (_data != TYPE_TCPOPT)
+            goto value_missing;
+        if (_transp_proto == UNKNOWN)
+            _transp_proto = IP_PROTO_TCP;
+        else if (_transp_proto != IP_PROTO_TCP)
+            return errh->error("%<tcp opt%>: bad protocol %d", _transp_proto);
+        if (_op != OP_EQ || _op_negated || mask_dt)
+            return type_error(errh, "operator or mask not supported");
+        if (_u.i < 0 || _u.i > 255)
+            return errh->error("%<tcp opt%>: value %d out of range", _u.i);
+        _mask.i = _u.i;
+        break;
 
-        case TYPE_IPECT:
-            if (header != 'i')
-                goto ip_only;
-            if (_data != TYPE_NONE && _data != TYPE_INT)
-                goto value_missing;
-            if (_data == TYPE_NONE) {
-                _mask.u = IP_ECNMASK;
-                _u.u = 0;
-                _op_negated = true;
-            } else if (mask_dt && mask_dt != TYPE_INT)
-                goto bad_mask;
-            if (set_mask(0x3, 0, mask_dt ? mask.u : 0, errh) < 0)
-                return -1;
-            _type = FIELD_TOS;
-            break;
-
-        case TYPE_IPCE:
-            if (header != 'i')
-                goto ip_only;
-            if (_data != TYPE_NONE || mask_dt)
-                goto value_not_supported;
+    case TYPE_IPECT:
+        if (header != 'i')
+            goto ip_only;
+        if (_data != TYPE_NONE && _data != TYPE_INT)
+            goto value_missing;
+        if (_data == TYPE_NONE)
+        {
             _mask.u = IP_ECNMASK;
-            _u.u = IP_ECN_CE;
-            _type = FIELD_TOS;
-            break;
-
-        case TYPE_IPFRAG:
-            if (header != 'i')
-                goto ip_only;
-            if (_data != TYPE_NONE || mask_dt)
-                goto value_not_supported;
-            _mask.u = 1; // don't want mask to be 0
-            break;
-
-        case TYPE_IPUNFRAG:
-            if (header != 'i')
-                goto ip_only;
-            if (_data != TYPE_NONE || mask_dt)
-                goto value_not_supported;
+            _u.u = 0;
             _op_negated = true;
-            _mask.u = 1; // don't want mask to be 0
-            _type = TYPE_IPFRAG;
-            break;
+        }
+        else if (mask_dt && mask_dt != TYPE_INT)
+            goto bad_mask;
+        if (set_mask(0x3, 0, mask_dt ? mask.u : 0, errh) < 0)
+            return -1;
+        _type = FIELD_TOS;
+        break;
 
-        default:
-            if (_type & TYPE_FIELD) {
-                if (header != 'i')
+    case TYPE_IPCE:
+        if (header != 'i')
+            goto ip_only;
+        if (_data != TYPE_NONE || mask_dt)
+            goto value_not_supported;
+        _mask.u = IP_ECNMASK;
+        _u.u = IP_ECN_CE;
+        _type = FIELD_TOS;
+        break;
+
+    case TYPE_IPFRAG:
+        if (header != 'i')
+            goto ip_only;
+        if (_data != TYPE_NONE || mask_dt)
+            goto value_not_supported;
+        _mask.u = 1; // don't want mask to be 0
+        break;
+
+    case TYPE_IPUNFRAG:
+        if (header != 'i')
+            goto ip_only;
+        if (_data != TYPE_NONE || mask_dt)
+            goto value_not_supported;
+        _op_negated = true;
+        _mask.u = 1; // don't want mask to be 0
+        _type = TYPE_IPFRAG;
+        break;
+
+    default:
+        if (_type & TYPE_FIELD)
+        {
+            if (header != 'i')
                 goto ip_only;
-                if (_data != TYPE_INT && _data != _type)
+            if (_data != TYPE_INT && _data != _type)
                 goto value_missing;
-                else if (mask_dt && mask_dt != TYPE_INT && mask_dt != _type)
+            else if (mask_dt && mask_dt != TYPE_INT && mask_dt != _type)
                 goto bad_mask;
-                int nbits = ((_type & FIELD_LENGTH_MASK) >> FIELD_LENGTH_SHIFT) + 1;
-                uint32_t xmask = (nbits == 32 ? 0xFFFFFFFFU : (1 << nbits) - 1);
-                if (set_mask(xmask, 0, mask_dt ? mask.u : 0, errh) < 0)
+            int nbits = ((_type & FIELD_LENGTH_MASK) >> FIELD_LENGTH_SHIFT) + 1;
+            uint32_t xmask = (nbits == 32 ? 0xFFFFFFFFU : (1 << nbits) - 1);
+            if (set_mask(xmask, 0, mask_dt ? mask.u : 0, errh) < 0)
                 return -1;
-            }
-            break;
+        }
+        break;
 
-        value_missing:
+    value_missing:
         return type_error(errh, "value missing");
-        bad_mask:
+    bad_mask:
         return type_error(errh, "bad mask");
-        value_not_supported:
+    value_not_supported:
         return type_error(errh, "value not supported");
-        operator_not_supported:
+    operator_not_supported:
         return type_error(errh, "operator not supported");
-        ip_only:
+    ip_only:
         return type_error(errh, "ip only");
     }
 
     // fix _srcdst
-    if (_type == TYPE_HOST || _type == TYPE_PORT || _type == TYPE_ETHER) {
+    if (_type == TYPE_HOST || _type == TYPE_PORT || _type == TYPE_ETHER)
+    {
         if (_srcdst == 0)
             _srcdst = SD_OR;
-    } else if (old_srcdst)
+    }
+    else if (old_srcdst)
         errh->warning("%<%s%>: %<src%> or %<dst%> ignored", unparse_type().c_str());
 
     return 0;
@@ -592,30 +651,33 @@ P4SFCIPFilter::Primitive::check(const Primitive &prev_prim, int header,
 static void
 add_exprs_for_proto(int32_t proto, int32_t mask, Classification::Wordwise::Program &p, Vector<int> &tree)
 {
-    if (mask == 0xFF && proto == IP_PROTO_TCP_OR_UDP) {
+    if (mask == 0xFF && proto == IP_PROTO_TCP_OR_UDP)
+    {
         p.start_subtree(tree);
         p.add_insn(tree, P4SFCIPFilter::offset_net + 8, htonl(IP_PROTO_TCP << 16), htonl(0x00FF0000));
         p.add_insn(tree, P4SFCIPFilter::offset_net + 8, htonl(IP_PROTO_UDP << 16), htonl(0x00FF0000));
         p.finish_subtree(tree, Classification::c_or);
-    } else if (mask == 0xFF && proto >= 256)
+    }
+    else if (mask == 0xFF && proto >= 256)
         /* nada */;
     else
         p.add_insn(tree, P4SFCIPFilter::offset_net + 8, htonl(proto << 16), htonl(mask << 16));
 }
 
-void
-P4SFCIPFilter::Primitive::add_comparison_exprs(Classification::Wordwise::Program &p, Vector<int> &tree, int offset, int shift, bool swapped, bool op_negate) const
+void P4SFCIPFilter::Primitive::add_comparison_exprs(Classification::Wordwise::Program &p, Vector<int> &tree, int offset, int shift, bool swapped, bool op_negate) const
 {
     assert(_op == P4SFCIPFilter::OP_EQ || _op == P4SFCIPFilter::OP_GT);
 
     uint32_t mask = _mask.u;
     uint32_t u = _u.u & mask;
-    if (swapped) {
+    if (swapped)
+    {
         mask = ntohl(mask);
         u = ntohl(u);
     }
 
-    if (_op == P4SFCIPFilter::OP_EQ) {
+    if (_op == P4SFCIPFilter::OP_EQ)
+    {
         p.add_insn(tree, offset, htonl(u << shift), htonl(mask << shift));
         if (_op_negated && op_negate)
             p.negate_subtree(tree, true);
@@ -639,9 +701,10 @@ P4SFCIPFilter::Primitive::add_comparison_exprs(Classification::Wordwise::Program
     int high_bit_record = 0;
     int count = 0;
 
-    while (u < mask) {
+    while (u < mask)
+    {
         int high_bit = (u > (mask >> 1));
-        int first_different_bit = 33 - ffs_msb(high_bit ? ~(u+1) & mask : u);
+        int first_different_bit = 33 - ffs_msb(high_bit ? ~(u + 1) & mask : u);
         uint32_t upper_mask;
         if (first_different_bit == 33)
             upper_mask = mask;
@@ -660,7 +723,8 @@ P4SFCIPFilter::Primitive::add_comparison_exprs(Classification::Wordwise::Program
         u &= mask;
     }
 
-    while (count > 0) {
+    while (count > 0)
+    {
         p.finish_subtree(tree, (high_bit_record & 1 ? Classification::c_and : Classification::c_or));
         high_bit_record >>= 1;
         count--;
@@ -670,8 +734,7 @@ P4SFCIPFilter::Primitive::add_comparison_exprs(Classification::Wordwise::Program
         p.negate_subtree(tree, true);
 }
 
-void
-P4SFCIPFilter::Primitive::compile(Classification::Wordwise::Program &p, Vector<int> &tree) const
+void P4SFCIPFilter::Primitive::compile(Classification::Wordwise::Program &p, Vector<int> &tree) const
 {
     p.start_subtree(tree);
 
@@ -684,127 +747,144 @@ P4SFCIPFilter::Primitive::compile(Classification::Wordwise::Program &p, Vector<i
         p.add_insn(tree, offset_net + 4, 0, htonl(0x00001FFF));
 
     // handle other types
-    switch (_type) {
-        case TYPE_HOST:
-            p.start_subtree(tree);
-            if (_srcdst == SD_SRC || _srcdst == SD_AND || _srcdst == SD_OR)
-                add_comparison_exprs(p, tree, offset_net + 12, 0, true, false);
-            if (_srcdst == SD_DST || _srcdst == SD_AND || _srcdst == SD_OR)
-                add_comparison_exprs(p, tree, offset_net + 16, 0, true, false);
-            finish_srcdst:
-            p.finish_subtree(tree, (_srcdst == SD_OR ? Classification::c_or : Classification::c_and));
-            if (_op_negated)
-                p.negate_subtree(tree, true);
-            break;
+    switch (_type)
+    {
+    case TYPE_HOST:
+        p.start_subtree(tree);
+        if (_srcdst == SD_SRC || _srcdst == SD_AND || _srcdst == SD_OR)
+            add_comparison_exprs(p, tree, offset_net + 12, 0, true, false);
+        if (_srcdst == SD_DST || _srcdst == SD_AND || _srcdst == SD_OR)
+            add_comparison_exprs(p, tree, offset_net + 16, 0, true, false);
+    finish_srcdst:
+        p.finish_subtree(tree, (_srcdst == SD_OR ? Classification::c_or : Classification::c_and));
+        if (_op_negated)
+            p.negate_subtree(tree, true);
+        break;
 
-        case TYPE_ETHER: {
+    case TYPE_ETHER:
+    {
+        p.start_subtree(tree);
+        Primitive copy(*this);
+        if (_srcdst == SD_SRC || _srcdst == SD_AND || _srcdst == SD_OR)
+        {
             p.start_subtree(tree);
-            Primitive copy(*this);
-            if (_srcdst == SD_SRC || _srcdst == SD_AND || _srcdst == SD_OR) {
-                p.start_subtree(tree);
-                memcpy(copy._u.c, _u.c, 4);
-                memcpy(copy._mask.c, _mask.c, 4);
-                copy.add_comparison_exprs(p, tree, offset_mac + 8, 0, true, false);
-                copy._u.u = copy._mask.u = 0;
-                memcpy(copy._u.c, _u.c + 4, 2);
-                memcpy(copy._mask.c, _mask.c + 4, 2);
-                copy.add_comparison_exprs(p, tree, offset_mac + 12, 0, true, false);
-                p.finish_subtree(tree, Classification::c_and);
-            }
-            if (_srcdst == SD_DST || _srcdst == SD_AND || _srcdst == SD_OR) {
-                p.start_subtree(tree);
-                copy._u.u = copy._mask.u = 0;
-                memcpy(copy._u.c + 2, _u.c, 2);
-                memcpy(copy._mask.c + 2, _mask.c, 2);
-                copy.add_comparison_exprs(p, tree, offset_mac, 0, true, false);
-                memcpy(copy._u.c, _u.c + 2, 4);
-                memcpy(copy._mask.c, _mask.c + 2, 4);
-                copy.add_comparison_exprs(p, tree, offset_mac + 4, 0, true, false);
-                p.finish_subtree(tree, Classification::c_and);
-            }
-            goto finish_srcdst;
+            memcpy(copy._u.c, _u.c, 4);
+            memcpy(copy._mask.c, _mask.c, 4);
+            copy.add_comparison_exprs(p, tree, offset_mac + 8, 0, true, false);
+            copy._u.u = copy._mask.u = 0;
+            memcpy(copy._u.c, _u.c + 4, 2);
+            memcpy(copy._mask.c, _mask.c + 4, 2);
+            copy.add_comparison_exprs(p, tree, offset_mac + 12, 0, true, false);
+            p.finish_subtree(tree, Classification::c_and);
         }
-
-        case TYPE_PROTO:
-            if (_transp_proto < 256)
-                add_comparison_exprs(p, tree, offset_net + 8, 16, false, true);
-            break;
-
-        case TYPE_IPFRAG:
-            p.add_insn(tree, offset_net + 4, 0, htonl(0x00003FFF));
-            if (!_op_negated)
-                p.negate_subtree(tree, true);
-            break;
-
-        case TYPE_PORT:
+        if (_srcdst == SD_DST || _srcdst == SD_AND || _srcdst == SD_OR)
+        {
             p.start_subtree(tree);
-            if (_srcdst == SD_SRC || _srcdst == SD_AND || _srcdst == SD_OR)
-                add_comparison_exprs(p, tree, offset_transp, 16, false, false);
-            if (_srcdst == SD_DST || _srcdst == SD_AND || _srcdst == SD_OR)
-                add_comparison_exprs(p, tree, offset_transp, 0, false, false);
-            goto finish_srcdst;
+            copy._u.u = copy._mask.u = 0;
+            memcpy(copy._u.c + 2, _u.c, 2);
+            memcpy(copy._mask.c + 2, _mask.c, 2);
+            copy.add_comparison_exprs(p, tree, offset_mac, 0, true, false);
+            memcpy(copy._u.c, _u.c + 2, 4);
+            memcpy(copy._mask.c, _mask.c + 2, 4);
+            copy.add_comparison_exprs(p, tree, offset_mac + 4, 0, true, false);
+            p.finish_subtree(tree, Classification::c_and);
+        }
+        goto finish_srcdst;
+    }
 
-        case TYPE_TCPOPT:
-            p.add_insn(tree, offset_transp + 12, htonl(_u.u << 16), htonl(_mask.u << 16));
-            break;
+    case TYPE_PROTO:
+        if (_transp_proto < 256)
+            add_comparison_exprs(p, tree, offset_net + 8, 16, false, true);
+        break;
 
-        default:
-            if (_type & TYPE_FIELD) {
-                int offset = (_type & FIELD_OFFSET_MASK) >> FIELD_OFFSET_SHIFT;
-                int length = ((_type & FIELD_LENGTH_MASK) >> FIELD_LENGTH_SHIFT) + 1;
-                int word_offset = (offset >> 3) & ~3, bit_offset = offset & 0x1F;
-                int base_offset = (_type & FIELD_PROTO_MASK ? offset_transp : offset_net);
-                add_comparison_exprs(p, tree, base_offset + word_offset, 32 - (bit_offset + length), false, true);
-            } else
-                assert(0);
-            break;
+    case TYPE_IPFRAG:
+        p.add_insn(tree, offset_net + 4, 0, htonl(0x00003FFF));
+        if (!_op_negated)
+            p.negate_subtree(tree, true);
+        break;
+
+    case TYPE_PORT:
+        p.start_subtree(tree);
+        if (_srcdst == SD_SRC || _srcdst == SD_AND || _srcdst == SD_OR)
+            add_comparison_exprs(p, tree, offset_transp, 16, false, false);
+        if (_srcdst == SD_DST || _srcdst == SD_AND || _srcdst == SD_OR)
+            add_comparison_exprs(p, tree, offset_transp, 0, false, false);
+        goto finish_srcdst;
+
+    case TYPE_TCPOPT:
+        p.add_insn(tree, offset_transp + 12, htonl(_u.u << 16), htonl(_mask.u << 16));
+        break;
+
+    default:
+        if (_type & TYPE_FIELD)
+        {
+            int offset = (_type & FIELD_OFFSET_MASK) >> FIELD_OFFSET_SHIFT;
+            int length = ((_type & FIELD_LENGTH_MASK) >> FIELD_LENGTH_SHIFT) + 1;
+            int word_offset = (offset >> 3) & ~3, bit_offset = offset & 0x1F;
+            int base_offset = (_type & FIELD_PROTO_MASK ? offset_transp : offset_net);
+            add_comparison_exprs(p, tree, base_offset + word_offset, 32 - (bit_offset + length), false, true);
+        }
+        else
+            assert(0);
+        break;
     }
 
     p.finish_subtree(tree, Classification::c_and);
 }
 
-
 static void
 separate_text(const String &text, Vector<String> &words)
 {
-    const char* s = text.data();
+    const char *s = text.data();
     int len = text.length();
     int pos = 0;
-    while (pos < len) {
-        while (pos < len && isspace((unsigned char) s[pos]))
+    while (pos < len)
+    {
+        while (pos < len && isspace((unsigned char)s[pos]))
             pos++;
-        switch (s[pos]) {
-            case '&': case '|':
-                if (pos < len - 1 && s[pos+1] == s[pos])
-                    goto two_char;
-                goto one_char;
+        switch (s[pos])
+        {
+        case '&':
+        case '|':
+            if (pos < len - 1 && s[pos + 1] == s[pos])
+                goto two_char;
+            goto one_char;
 
-            case '<': case '>': case '!': case '=':
-                if (pos < len - 1 && s[pos+1] == '=')
-                    goto two_char;
-                goto one_char;
+        case '<':
+        case '>':
+        case '!':
+        case '=':
+            if (pos < len - 1 && s[pos + 1] == '=')
+                goto two_char;
+            goto one_char;
 
-            case '(': case ')': case '[': case ']': case ',': case ';':
-            case '?':
-                one_char:
-                words.push_back(text.substring(pos, 1));
+        case '(':
+        case ')':
+        case '[':
+        case ']':
+        case ',':
+        case ';':
+        case '?':
+        one_char:
+            words.push_back(text.substring(pos, 1));
+            pos++;
+            break;
+
+        two_char:
+            words.push_back(text.substring(pos, 2));
+            pos += 2;
+            break;
+
+        default:
+        {
+            int first = pos;
+            while (pos < len && (isalnum((unsigned char)s[pos]) || s[pos] == '-' || s[pos] == '.' || s[pos] == '/' || s[pos] == '@' || s[pos] == '_' || s[pos] == ':'))
                 pos++;
-                break;
-
-                two_char:
-                words.push_back(text.substring(pos, 2));
-                pos += 2;
-                break;
-
-            default: {
-                int first = pos;
-                while (pos < len && (isalnum((unsigned char) s[pos]) || s[pos] == '-' || s[pos] == '.' || s[pos] == '/' || s[pos] == '@' || s[pos] == '_' || s[pos] == ':'))
-                    pos++;
-                if (pos == first)
-                    pos++;
-                words.push_back(text.substring(first, pos - first));
-                break;
-            }
+            if (pos == first)
+                pos++;
+            words.push_back(text.substring(first, pos - first));
+            break;
+        }
         }
     }
 }
@@ -828,120 +908,132 @@ separate_text(const String &text, Vector<String> &words)
  *  |   quals relop data
  */
 
-int
-P4SFCIPFilter::Parser::parse_expr_iterative(int pos)
+int P4SFCIPFilter::Parser::parse_expr_iterative(int pos)
 {
     Vector<parse_state> stk;
     stk.push_back(parse_state(s_expr0));
 
-    while (stk.size()) {
+    while (stk.size())
+    {
         parse_state &ps = stk.back();
         int new_state = -1;
 
-        switch (ps.state) {
-            case s_expr0:
-                _prog.start_subtree(_tree);
-                ps.state = s_expr1;
-                new_state = s_orexpr0;
-                break;
+        switch (ps.state)
+        {
+        case s_expr0:
+            _prog.start_subtree(_tree);
+            ps.state = s_expr1;
+            new_state = s_orexpr0;
+            break;
 
-            case s_expr1:
-                if (pos >= _words.size() || _words[pos] != "?")
-                    goto finish_expr;
-                ++pos;
-                ps.state = s_expr2;
-                new_state = s_expr0;
-                break;
+        case s_expr1:
+            if (pos >= _words.size() || _words[pos] != "?")
+                goto finish_expr;
+            ++pos;
+            ps.state = s_expr2;
+            new_state = s_expr0;
+            break;
 
-            case s_expr2:
-                if (pos == ps.last_pos || pos >= _words.size() || _words[pos] != ":") {
-                    _errh->error("missing %<:%> in ternary expression");
-                    goto finish_expr;
-                }
-                ++pos;
-                ps.state = s_expr1;
-                new_state = s_orexpr0;
-                break;
-            finish_expr:
-                _prog.finish_subtree(_tree, Classification::c_ternary);
-                break;
+        case s_expr2:
+            if (pos == ps.last_pos || pos >= _words.size() || _words[pos] != ":")
+            {
+                _errh->error("missing %<:%> in ternary expression");
+                goto finish_expr;
+            }
+            ++pos;
+            ps.state = s_expr1;
+            new_state = s_orexpr0;
+            break;
+        finish_expr:
+            _prog.finish_subtree(_tree, Classification::c_ternary);
+            break;
 
-            case s_orexpr0:
-                _prog.start_subtree(_tree);
-                ps.state = s_orexpr1;
-                new_state = s_term0;
-                break;
+        case s_orexpr0:
+            _prog.start_subtree(_tree);
+            ps.state = s_orexpr1;
+            new_state = s_term0;
+            break;
 
-            case s_orexpr1:
-                if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
-                    goto finish_orexpr;
-                ++pos;
-                new_state = s_term0;
-                break;
+        case s_orexpr1:
+            if (pos >= _words.size() || (_words[pos] != "or" && _words[pos] != "||"))
+                goto finish_orexpr;
+            ++pos;
+            new_state = s_term0;
+            break;
 
-            finish_orexpr:
-                _prog.finish_subtree(_tree, Classification::c_or);
-                break;
+        finish_orexpr:
+            _prog.finish_subtree(_tree, Classification::c_or);
+            break;
 
-            case s_term0:
-                _prog.start_subtree(_tree);
+        case s_term0:
+            _prog.start_subtree(_tree);
+            ps.state = s_term1;
+            new_state = s_factor0;
+            break;
+
+        case s_term1:
+        case s_term2:
+            if (pos == ps.last_pos)
+            {
+                if (ps.state == s_term1)
+                    _errh->error("missing expression");
+                goto finish_term;
+            }
+            if (pos < _words.size() && (_words[pos] == "and" || _words[pos] == "&&"))
+            {
                 ps.state = s_term1;
-                new_state = s_factor0;
-                break;
+                ++pos;
+            }
+            else
+                ps.state = s_term2;
+            new_state = s_factor0;
+            break;
+        finish_term:
+            _prog.finish_subtree(_tree, Classification::c_and);
+            break;
 
-            case s_term1:
-            case s_term2:
-                if (pos == ps.last_pos) {
-                    if (ps.state == s_term1)
-                        _errh->error("missing expression");
-                    goto finish_term;
-                }
-                if (pos < _words.size() && (_words[pos] == "and" || _words[pos] == "&&")) {
-                    ps.state = s_term1;
-                    ++pos;
-                } else
-                    ps.state = s_term2;
-                new_state = s_factor0;
-                break;
-            finish_term:
-                _prog.finish_subtree(_tree, Classification::c_and);
-                break;
-
-            case s_factor0:
-            case s_factor0_neg:
-                if (pos < _words.size() && (_words[pos] == "not" || _words[pos] == "!")) {
-                    ps.state += (s_factor1 - s_factor0);
-                    new_state = (ps.state == s_factor1 ? s_factor0_neg : s_factor0);
-                    ++pos;
-                } else if (pos < _words.size() && _words[pos] == "(") {
-                    ps.state += (s_factor2 - s_factor0);
-                    new_state = s_expr0;
-                    ++pos;
-                } else
-                    pos = parse_test(pos, ps.state == s_factor0_neg);
-                break;
-            case s_factor1:
-            case s_factor1_neg:
-                if (pos == ps.last_pos)
-                    _errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
-                break;
-            case s_factor2:
-            case s_factor2_neg:
-                if (pos == ps.last_pos)
-                    _errh->error("missing expression after %<(%>");
-                if (pos < _words.size() && _words[pos] == ")")
-                    ++pos;
-                else if (pos != ps.last_pos)
-                    _errh->error("missing %<)%>");
-                if (ps.state == s_factor2_neg)
-                    _prog.negate_subtree(_tree);
-                break;
+        case s_factor0:
+        case s_factor0_neg:
+            if (pos < _words.size() && (_words[pos] == "not" || _words[pos] == "!"))
+            {
+                ps.state += (s_factor1 - s_factor0);
+                new_state = (ps.state == s_factor1 ? s_factor0_neg : s_factor0);
+                ++pos;
+            }
+            else if (pos < _words.size() && _words[pos] == "(")
+            {
+                ps.state += (s_factor2 - s_factor0);
+                new_state = s_expr0;
+                ++pos;
+            }
+            else
+                pos = parse_test(pos, ps.state == s_factor0_neg);
+            break;
+        case s_factor1:
+        case s_factor1_neg:
+            if (pos == ps.last_pos)
+                _errh->error("missing expression after %<%s%>", _words[pos - 1].c_str());
+            break;
+        case s_factor2:
+        case s_factor2_neg:
+            if (pos == ps.last_pos)
+                _errh->error("missing expression after %<(%>");
+            if (pos < _words.size() && _words[pos] == ")")
+                ++pos;
+            else if (pos != ps.last_pos)
+                _errh->error("missing %<)%>");
+            if (ps.state == s_factor2_neg)
+                _prog.negate_subtree(_tree);
+            break;
         }
 
-        if (new_state >= 0) {
+        if (new_state >= 0)
+        {
             ps.last_pos = pos;
             stk.push_back(parse_state(new_state));
-        } else {
+        }
+        else
+        {
             stk.pop_back();
         }
     }
@@ -950,14 +1042,15 @@ P4SFCIPFilter::Parser::parse_expr_iterative(int pos)
 }
 
 static int
-parse_brackets(P4SFCIPFilter::Primitive& prim, const Vector<String>& words, int pos,
-           ErrorHandler* errh)
+parse_brackets(P4SFCIPFilter::Primitive &prim, const Vector<String> &words, int pos,
+               ErrorHandler *errh)
 {
     int first_pos = pos + 1;
     String combination;
     for (pos++; pos < words.size() && words[pos] != "]"; pos++)
         combination += words[pos];
-    if (pos >= words.size()) {
+    if (pos >= words.size())
+    {
         errh->error("missing %<]%>");
         return first_pos;
     }
@@ -965,61 +1058,62 @@ parse_brackets(P4SFCIPFilter::Primitive& prim, const Vector<String>& words, int 
 
     // parse 'combination'
     int fieldpos, len = 1;
-    const char* colon = find(combination.begin(), combination.end(), ':');
-    const char* comma = find(combination.begin(), combination.end(), ',');
-    if (colon < combination.end() - 1) {
-        if (cp_integer(combination.begin(), colon, 0, &fieldpos) == colon
-            && cp_integer(colon + 1, combination.end(), 0, &len) == combination.end())
+    const char *colon = find(combination.begin(), combination.end(), ':');
+    const char *comma = find(combination.begin(), combination.end(), ',');
+    if (colon < combination.end() - 1)
+    {
+        if (cp_integer(combination.begin(), colon, 0, &fieldpos) == colon && cp_integer(colon + 1, combination.end(), 0, &len) == combination.end())
             goto non_syntax_error;
-        } else if (comma < combination.end() - 1) {
-            int pos2;
-            if (cp_integer(combination.begin(), comma, 0, &fieldpos) == comma
-            && cp_integer(comma + 1, combination.end(), 0, &pos2) == combination.end()) {
-              len = pos2 - fieldpos + 1;
-              goto non_syntax_error;
-            }
-        } else if (IntArg().parse(combination, fieldpos))
+    }
+    else if (comma < combination.end() - 1)
+    {
+        int pos2;
+        if (cp_integer(combination.begin(), comma, 0, &fieldpos) == comma && cp_integer(comma + 1, combination.end(), 0, &pos2) == combination.end())
+        {
+            len = pos2 - fieldpos + 1;
             goto non_syntax_error;
-        errh->error("syntax error after %<[%>, expected %<[POS]%> or %<[POS:LEN]%>");
-        return pos;
+        }
+    }
+    else if (IntArg().parse(combination, fieldpos))
+        goto non_syntax_error;
+    errh->error("syntax error after %<[%>, expected %<[POS]%> or %<[POS:LEN]%>");
+    return pos;
 
-    non_syntax_error:
+non_syntax_error:
     int multiplier = 8;
     fieldpos *= multiplier, len *= multiplier;
     if (len < 1 || len > 32)
         errh->error("LEN in %<[POS:LEN]%> out of range, should be between 1 and 4");
     else if ((fieldpos & ~31) != ((fieldpos + len - 1) & ~31))
-        errh->error("field [%d:%d] does not fit in a single word", fieldpos/multiplier, len/multiplier);
-    else {
+        errh->error("field [%d:%d] does not fit in a single word", fieldpos / multiplier, len / multiplier);
+    else
+    {
         int transp = prim._transp_proto;
         if (transp == P4SFCIPFilter::UNKNOWN)
             transp = 0;
-        prim.set_type(P4SFCIPFilter::TYPE_FIELD
-              | (transp << P4SFCIPFilter::FIELD_PROTO_SHIFT)
-              | (fieldpos << P4SFCIPFilter::FIELD_OFFSET_SHIFT)
-              | ((len - 1) << P4SFCIPFilter::FIELD_LENGTH_SHIFT), errh);
+        prim.set_type(P4SFCIPFilter::TYPE_FIELD | (transp << P4SFCIPFilter::FIELD_PROTO_SHIFT) | (fieldpos << P4SFCIPFilter::FIELD_OFFSET_SHIFT) | ((len - 1) << P4SFCIPFilter::FIELD_LENGTH_SHIFT), errh);
     }
     return pos;
 }
 
-int
-P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
+int P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
 {
     if (pos >= _words.size())
         return pos;
     String first_word = _words[pos];
-    if (first_word == ")" || first_word == "||" || first_word == "or"
-        || first_word == "?" || first_word == ":")
+    if (first_word == ")" || first_word == "||" || first_word == "or" || first_word == "?" || first_word == ":")
         return pos;
 
     // 'true' and 'false'
-    if (first_word == "true") {
+    if (first_word == "true")
+    {
         _prog.add_insn(_tree, 0, 0, 0);
         if (negated)
             _prog.negate_subtree(_tree);
         return pos + 1;
     }
-    if (first_word == "false") {
+    if (first_word == "false")
+    {
         _prog.add_insn(_tree, 0, 0, 0);
         if (!negated)
             _prog.negate_subtree(_tree);
@@ -1034,39 +1128,52 @@ P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
     int header = 0;
 
     // collect qualifiers
-    for (; pos < _words.size(); pos++) {
+    for (; pos < _words.size(); pos++)
+    {
         String wd = _words[pos];
         uint32_t wdata;
         int wt = lookup(wd, 0, UNKNOWN, wdata, _context, 0);
 
-        if (wt >= 0 && wt == TYPE_TYPE) {
+        if (wt >= 0 && wt == TYPE_TYPE)
+        {
             prim.set_type(wdata, _errh);
             if ((wdata & TYPE_FIELD) && (wdata & FIELD_PROTO_MASK))
                 prim.set_transp_proto((wdata & FIELD_PROTO_MASK) >> FIELD_PROTO_SHIFT, _errh);
-        } else if (wt >= 0 && wt == TYPE_PROTO)
+        }
+        else if (wt >= 0 && wt == TYPE_PROTO)
             prim.set_transp_proto(wdata, _errh);
         else if (wt != -1)
             break;
-        else if (wd == "src") {
-            if (pos < _words.size() - 2 && (_words[pos+2] == "dst" || _words[pos+2] == "dest")) {
-                if (_words[pos+1] == "and" || _words[pos+1] == "&&") {
+        else if (wd == "src")
+        {
+            if (pos < _words.size() - 2 && (_words[pos + 2] == "dst" || _words[pos + 2] == "dest"))
+            {
+                if (_words[pos + 1] == "and" || _words[pos + 1] == "&&")
+                {
                     prim.set_srcdst(SD_AND, _errh);
                     pos += 2;
-                } else if (_words[pos+1] == "or" || _words[pos+1] == "||") {
+                }
+                else if (_words[pos + 1] == "or" || _words[pos + 1] == "||")
+                {
                     prim.set_srcdst(SD_OR, _errh);
                     pos += 2;
-                } else
+                }
+                else
                     prim.set_srcdst(SD_SRC, _errh);
-            } else
+            }
+            else
                 prim.set_srcdst(SD_SRC, _errh);
-        } else if (wd == "dst" || wd == "dest")
+        }
+        else if (wd == "dst" || wd == "dest")
             prim.set_srcdst(SD_DST, _errh);
 
-        else if (wd == "ip" || wd == "ether") {
+        else if (wd == "ip" || wd == "ether")
+        {
             if (header)
                 break;
             header = wd[0];
-        } else if (wd == "not" || wd == "!")
+        }
+        else if (wd == "not" || wd == "!")
             negated = !negated;
         else
             break;
@@ -1080,7 +1187,8 @@ P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
 
     // optional [] syntax
     String wd = (pos >= _words.size() - 1 ? String() : _words[pos]);
-    if (wd == "[" && pos > first_pos && prim._type == TYPE_NONE) {
+    if (wd == "[" && pos > first_pos && prim._type == TYPE_NONE)
+    {
         pos = parse_brackets(prim, _words, pos, _errh);
         wd = (pos >= _words.size() - 1 ? String() : _words[pos]);
     }
@@ -1088,18 +1196,25 @@ P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
     // optional bitmask
     int mask_dt = 0;
     PrimitiveData provided_mask;
-    if (wd == "&" && pos < _words.size() - 1) {
-        if (IntArg().parse(_words[pos + 1], provided_mask.u)) {
+    if (wd == "&" && pos < _words.size() - 1)
+    {
+        if (IntArg().parse(_words[pos + 1], provided_mask.u))
+        {
             mask_dt = TYPE_INT;
             pos += 2;
-        } else if (header != 'e' && IPAddressArg().parse(_words[pos + 1], provided_mask.ip4, _context)) {
+        }
+        else if (header != 'e' && IPAddressArg().parse(_words[pos + 1], provided_mask.ip4, _context))
+        {
             mask_dt = TYPE_HOST;
             pos += 2;
-        } else if (header != 'i' && EtherAddressArg().parse(_words[pos + 1], provided_mask.c, _context)) {
+        }
+        else if (header != 'i' && EtherAddressArg().parse(_words[pos + 1], provided_mask.c, _context))
+        {
             mask_dt = TYPE_ETHER;
             pos += 2;
         }
-        if (mask_dt && mask_dt != TYPE_ETHER && !provided_mask.u) {
+        if (mask_dt && mask_dt != TYPE_ETHER && !provided_mask.u)
+        {
             _errh->error("zero mask ignored");
             mask_dt = 0;
         }
@@ -1116,57 +1231,70 @@ P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
         prim._op = OP_GT;
     else if (wd == "<")
         prim._op = OP_LT;
-    else if (wd == ">=") {
+    else if (wd == ">=")
+    {
         prim._op = OP_LT;
         prim._op_negated = true;
-    } else if (wd == "<=") {
+    }
+    else if (wd == "<=")
+    {
         prim._op = OP_GT;
         prim._op_negated = true;
-    } else
+    }
+    else
         pos--;
 
     // now collect the actual data
-    if (pos < _words.size()) {
+    if (pos < _words.size())
+    {
         wd = _words[pos];
         uint32_t wdata;
         int wt = lookup(wd, prim._type, prim._transp_proto, wdata, _context, _errh);
         pos++;
 
-        if (wt == -2)       // ambiguous or incorrect word type
+        if (wt == -2) // ambiguous or incorrect word type
             /* absorb word, but do nothing */
             prim._type = -2;
-        else if (wt != -1 && wt != TYPE_TYPE) {
+        else if (wt != -1 && wt != TYPE_TYPE)
+        {
             prim._data = wt;
             prim._u.u = wdata;
-        } else if (IntArg().parse(wd, prim._u.i))
+        }
+        else if (IntArg().parse(wd, prim._u.i))
             prim._data = TYPE_INT;
-        else if (header != 'e' && IPAddressArg().parse(wd, prim._u.ip4, _context)) {
-            if (pos < _words.size() - 1 && _words[pos] == "mask"
-                && IPAddressArg().parse(_words[pos+1], prim._mask.ip4, _context)) {
+        else if (header != 'e' && IPAddressArg().parse(wd, prim._u.ip4, _context))
+        {
+            if (pos < _words.size() - 1 && _words[pos] == "mask" && IPAddressArg().parse(_words[pos + 1], prim._mask.ip4, _context))
+            {
                 pos += 2;
                 prim._data = TYPE_NET;
-            } else if (prim._type == TYPE_NET && IPPrefixArg().parse(wd, prim._u.ip4, prim._mask.ip4, _context))
+            }
+            else if (prim._type == TYPE_NET && IPPrefixArg().parse(wd, prim._u.ip4, prim._mask.ip4, _context))
                 prim._data = TYPE_NET;
             else
                 prim._data = TYPE_HOST;
-        } else if (header != 'e' && IPPrefixArg().parse(wd, prim._u.ip4, prim._mask.ip4, _context))
+        }
+        else if (header != 'e' && IPPrefixArg().parse(wd, prim._u.ip4, prim._mask.ip4, _context))
             prim._data = TYPE_NET;
         else if (header != 'i' && EtherAddressArg().parse(wd, prim._u.c, _context))
             prim._data = TYPE_ETHER;
-        else {
+        else
+        {
             if (prim._op != OP_EQ || prim._op_negated)
                 _errh->error("dangling operator near %<%s%>", wd.c_str());
             pos--;
         }
     }
 
-    if (pos == first_pos) {
+    if (pos == first_pos)
+    {
         _errh->error("empty term near %<%s%>", wd.c_str());
         return pos;
     }
 
     // add if it is valid
-    if (prim.check(_prev_prim, header, mask_dt, provided_mask, _errh) >= 0) {
+    if (prim.check(_prev_prim, header, mask_dt, provided_mask, _errh) >= 0)
+    {
         prim.compile(_prog, _tree);
         if (negated)
             _prog.negate_subtree(_tree);
@@ -1176,35 +1304,43 @@ P4SFCIPFilter::Parser::parse_test(int pos, bool negated)
     return pos;
 }
 
-void
-P4SFCIPFilter::parse_program(Classification::Wordwise::CompressedProgram &zprog,
-            const Vector<String> &conf, int noutputs,
-            const Element *context, ErrorHandler *errh)
+void P4SFCIPFilter::parse_program(Classification::Wordwise::CompressedProgram &zprog,
+                                  const Vector<String> &conf, int noutputs,
+                                  const Element *context, ErrorHandler *errh)
 {
     Vector<Classification::Wordwise::Program> progs;
 
     // [QUALS] [host|net|port|proto] [data]
     // QUALS ::= src | dst | src and dst | src or dst | \empty
     //        |  ip | icmp | tcp | udp
-    for (int argno = 0; argno < conf.size(); argno++) {
+    for (int argno = 0; argno < conf.size(); argno++)
+    {
         Vector<String> words;
         separate_text(cp_unquote(conf[argno]), words);
+#ifdef DEBUG
+        for (size_t i = 0; i < words.size(); i++)
+            click_chatter("word %d.%d %s", argno, i, words[i].c_str());
+#endif
 
-        if (words.size() == 0) {
+        if (words.size() == 0)
+        {
             errh->error("empty pattern %d", argno);
             continue;
         }
 
         PrefixErrorHandler cerrh(errh, "pattern " + String(argno) + ": ");
 
-        if (words[0] == "file") {
-            if (words.size() != 2) {
+        if (words[0] == "file")
+        {
+            if (words.size() != 2)
+            {
                 cerrh.error("file must have a single argument, the filename");
                 continue;
             }
             FILE *fp = NULL;
             fp = fopen(words[1].c_str(), "r");
-            if (fp == NULL) {
+            if (fp == NULL)
+            {
                 cerrh.error("Could not open file %s", words[1].c_str());
                 continue;
             }
@@ -1213,7 +1349,8 @@ P4SFCIPFilter::parse_program(Classification::Wordwise::CompressedProgram &zprog,
             size_t len;
             int lineno = 0;
             // Read file line-by-line (or rule-by-rule)
-            while ((getline(&line, &len, fp)) != -1) {
+            while ((getline(&line, &len, fp)) != -1)
+            {
                 if (len == 0)
                     continue;
                 String s = String(line);
@@ -1222,21 +1359,23 @@ P4SFCIPFilter::parse_program(Classification::Wordwise::CompressedProgram &zprog,
                 if (s.empty())
                     continue;
 
-                PrefixErrorHandler csuberrh(errh, "file " + words[1] + "/pattern " + String(lineno)+": ");
+                PrefixErrorHandler csuberrh(errh, "file " + words[1] + "/pattern " + String(lineno) + ": ");
 
                 Vector<String> subwords;
                 separate_text(cp_unquote(s), subwords);
-                add_pattern(subwords,csuberrh,context,noutputs, progs);
+                add_pattern(subwords, csuberrh, context, noutputs, progs);
                 lineno++;
             }
-        } else
-            add_pattern(words,cerrh,context,noutputs, progs);
+        }
+        else
+            add_pattern(words, cerrh, context, noutputs, progs);
     }
 
-    static const int offset_map[] = { offset_net + 8, offset_net + 3 };
+    static const int offset_map[] = {offset_net + 8, offset_net + 3};
     // merge programs
     for (int merge_step = 1; merge_step < progs.size(); merge_step *= 2)
-        for (int i = 0; i + merge_step < progs.size(); i += 2 * merge_step) {
+        for (int i = 0; i + merge_step < progs.size(); i += 2 * merge_step)
+        {
             progs[i].add_or_program(progs[i + merge_step]);
             progs[i].optimize(offset_map, offset_map + 2, Classification::offset_max);
         }
@@ -1256,67 +1395,69 @@ P4SFCIPFilter::parse_program(Classification::Wordwise::CompressedProgram &zprog,
     // click_chatter("%s", zprog.unparse().c_str());
 }
 
-void
-P4SFCIPFilter::add_pattern(Vector<String> &words, PrefixErrorHandler &cerrh,
-            const Element *context, int noutputs,
-            Vector<Classification::Wordwise::Program> &progs)
+void P4SFCIPFilter::add_pattern(Vector<String> &words, PrefixErrorHandler &cerrh,
+                                const Element *context, int noutputs,
+                                Vector<Classification::Wordwise::Program> &progs)
 {
     // get slot
     int slot = -Classification::j_never;
     {
         String slotwd = words[0];
-        if (slotwd == "allow") {
+        if (slotwd == "allow")
+        {
             slot = 0;
             if (noutputs == 0)
                 cerrh.error("%<allow%> is meaningless, element has zero outputs");
-        } else if (slotwd == "deny" || slotwd == "drop")
+        }
+        else if (slotwd == "deny" || slotwd == "drop")
             /* nada */;
-        else if (IntArg().parse(slotwd, slot)) {
-            if (slot < 0 || slot >= noutputs) {
+        else if (IntArg().parse(slotwd, slot))
+        {
+            if (slot < 0 || slot >= noutputs)
+            {
                 cerrh.error("slot %<%d%> out of range", slot);
                 slot = -Classification::j_never;
             }
-        } else
+        }
+        else
             cerrh.error("unknown slot ID %<%s%>", slotwd.c_str());
     }
 
     progs.push_back(Classification::Wordwise::Program());
-    Classification::Wordwise::Program& prog = progs.back();
+    Classification::Wordwise::Program &prog = progs.back();
     Vector<int> tree = prog.init_subtree();
     prog.start_subtree(tree);
 
     // check for "-"
-    if (words.size() == 1
-        || (words.size() == 2
-        && (words[1] == "-" || words[1] == "any" || words[1] == "all")))
+    if (words.size() == 1 || (words.size() == 2 && (words[1] == "-" || words[1] == "any" || words[1] == "all")))
         prog.add_insn(tree, 0, 0, 0);
-    else {
+    else
+    {
         Parser parser(words, tree, prog, context, &cerrh);
         int pos = parser.parse_expr_iterative(1);
         if (pos < words.size())
-        cerrh.error("garbage after expression at %<%s%>", words[pos].c_str());
+            cerrh.error("garbage after expression at %<%s%>", words[pos].c_str());
     }
 
     prog.finish_subtree(tree, Classification::c_and, -slot, Classification::j_failure);
 }
 
-int
-P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
+int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
 {
     // Consume key-value argument before parsing the rules
-    if (Args(this, errh).bind(conf)
-        .read("CACHING", _caching)
-        .consume() < 0)
+    if (Args(this, errh).bind(conf).read("CACHING", _caching).consume() < 0)
         return -1;
 
-    if (_caching) {
+    if (_caching)
+    {
         errh->message("%s::%s: Caching mode enabled", name().c_str(), class_name());
     }
 
     IPFilterProgram zprog;
     parse_program(zprog, conf, noutputs(), this, errh);
 
-    if (!errh->nerrors()) {
+    if (!errh->nerrors())
+    {
         _zprog = zprog;
         return 0;
     }
@@ -1329,56 +1470,70 @@ P4SFCIPFilter::read_handler(Element *e, void *thunk)
 {
     P4SFCIPFilter *ipf = static_cast<P4SFCIPFilter *>(e);
 
-    switch ((intptr_t)thunk) {
-        case H_PROGRAM: {
-            return ipf->_zprog.unparse();
-        }
-        case H_CACHE_HITS: {
-            if (!ipf->_caching){
-                return "-1";
-            }
-            return String(ipf->_cache.cache_hits_nb);
-        }
-        case H_CACHE_MISSES: {
-            if (!ipf->_caching){
-                return "-1";
-            }
-            return String(ipf->_cache.cache_misses_nb);
-        }
-        case H_CACHE_TOTAL: {
-            if (!ipf->_caching){
-                return "-1";
-            }
-            return String(ipf->_cache.cache_hits_nb + ipf->_cache.cache_misses_nb);
-        }
-        case H_CACHE_HITS_RATIO: {
-            if (!ipf->_caching) {
-                return "-1";
-            }
-            uint64_t tot = ipf->_cache.cache_hits_nb + ipf->_cache.cache_misses_nb;
-            if (tot == 0) {
-                return "0";
-            }
-            return String(((float) ipf->_cache.cache_hits_nb / (float) tot)*100);
-        }
-        case H_CACHE_MISSES_RATIO: {
-            if (!ipf->_caching) {
-                return "-1";
-            }
-            uint64_t tot = ipf->_cache.cache_hits_nb + ipf->_cache.cache_misses_nb;
-            if (tot == 0) {
-                return "0";
-            }
-            return String(((float) ipf->_cache.cache_misses_nb / (float) tot)*100);
-        }
-        default: {
+    switch ((intptr_t)thunk)
+    {
+    case H_PROGRAM:
+    {
+        return ipf->_zprog.unparse();
+    }
+    case H_CACHE_HITS:
+    {
+        if (!ipf->_caching)
+        {
             return "-1";
         }
+        return String(ipf->_cache.cache_hits_nb);
+    }
+    case H_CACHE_MISSES:
+    {
+        if (!ipf->_caching)
+        {
+            return "-1";
+        }
+        return String(ipf->_cache.cache_misses_nb);
+    }
+    case H_CACHE_TOTAL:
+    {
+        if (!ipf->_caching)
+        {
+            return "-1";
+        }
+        return String(ipf->_cache.cache_hits_nb + ipf->_cache.cache_misses_nb);
+    }
+    case H_CACHE_HITS_RATIO:
+    {
+        if (!ipf->_caching)
+        {
+            return "-1";
+        }
+        uint64_t tot = ipf->_cache.cache_hits_nb + ipf->_cache.cache_misses_nb;
+        if (tot == 0)
+        {
+            return "0";
+        }
+        return String(((float)ipf->_cache.cache_hits_nb / (float)tot) * 100);
+    }
+    case H_CACHE_MISSES_RATIO:
+    {
+        if (!ipf->_caching)
+        {
+            return "-1";
+        }
+        uint64_t tot = ipf->_cache.cache_hits_nb + ipf->_cache.cache_misses_nb;
+        if (tot == 0)
+        {
+            return "0";
+        }
+        return String(((float)ipf->_cache.cache_misses_nb / (float)tot) * 100);
+    }
+    default:
+    {
+        return "-1";
+    }
     }
 }
 
-void
-P4SFCIPFilter::add_handlers()
+void P4SFCIPFilter::add_handlers()
 {
     add_read_handler("program", read_handler, H_PROGRAM);
     add_read_handler("cache_hits_count", read_handler, H_CACHE_HITS);
@@ -1392,8 +1547,7 @@ P4SFCIPFilter::add_handlers()
 // RUNNING
 //
 
-int
-P4SFCIPFilter::length_checked_match(const IPFilterProgram &zprog, const Packet *p, int packet_length)
+int P4SFCIPFilter::length_checked_match(const IPFilterProgram &zprog, const Packet *p, int packet_length)
 {
     const unsigned char *neth_data = p->network_header();
     const unsigned char *transph_data = p->transport_header();
@@ -1401,12 +1555,13 @@ P4SFCIPFilter::length_checked_match(const IPFilterProgram &zprog, const Packet *
     const uint32_t *pp;
     uint32_t data = 0;
 
-    while (1) {
-        int off = (int16_t) pr[0];
+    while (1)
+    {
+        int off = (int16_t)pr[0];
         if (off + 4 > packet_length)
             goto check_length;
 
-        length_ok:
+    length_ok:
         if (off >= offset_transp)
             data = *(const uint32_t *)(transph_data + off - offset_transp);
         else if (off >= offset_net)
@@ -1416,40 +1571,46 @@ P4SFCIPFilter::length_checked_match(const IPFilterProgram &zprog, const Packet *
         data &= pr[3];
         off = pr[0] >> 17;
         pp = pr + 4;
-        if (!PERFORM_BINARY_SEARCH || off < MIN_BINARY_SEARCH) {
+        if (!PERFORM_BINARY_SEARCH || off < MIN_BINARY_SEARCH)
+        {
             for (; off; --off, ++pp)
-                if (*pp == data) {
+                if (*pp == data)
+                {
                     off = pr[2];
                     goto gotit;
                 }
-        } else {
+        }
+        else
+        {
             const uint32_t *px = pp + off;
-            while (pp < px) {
+            while (pp < px)
+            {
                 const uint32_t *pm = pp + (px - pp) / 2;
-                if (*pm == data) {
+                if (*pm == data)
+                {
                     off = pr[2];
                     goto gotit;
-                } else if (*pm < data)
+                }
+                else if (*pm < data)
                     pp = pm + 1;
                 else
                     px = pm;
             }
         }
         off = pr[1];
-        gotit:
+    gotit:
         if (off <= 0)
             return -off;
         pr += off;
         continue;
 
-        check_length:
-        if (off < packet_length) {
+    check_length:
+        if (off < packet_length)
+        {
             unsigned available = packet_length - off;
-            const uint8_t *c = (const uint8_t *) &pr[3];
-            if (!(c[3]
-              || (c[2] && available <= 2)
-              || (c[1] && available == 1)))
-            goto length_ok;
+            const uint8_t *c = (const uint8_t *)&pr[3];
+            if (!(c[3] || (c[2] && available <= 2) || (c[1] && available == 1)))
+                goto length_ok;
         }
         off = pr[1 + ((pr[0] & 0x10000) != 0)];
         goto gotit;
@@ -1457,21 +1618,17 @@ P4SFCIPFilter::length_checked_match(const IPFilterProgram &zprog, const Packet *
 }
 
 #if HAVE_BATCH
-void
-P4SFCIPFilter::push_batch(int, PacketBatch *batch)
+void P4SFCIPFilter::push_batch(int, PacketBatch *batch)
 {
     CLASSIFY_EACH_PACKET(
         (noutputs() + 1),
         match,
         batch,
-        checked_output_push_batch
-    );
-
+        checked_output_push_batch);
 }
 #endif
 
-void
-P4SFCIPFilter::push(int, Packet *p)
+void P4SFCIPFilter::push(int, Packet *p)
 {
     checked_output_push(match(_zprog, p), p);
 }
