@@ -28,7 +28,8 @@ message Empty{ }
 
 message TableEntryReply {
   int32 click_instance_id = 1;
-  repeated TableEntry entries = 2;
+  int32 window_cur_pos= 2;
+  repeated TableEntry entries = 3;
 }
 
 message TableEntry {

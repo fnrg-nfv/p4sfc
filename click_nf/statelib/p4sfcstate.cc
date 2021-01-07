@@ -19,7 +19,7 @@ namespace P4SFCState
     using namespace grpc;
 
     vector<Table *> tables;
-    int curPos;
+    int cur_pos;
     const int k = 1000;
 
     void incSlot(TableEntry *);
@@ -46,6 +46,7 @@ namespace P4SFCState
 #ifdef DEBUG
             auto t_start = std::chrono::high_resolution_clock::now();
 #endif
+            reply->set_window_cur_pos(cur_pos);
             reply->set_click_instance_id(_click_instance_id);
 
             size_t size = 0;
@@ -89,23 +90,20 @@ namespace P4SFCState
 
         void move_window_forward()
         {
-            int nextPos = (curPos + 1) % WINDOW_SIZE;
+            int nextPos = (cur_pos + 1) % WINDOW_SIZE;
             for (auto i = tables.begin(); i != tables.cend(); i++)
             {
                 Table *table = *i;
                 for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
-                    j->second.mutable_window()->set_slot(nextPos, 0);
+                    j->second.mutable_window()->set_slot(nextPos, j->second.window().slot(cur_pos));
             }
-            curPos = nextPos;
+            cur_pos = nextPos;
         }
 
         uint64_t window_sum(const TableEntry &e)
         {
             auto w = e.window();
-            uint64_t sum = 0;
-            for (size_t i = 0; i < w.slot_size(); i++)
-                sum += w.slot(i);
-            return sum;
+            return w.slot(cur_pos) - w.slot((cur_pos + 1) % WINDOW_SIZE);
         }
     };
 
@@ -114,7 +112,7 @@ namespace P4SFCState
 
     void runServer(string addr, int click_instance_id)
     {
-        curPos = 0;
+        cur_pos = 0;
 
         ServiceImpl service(click_instance_id);
         ServerBuilder builder;
@@ -186,7 +184,7 @@ namespace P4SFCState
     void incSlot(TableEntry *entry)
     {
         auto w = entry->mutable_window();
-        w->set_slot(curPos, w->slot(curPos) + 1);
+        w->set_slot(cur_pos, w->slot(cur_pos) + 1);
     }
 
     TableEntry *newTableEntry()

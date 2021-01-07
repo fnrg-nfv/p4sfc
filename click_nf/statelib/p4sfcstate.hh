@@ -63,7 +63,6 @@ namespace P4SFCState
     {
         _map.erase(key);
     }
-
 } // namespace P4SFCState
 
 #endif
