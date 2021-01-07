@@ -3,7 +3,7 @@
 define(
       $nf_id 3,
       $queueSize 1024,
-      $debug false
+      $debug false,
       );
 
 nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);
@@ -21,7 +21,7 @@ ipfilter :: IPFilter(allow src net intern && dst net intern,
                      1 dst host extern,
                      deny all)
 
-nf_from     -> ec;
+nf_from     -> ec
             -> Strip(14)
             -> CheckIPHeader
             -> ipfilter;
