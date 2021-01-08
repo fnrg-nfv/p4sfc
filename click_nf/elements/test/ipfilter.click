@@ -16,10 +16,11 @@ AddressInfo(
 
 // do not deny
 // <action srcip:port dstip:port proto>
-ipfilter :: P4SFCIPFilter(allow 10.0.0.0/8:80 10.0.0.0/8 TCP,
-                          1 10.0.0.0/8 - -,
-                          1 - 66.66.66.66 -,
-                          2 - - -)
+ipfilter :: P4SFCIPFilter(3,
+	allow 10.0.0.0/8:80 10.0.0.0/8 TCP,
+	1 10.0.0.0/8 - -,
+	1 - 66.66.66.66 -,
+	2 - - -)
 
 src::P4SFCSimuFlow(
 SRCETH $srcmac,

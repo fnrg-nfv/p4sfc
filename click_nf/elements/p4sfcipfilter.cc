@@ -82,11 +82,22 @@ P4SFCIPFilter::P4SFCIPFilter()
 
 P4SFCIPFilter::~P4SFCIPFilter()
 {
+    P4SFCState::shutdownServer();
 }
 
 int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
 {
-    for (int argno = 0; argno < conf.size(); argno++)
+    int click_instance_id = 1;
+    // int _debug = false;
+    if (Args(conf, this, errh)
+            .read_mp("CLICKINSTANCEID", click_instance_id)
+            // .read_mp("DEBUG", _debug)
+            .consume() < 0)
+        return -1;
+
+    P4SFCState::startServer(click_instance_id);
+
+    for (int argno = 1; argno < conf.size(); argno++)
     {
         Vector<String> words;
         separate_text(cp_unquote(conf[argno]), words);
@@ -97,7 +108,7 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
         // parse every rules into statelib
         P4SFCState::TableEntry *e = parse(words, errh);
         click_chatter("entry: %s", toString(*e).c_str());
-        entries.push_back(e);
+        rules.push_back(e);
     }
 }
 
@@ -234,18 +245,80 @@ P4SFCIPFilter::SingleAddress P4SFCIPFilter::parseSingleAddress(String &word)
     return ret;
 }
 
+template <class T>
+T P4SFCIPFilter::s2i(const std::string &s)
+{
+    return *(const T *)s.data();
+}
+
+bool P4SFCIPFilter::match(Packet *p, P4SFCState::TableEntry *rule)
+{
+    IPFlow5ID flowid(p);
+    {
+        auto t = rule->match(0).ternary();
+        uint32_t val = s2i<uint32_t>(t.value());
+        uint32_t mask = s2i<uint32_t>(t.mask());
+        if (!((flowid.saddr().addr() & mask) == (val & mask)))
+            return false;
+    }
+    {
+        auto t = rule->match(1).ternary();
+        uint32_t val = s2i<uint32_t>(t.value());
+        uint32_t mask = s2i<uint32_t>(t.mask());
+        if (!((flowid.daddr().addr() & mask) == (val & mask)))
+            return false;
+    }
+    {
+        auto t = rule->match(2).ternary();
+        uint16_t val = s2i<uint16_t>(t.value());
+        uint16_t mask = s2i<uint16_t>(t.mask());
+        if (!((flowid.sport() & mask) == (val & mask)))
+            return false;
+    }
+    {
+        auto t = rule->match(3).ternary();
+        uint16_t val = s2i<uint16_t>(t.value());
+        uint16_t mask = s2i<uint16_t>(t.mask());
+        if (!((flowid.dport() & mask) == (val & mask)))
+            return false;
+    }
+    {
+        auto t = rule->match(4).ternary();
+        uint8_t val = s2i<uint8_t>(t.value());
+        uint8_t mask = s2i<uint8_t>(t.mask());
+        if (!((flowid.proto() & mask) == (val & mask)))
+            return false;
+    }
+    return true;
+}
+
+int P4SFCIPFilter::apply(Packet *p, P4SFCState::TableEntry *rule)
+{
+    auto a = rule->action();
+    auto port = a.params(0).value();
+    click_chatter("apply rule to packet: port: %s", port.data());
+}
+
 void P4SFCIPFilter::push(int port, Packet *p)
 {
-    std::cout << entries.size() << std::endl;
 
     // map and do actions
-    for (auto i = 0; i < entries.size(); i++)
+    int out = -1;
+    for (auto i = rules.begin(); i != rules.cend(); i++)
     {
-        std::cout << toString(*entries[i]) << std::endl;
+        if (match(p, *i))
+        {
+            std::cout << toString(**i) << std::endl;
+            out = apply(p, *i);
+            break;
+        }
     }
-
-    output(0).push(p);
+    if (out < 0)
+        p->kill();
+    else
+        checked_output_push(out, p);
 }
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4SFCIPFilter)
+// ELEMENT_LIBS(-L / home / sonic / p4sfc / click_nf / statelib - lstate - lprotobuf)

@@ -46,11 +46,15 @@ P4IPRewriter::~P4IPRewriter()
 int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh)
 {
   // std::cout << "Specs Len: " << conf.size() << std::endl;
+  int click_instance_id = 1;
+  _debug = false;
+  if (Args(conf, this, errh)
+          .read_mp("CLICKINSTANCEID", click_instance_id)
+          .read_mp("DEBUG", _debug)
+          .consume() < 0)
+    return -1;
 
-  int click_instance_id = atoi(conf[0].c_str());
   P4SFCState::startServer(click_instance_id);
-
-  _debug = conf[1].equals("true", 4);
 
   if (_debug)
     std::cout << _debug << std::endl;

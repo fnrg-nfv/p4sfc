@@ -1,5 +1,5 @@
-#ifndef CLICK_P4SFCIPFILTER2_HH
-#define CLICK_P4SFCIPFILTER2_HH
+#ifndef CLICK_P4SFCIPFILTER_HH
+#define CLICK_P4SFCIPFILTER_HH
 #include <click/batchelement.hh>
 #include <click/element.hh>
 #include <click/ipflowid.hh>
@@ -29,11 +29,6 @@ public:
     void push(int port, Packet *);
 
 protected:
-    P4SFCState::TableEntry *parse(Vector<String> &, ErrorHandler *);
-    Vector<P4SFCState::TableEntry *> entries;
-
-    // P4SFCState::Table _table;
-
     struct SingleAddress
     {
         // these are all in network order
@@ -42,7 +37,18 @@ protected:
         uint16_t port;
         uint16_t port_mask;
     };
+
+    P4SFCState::TableEntry *parse(Vector<String> &, ErrorHandler *);
     SingleAddress parseSingleAddress(String &);
+
+    int apply(Packet *, P4SFCState::TableEntry *);
+    bool match(Packet *, P4SFCState::TableEntry *);
+
+    template <class T>
+    T s2i(const std::string &);
+
+private:
+    Vector<P4SFCState::TableEntry *> rules;
 };
 
 CLICK_ENDDECLS
