@@ -20,7 +20,7 @@ namespace P4SFCState
 
     using namespace grpc;
 
-    vector<Table *> tables;
+    vector<TableEntry *> total_entries;
     int cur_pos;
     const int k = 1000;
 
@@ -41,7 +41,7 @@ namespace P4SFCState
         {
             TableEntry *e;
             uint64_t sum;
-        } entry;
+        } entry_sum;
 
         Status GetState(ServerContext *context, const Empty *request, TableEntryReply *reply)
         {
@@ -51,20 +51,16 @@ namespace P4SFCState
             reply->set_window_cur_pos(cur_pos);
             reply->set_click_instance_id(_click_instance_id);
 
-            size_t size = 0;
-            vector<entry> entries;
-            for (auto i = tables.begin(); i != tables.cend(); i++)
+            size_t size = total_entries.size();
+            vector<entry_sum> entries;
+            for (auto i = total_entries.begin(); i != total_entries.cend(); i++)
             {
-                Table *table = *i;
-                for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
-                {
-                    entries.push_back({&(j->second), window_sum(j->second)});
-                    size++;
-                }
+                TableEntry *e = *i;
+                entries.push_back({e, window_sum(*e)});
             }
 
             std::sort(entries.begin(), entries.end(),
-                      [this](const entry &a, const entry &b) {
+                      [this](const entry_sum &a, const entry_sum &b) {
                           return a.sum > b.sum;
                       });
 
@@ -75,7 +71,7 @@ namespace P4SFCState
             move_window_forward();
 
 #ifdef DEBUG
-            std::cout << "Get size:" << size << std::endl;
+            std::cout << "Get size:" << size << "/" << total_entries.size() <<  std::endl;
             auto t_end = std::chrono::high_resolution_clock::now();
             std::cout << std::fixed << std::setprecision(2)
                       << "Get state time passed:"
@@ -93,11 +89,11 @@ namespace P4SFCState
         void move_window_forward()
         {
             int nextPos = (cur_pos + 1) % WINDOW_SIZE;
-            for (auto i = tables.begin(); i != tables.cend(); i++)
+            for (auto i = total_entries.begin(); i != total_entries.cend(); i++)
             {
-                Table *table = *i;
-                for (auto j = table->_map.begin(); j != table->_map.cend(); j++)
-                    j->second.mutable_window()->set_slot(nextPos, j->second.window().slot(cur_pos));
+                TableEntry *e = *i;
+                auto w = e->mutable_window();
+                w->set_slot(nextPos, w->slot(cur_pos));
             }
             cur_pos = nextPos;
         }
@@ -139,10 +135,7 @@ namespace P4SFCState
         server_thread->join();
     }
 
-    Table::Table()
-    {
-        tables.push_back(this);
-    }
+    Table::Table() {}
 
     string bigint_to_hexstr(const string &s)
     {
@@ -204,7 +197,7 @@ namespace P4SFCState
         auto it = _map.find(key);
         if (it == _map.end())
             return NULL;
-        auto e = &(it->second);
+        auto e = it->second;
         incSlot(e);
         return e;
     }
@@ -218,6 +211,7 @@ namespace P4SFCState
     TableEntry *newTableEntry()
     {
         TableEntry *entry = new TableEntry();
+        total_entries.push_back(entry);
         // init sliding window
         SlidingWindow *window = entry->mutable_window();
         for (int i = 0; i < WINDOW_SIZE; i++)
@@ -235,7 +229,15 @@ namespace P4SFCState
         {
             auto m = entry.match(i);
             // TODO: only support exact currently
-            ret += m.exact().value();
+            if (m.has_exact())
+            {
+                ret += m.exact().value();
+            }
+            else if (m.has_ternary())
+            {
+                ret += m.ternary().value();
+                ret += m.ternary().mask();
+            }
         }
         return ret;
     }

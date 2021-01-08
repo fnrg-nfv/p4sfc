@@ -20,13 +20,13 @@ namespace P4SFCState
         Table();
         int size();
 
-        void insert(const string &, const TableEntry &);
-        void insert(const TableEntry &);
+        void insert(const string &, TableEntry &);
+        void insert(TableEntry &);
         void remove(const string &);
         TableEntry *lookup(const string &);
         TableEntry *lookup(const TableEntry &);
 
-        map<string, TableEntry> _map;
+        map<string, TableEntry *> _map;
     };
 
     string buildKey(const TableEntry &entry);
@@ -42,15 +42,15 @@ namespace P4SFCState
     }
 
     inline void
-    Table::insert(const string &key, const TableEntry &entry)
+    Table::insert(const string &key, TableEntry &entry)
     {
-        _map.insert({key, entry});
+        _map.insert({key, &entry});
     }
 
-    inline void Table::insert(const TableEntry &entry)
+    inline void Table::insert(TableEntry &entry)
     {
         string key = buildKey(entry);
-        _map.insert({key, entry});
+        _map.insert({key, &entry});
     }
 
     inline TableEntry *Table::lookup(const TableEntry &e)
