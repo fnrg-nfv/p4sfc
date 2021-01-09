@@ -14,10 +14,32 @@ AddressInfo(
   extern_next_hop	00:10:20:30:40:50,
 );
 
+
+// ipfilter :: IPFilter(
+// 	allow src host intern && dst net intern,
+// 	allow src host intern && dst net intern,
+// 	allow src host intern && dst net intern,
+// 	allow src host intern && dst net intern,
+// 	allow src host intern && dst net intern,
+// 	allow src host intern && dst net intern,
+//                      1 src net intern,
+//                      1 dst host extern,
+//                      deny all)
+
 // do not deny
 // <action srcip:port dstip:port proto>
-ipfilter :: P4SFCIPFilter(3,
-	allow 10.0.0.0/8:80 10.0.0.0/8 TCP,
+ipfilter :: P4SFCIPFilter(3, $debug,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
+	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	1 10.0.0.0/8 - -,
 	1 - 66.66.66.66 -,
 	2 - - -)
@@ -39,8 +61,8 @@ out ::	EtherEncap(0x1234, 0:0:0:0:0:0, 0:0:0:0:0:0)
 		->tx :: ToDPDKDevice(0)
 
 ipfilter[0] -> out;
-ipfilter[1] -> Print(alert) -> out;
-ipfilter[2] -> Print(drop) -> out;
+ipfilter[1] -> Print(alert, ACTIVE $debug) -> out;
+ipfilter[2] -> Print(drop, ACTIVE $debug) -> out;
 
 rx :: FromDPDKDevice(0) 
 ->Discard

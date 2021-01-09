@@ -1,7 +1,6 @@
 #ifndef CLICK_P4SFCIPFILTER_HH
 #define CLICK_P4SFCIPFILTER_HH
 #include <click/batchelement.hh>
-#include <click/element.hh>
 #include <click/ipflowid.hh>
 #include <click/error.hh>
 #include <click/vector.hh>
@@ -13,11 +12,11 @@ CLICK_DECLS
 
 #define DEBUG
 
-class P4SFCIPFilter : public Element
+class P4SFCIPFilter : public BatchElement
 {
 public:
-    P4SFCIPFilter();  // SEE sample.cc FOR CONSTRUCTOR
-    ~P4SFCIPFilter(); // SEE sample.cc FOR DESTRUCTOR
+    P4SFCIPFilter();
+    ~P4SFCIPFilter();
 
     const char *class_name() const { return "P4SFCIPFilter"; }
     const char *port_count() const override { return "1/-"; }
@@ -27,6 +26,7 @@ public:
 
     // void push_batch(int port, PacketBatch *);
     void push(int port, Packet *);
+    void push_batch(int port, PacketBatch *batch) override;
 
 protected:
     struct SingleAddress
@@ -41,14 +41,17 @@ protected:
     P4SFCState::TableEntry *parse(Vector<String> &, ErrorHandler *);
     SingleAddress parseSingleAddress(String &);
 
-    int apply(Packet *, P4SFCState::TableEntry *);
-    bool match(Packet *, P4SFCState::TableEntry *);
+    int process(int port, Packet *);
+    int apply(P4SFCState::TableEntry *);
+    bool match(const IPFlow5ID &, const P4SFCState::TableEntry *);
 
     template <class T>
     T s2i(const std::string &);
 
 private:
-    Vector<P4SFCState::TableEntry *> rules;
+    P4SFCState::List _rules;
+    bool _debug;
+    // Vector<P4SFCState::TableEntry *> rules;
 };
 
 CLICK_ENDDECLS

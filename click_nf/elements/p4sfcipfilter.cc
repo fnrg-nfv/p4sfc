@@ -78,6 +78,7 @@ separate_text(const String &text, Vector<String> &words)
 
 P4SFCIPFilter::P4SFCIPFilter()
 {
+    in_batch_mode = BATCH_MODE_IFPOSSIBLE;
 }
 
 P4SFCIPFilter::~P4SFCIPFilter()
@@ -88,29 +89,28 @@ P4SFCIPFilter::~P4SFCIPFilter()
 int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
 {
     int click_instance_id = 1;
-    // int _debug = false;
+    _debug = false;
     if (Args(conf, this, errh)
             .read_mp("CLICKINSTANCEID", click_instance_id)
-            // .read_mp("DEBUG", _debug)
+            .read_mp("DEBUG", _debug)
             .consume() < 0)
         return -1;
 
     P4SFCState::startServer(click_instance_id);
 
-    for (int argno = 1; argno < conf.size(); argno++)
+    for (int argno = 2; argno < conf.size(); argno++)
     {
+        // parse every rules into statelib
         Vector<String> words;
         separate_text(cp_unquote(conf[argno]), words);
-#ifdef DEBUG
-        for (size_t i = 0; i < words.size(); i++)
-            click_chatter("word %d.%d %s", argno, i, words[i].c_str());
-#endif
-        // parse every rules into statelib
+
         P4SFCState::TableEntry *e = parse(words, errh);
-        click_chatter("entry: %s", toString(*e).c_str());
-        rules.push_back(e);
+        _rules.insert(*e);
+        if (_debug)
+            click_chatter("entry: %s", toString(*e).c_str());
     }
 }
+
 
 P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
 {
@@ -137,13 +137,12 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
             out_port = -1;
         }
     }
-    click_chatter("out port: %d", out_port);
     {
         auto a = e->mutable_action();
         a->set_action(P4_IPFILTER_ACTION_NAME);
         auto p = a->add_params();
         p->set_param(P4_IPFILTER_PARAM_PORT);
-        p->set_value(&out_port, 2);
+        p->set_value(&out_port, 4);
     }
     P4SFCIPFilter::SingleAddress src = parseSingleAddress(words[1]);
     P4SFCIPFilter::SingleAddress dst = parseSingleAddress(words[2]);
@@ -208,9 +207,7 @@ P4SFCIPFilter::SingleAddress P4SFCIPFilter::parseSingleAddress(String &word)
     }
     else
     {
-
         int middle_pos = word.find_left(":");
-        click_chatter("middle pos: %d", middle_pos);
 
         String ip_str;
         String port_str = nullptr;
@@ -237,23 +234,18 @@ P4SFCIPFilter::SingleAddress P4SFCIPFilter::parseSingleAddress(String &word)
                 ret.port_mask = 0xffff;
             }
         }
-#ifdef DEBUG
-        click_chatter("parse(%s): %08x %08x %u %04x", word.c_str(), ret.ip,
-                      ret.ip_mask, ret.port, ret.port_mask);
-#endif
     }
     return ret;
 }
 
 template <class T>
-T P4SFCIPFilter::s2i(const std::string &s)
+inline T P4SFCIPFilter::s2i(const std::string &s)
 {
-    return *(const T *)s.data();
+    return *(T *)s.data();
 }
 
-bool P4SFCIPFilter::match(Packet *p, P4SFCState::TableEntry *rule)
+bool P4SFCIPFilter::match(const IPFlow5ID &flowid, const P4SFCState::TableEntry *rule)
 {
-    IPFlow5ID flowid(p);
     {
         auto t = rule->match(0).ternary();
         uint32_t val = s2i<uint32_t>(t.value());
@@ -292,31 +284,33 @@ bool P4SFCIPFilter::match(Packet *p, P4SFCState::TableEntry *rule)
     return true;
 }
 
-int P4SFCIPFilter::apply(Packet *p, P4SFCState::TableEntry *rule)
+int P4SFCIPFilter::apply(P4SFCState::TableEntry *rule)
 {
     auto a = rule->action();
-    auto port = a.params(0).value();
-    click_chatter("apply rule to packet: port: %s", port.data());
+    int port = s2i<int>(a.params(0).value());
+
+    if (_debug)
+        click_chatter("apply rule to packet: port: %x", port);
+
+    return port;
 }
 
+int P4SFCIPFilter::process(int port, Packet *p)
+{
+    IPFlow5ID flowid(p);
+    auto lambda = [this](P4SFCState::TableEntry *e) -> bool { return match(flowid, e); };
+    auto e = _rules.lookup(lambda);
+    return apply(e);
+}
 void P4SFCIPFilter::push(int port, Packet *p)
 {
+    checked_output_push(process(port, p), p);
+}
 
-    // map and do actions
-    int out = -1;
-    for (auto i = rules.begin(); i != rules.cend(); i++)
-    {
-        if (match(p, *i))
-        {
-            std::cout << toString(**i) << std::endl;
-            out = apply(p, *i);
-            break;
-        }
-    }
-    if (out < 0)
-        p->kill();
-    else
-        checked_output_push(out, p);
+void P4SFCIPFilter::push_batch(int port, PacketBatch *batch)
+{
+    auto fnt = [this, port](Packet *p) { return process(port, p); };
+    CLASSIFY_EACH_PACKET(noutputs() + 1, fnt, batch, checked_output_push_batch);
 }
 
 CLICK_ENDDECLS

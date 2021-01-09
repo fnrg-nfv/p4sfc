@@ -36,6 +36,7 @@ CLICK_DECLS
 
 P4IPRewriter::P4IPRewriter()
 {
+  in_batch_mode = BATCH_MODE_IFPOSSIBLE;
 }
 
 P4IPRewriter::~P4IPRewriter()
@@ -507,4 +508,4 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4IPRewriter)
-ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)
+ELEMENT_LIBS(-L / home / sonic / p4sfc / click_nf / statelib - lstate - lprotobuf)

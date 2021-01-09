@@ -17,7 +17,7 @@ namespace P4SFCState
     class Table
     {
     public:
-        Table();
+        Table() {}
         int size();
 
         void insert(const string &, TableEntry &);
@@ -29,11 +29,37 @@ namespace P4SFCState
         map<string, TableEntry *> _map;
     };
 
+    class List
+    {
+    public:
+        List() {}
+        int size();
+
+        void insert(TableEntry &);
+        TableEntry *at(int);
+        TableEntry *operator[](int);
+
+        // TODO: std::function is cost heavy
+        // TableEntry *lookup(std::function<bool(TableEntry *)> match);
+        template <typename T>
+        TableEntry *lookup(T match);
+
+        // TODO
+        void remove(int index);
+
+    private:
+        vector<TableEntry *> _list;
+    };
+
     string buildKey(const TableEntry &entry);
     TableEntry *newTableEntry();
+    void deleteTableEntries();
     void startServer(int click_instance_id = 1, string addr = "0.0.0.0:28282");
     void shutdownServer();
     string toString(const TableEntry &entry);
+
+    // should not be exploded
+    void incSlot(TableEntry *);
 
     // inline definition
     inline int Table::size()
@@ -63,6 +89,38 @@ namespace P4SFCState
     {
         _map.erase(key);
     }
+
+    inline int List::size()
+    {
+        return _list.size();
+    }
+
+    inline void List::insert(TableEntry &e)
+    {
+        _list.push_back(&e);
+    }
+    inline TableEntry *List::at(int i)
+    {
+        return _list[i];
+    }
+
+    inline TableEntry *List::operator[](int i)
+    {
+        return at(i);
+    }
+
+    template <typename T>
+    inline TableEntry *List::lookup(T match)
+    {
+        for (auto e = _list.begin(); e != _list.end(); e++)
+            if (match(*e))
+            {
+                incSlot(*e);
+                return *e;
+            }
+        return 0;
+    }
+
 } // namespace P4SFCState
 
 #endif

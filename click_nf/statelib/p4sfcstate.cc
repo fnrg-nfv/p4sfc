@@ -24,8 +24,6 @@ namespace P4SFCState
     int cur_pos;
     const int k = 1000;
 
-    void incSlot(TableEntry *);
-
     // Logic and data behind the server's behavior.
     class ServiceImpl final : public RPC::Service
     {
@@ -71,7 +69,7 @@ namespace P4SFCState
             move_window_forward();
 
 #ifdef DEBUG
-            std::cout << "Get size:" << size << "/" << total_entries.size() <<  std::endl;
+            std::cout << "Get size:" << size << "/" << total_entries.size() << std::endl;
             auto t_end = std::chrono::high_resolution_clock::now();
             std::cout << std::fixed << std::setprecision(2)
                       << "Get state time passed:"
@@ -131,11 +129,10 @@ namespace P4SFCState
 
     void shutdownServer()
     {
+        deleteTableEntries();
         server->Shutdown();
         server_thread->join();
     }
-
-    Table::Table() {}
 
     string bigint_to_hexstr(const string &s)
     {
@@ -196,7 +193,7 @@ namespace P4SFCState
     {
         auto it = _map.find(key);
         if (it == _map.end())
-            return NULL;
+            return 0;
         auto e = it->second;
         incSlot(e);
         return e;
@@ -217,6 +214,13 @@ namespace P4SFCState
         for (int i = 0; i < WINDOW_SIZE; i++)
             window->add_slot(0);
         return entry;
+    }
+
+    void deleteTableEntries()
+    {
+        for (auto e = total_entries.begin(); e != total_entries.end(); e = total_entries.erase(e))
+            if (*e)
+                delete *e;
     }
 
     // concat all val as key, seperated by commas
