@@ -74,7 +74,7 @@ protected:
     flow_t *_flows;
 
     void new_header(unsigned char *);
-    Timestamp random_duration();
+    Timestamp random_duration(bool);
     void setup_flows(ErrorHandler *);
 
     void print_flow_counts();

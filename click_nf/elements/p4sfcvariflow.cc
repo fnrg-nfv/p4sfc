@@ -261,14 +261,15 @@ void P4SFCVariFlow::new_header(unsigned char *data)
                       IPAddress(ip->ip_dst).unparse().c_str(), ntohs(udp->uh_dport));
 }
 
-Timestamp P4SFCVariFlow::random_duration()
+Timestamp P4SFCVariFlow::random_duration(bool reverse)
 {
     // static const double short_prop = .8;
     // static const int short_range = 10;
     // static const uint32_t dividingline = short_prop * CLICK_RAND_MAX;
     const uint32_t rand1 = click_random();
     const uint32_t rand2 = click_random();
-    if (rand1 > _short_prop) // long duration
+
+    if ((rand1 > _short_prop) ^ reverse) // long duration
         return Timestamp((int)((double)_short_time * CLICK_RAND_MAX / rand2));
     else // short duration
         return Timestamp((rand2 % _short_time));
@@ -280,7 +281,7 @@ void P4SFCVariFlow::setup_flows(ErrorHandler *errh)
     for (unsigned i = 0; i < _flowsize; i++)
     {
         _now = Timestamp::now();
-        Timestamp duration = random_duration();
+        Timestamp duration = random_duration(i < _major_flowsize);
         _flows[i].flow_count = 0;
         _flows[i].duration = duration;
         _flows[i].end_time = _now + duration;

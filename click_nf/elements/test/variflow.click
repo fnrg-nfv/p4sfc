@@ -5,6 +5,7 @@ define(
 	$debug		false,
 	$rate		1,
 	$flowsize	10000,
+	$seed		1,
 );
 
 P4SFCVariFlow(
@@ -14,7 +15,7 @@ STOP false, DEBUG $debug,
 LIMIT -1, RATE $rate, BURST 32,
 SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE 1, LENGTH 1494,
 FLOWSIZE $flowsize,
-SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
+SEED $seed, MAJORFLOW 0.2, MAJORDATA 0.8) 
 	// -> Print(out, ACTIVE $debug)
 	// -> Strip(14)
 	// -> CheckIPHeader
