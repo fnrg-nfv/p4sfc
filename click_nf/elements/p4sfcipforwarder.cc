@@ -2,9 +2,9 @@
 // ALWAYS INCLUDE <click/config.h> FIRST
 #include <click/config.h>
 
-#include "p4sfcipfilter.hh"
-#include "parserhelper.hh"
+#include "p4sfcipforwarder.hh"
 #include "p4header.hh"
+#include "parserhelper.hh"
 #include <click/error.hh>
 #include <click/args.hh>
 #include <click/straccum.hh>
@@ -77,17 +77,17 @@ separate_text(const String &text, Vector<String> &words)
     }
 }
 
-P4SFCIPFilter::P4SFCIPFilter()
+P4SFCIPForwarder::P4SFCIPForwarder()
 {
     in_batch_mode = BATCH_MODE_IFPOSSIBLE;
 }
 
-P4SFCIPFilter::~P4SFCIPFilter()
+P4SFCIPForwarder::~P4SFCIPForwarder()
 {
     P4SFCState::shutdownServer();
 }
 
-int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
+int P4SFCIPForwarder::configure(Vector<String> &conf, ErrorHandler *errh)
 {
     int click_instance_id = 1;
     _debug = false;
@@ -118,61 +118,48 @@ struct QuickEntry
 {
     IPFlowID flowid;
     IPFlowID mask;
-    uint8_t proto;
-    uint8_t proto_mask;
-
     int port;
+
     bool match(const IPFlow5ID &cmp)
     {
-        return (cmp & mask) == flowid && (cmp.proto() & proto_mask) == proto;
+        return (cmp & mask) == flowid;
+    }
+    QuickEntry(IPAddress dst_ip, IPAddress dst_ip_mask, uint16_t dst_port, uint16_t dst_port_mask, int p)
+    {
+        flowid.assign(IPAddress(), 0, dst_ip, dst_port);
+        mask.assign(IPAddress(), 0, dst_ip_mask, dst_port_mask);
+        port = p;
     }
 };
 
-std::map<P4SFCState::TableEntry *, QuickEntry> quick_map;
+static std::map<P4SFCState::TableEntry *, QuickEntry> quick_map;
 
-P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
+P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHandler *errh)
 {
-    QuickEntry ce;
     int size = words.size();
-    if (size != 4)
+    if (size != 2)
     {
-        errh->message("firewall rule must be 4-tuple, but is a %d-tuple", size);
+        errh->message("firewall rule must be 2-tuple, but is a %d-tuple", size);
         return NULL;
     }
 
     P4SFCState::TableEntry *e = P4SFCState::newTableEntry();
-    e->set_table_name(P4_IPFILTER_TABLE_NAME);
+    e->set_table_name(P4_IPFORWARDER_TABLE_NAME);
 
-    int out_port;
+    int out_port = 0;
     if (!IntArg().parse(words[0], out_port))
     {
-        if (words[0].compare("allow") == 0)
-            out_port = 0;
-        else if (words[0].compare("deny") == 0)
-            out_port = -1;
-        else
-        {
+        if (!(words[0].compare("allow") == 0))
             errh->message("format error %s", words[0]);
-            out_port = -1;
-        }
     }
     {
         auto a = e->mutable_action();
-        a->set_action(P4_IPFILTER_ACTION_NAME);
+        a->set_action(P4_IPFORWARDER_ACTION_NAME);
         auto p = a->add_params();
-        p->set_param(P4_IPFILTER_PARAM_PORT);
+        p->set_param(P4_IPFORWARDER_PARAM_PORT);
         p->set_value(&out_port, 4);
     }
-    ce.port = out_port;
-    SingleAddress src = SingleAddress::parse(words[1]);
-    SingleAddress dst = SingleAddress::parse(words[2]);
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_SADDR);
-        auto t = m->mutable_ternary();
-        t->set_value(&src.ip, 4);
-        t->set_mask(&src.ip_mask, 4);
-    }
+    SingleAddress dst = SingleAddress::parse(words[1]);
     {
         auto m = e->add_match();
         m->set_field_name(P4H_IP_DADDR);
@@ -182,46 +169,20 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
     }
     {
         auto m = e->add_match();
-        m->set_field_name(P4H_IP_SPORT);
-        auto t = m->mutable_ternary();
-        t->set_value(&src.port, 2);
-        t->set_mask(&src.port_mask, 2);
-    }
-    {
-        auto m = e->add_match();
         m->set_field_name(P4H_IP_DPORT);
         auto t = m->mutable_ternary();
         t->set_value(&dst.port, 2);
         t->set_mask(&dst.port_mask, 2);
     }
-    ce.flowid.assign(src.ip, src.port, dst.ip, dst.port);
-    ce.mask.assign(src.ip_mask, src.port_mask, dst.ip_mask, dst.port_mask);
-    {
-        uint8_t proto = 0;
-        uint8_t proto_mask = 0;
-        if (words[3] != "-")
-        {
-            if (IntArg().parse(words[3], proto))
-                proto_mask = 0xff;
-            else
-                errh->message("bad proto number %s", words[3].c_str());
-        }
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_PROTO);
-        auto t = m->mutable_ternary();
-        t->set_value(&proto, 1);
-        t->set_mask(&proto_mask, 1);
-        ce.proto = proto;
-        ce.proto_mask = proto_mask;
-    }
-    quick_map.insert({e, ce});
+    quick_map.insert({e, QuickEntry(dst.ip, dst.ip_mask, dst.port, dst.port_mask, out_port)});
     return e;
 }
 
-int P4SFCIPFilter::process(int port, Packet *p)
+
+int P4SFCIPForwarder::process(int port, Packet *p)
 {
     IPFlow5ID flowid(p);
-    int out = -1;
+    int out = 0;
     auto lambda = [this, flowid, &out](P4SFCState::TableEntry *e) mutable {
         auto ce = quick_map.find(e)->second;
         if (ce.match(flowid))
@@ -233,20 +194,20 @@ int P4SFCIPFilter::process(int port, Packet *p)
     };
     auto e = _rules.lookup(lambda);
     if (_debug)
-        click_chatter("Filter the packet to port %x.", out);
+        click_chatter("Forward the packet(%s) to port %x rule %d.", flowid.unparse().c_str(), out, e->priority());
     return out;
 }
 
-void P4SFCIPFilter::push(int port, Packet *p)
+void P4SFCIPForwarder::push(int port, Packet *p)
 {
     checked_output_push(process(port, p), p);
 }
 
-void P4SFCIPFilter::push_batch(int port, PacketBatch *batch)
+void P4SFCIPForwarder::push_batch(int port, PacketBatch *batch)
 {
     auto fnt = [this, port](Packet *p) { return process(port, p); };
     CLASSIFY_EACH_PACKET(noutputs() + 1, fnt, batch, checked_output_push_batch);
 }
 
 CLICK_ENDDECLS
-EXPORT_ELEMENT(P4SFCIPFilter)
+EXPORT_ELEMENT(P4SFCIPForwarder)

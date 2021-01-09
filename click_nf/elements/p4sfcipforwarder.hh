@@ -1,5 +1,5 @@
-#ifndef CLICK_P4SFCIPFILTER_HH
-#define CLICK_P4SFCIPFILTER_HH
+#ifndef CLICK_P4SFCIPFORWARDER_HH
+#define CLICK_P4SFCIPFORWARDER_HH
 #include <click/batchelement.hh>
 #include <click/ipflowid.hh>
 #include <click/error.hh>
@@ -10,13 +10,13 @@
 
 CLICK_DECLS
 
-class P4SFCIPFilter : public BatchElement
+class P4SFCIPForwarder : public BatchElement
 {
 public:
-    P4SFCIPFilter();
-    ~P4SFCIPFilter();
+    P4SFCIPForwarder();
+    ~P4SFCIPForwarder();
 
-    const char *class_name() const { return "P4SFCIPFilter"; }
+    const char *class_name() const { return "P4SFCIPForwarder"; }
     const char *port_count() const override { return "1/-"; }
     const char *processing() const override { return PUSH; }
 
@@ -27,19 +27,16 @@ public:
     void push_batch(int port, PacketBatch *batch) override;
 
 protected:
+
     P4SFCState::TableEntry *parse(Vector<String> &, ErrorHandler *);
 
     int process(int port, Packet *);
     int apply(P4SFCState::TableEntry *);
     bool match(const IPFlow5ID &, const P4SFCState::TableEntry *);
 
-    template <class T>
-    T s2i(const std::string &);
-
 private:
     P4SFCState::List _rules;
     bool _debug;
-    // Vector<P4SFCState::TableEntry *> rules;
 };
 
 CLICK_ENDDECLS

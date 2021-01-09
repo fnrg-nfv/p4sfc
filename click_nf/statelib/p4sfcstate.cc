@@ -1,7 +1,6 @@
 #include <thread>
 #include <grpc++/grpc++.h>
 
-#define DEBUG
 #ifdef DEBUG
 #include <string>
 #include <iostream>
