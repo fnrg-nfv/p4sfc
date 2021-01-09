@@ -298,7 +298,7 @@ int P4SFCIPFilter::apply(P4SFCState::TableEntry *rule)
 int P4SFCIPFilter::process(int port, Packet *p)
 {
     IPFlow5ID flowid(p);
-    auto lambda = [this](P4SFCState::TableEntry *e) -> bool { return match(flowid, e); };
+    auto lambda = [this, flowid](P4SFCState::TableEntry *e) -> bool { return match(flowid, e); };
     auto e = _rules.lookup(lambda);
     return apply(e);
 }
