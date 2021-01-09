@@ -16,12 +16,11 @@ rt :: DirectIPLookup(18.26.4.24/32 0,
                      66.66.66.66/32 1,
                      77.77.77.77/24 1);
 
-nf_form     -> ec;
-            -> Print(in)
-            -> Strip(14)
-            -> CheckIPHeader
-            -> GetIPAddress(16)
-            -> rt;
+nf_form -> Strip(14)
+        -> ec
+        -> CheckIPHeader
+        -> GetIPAddress(16)
+        -> rt;
 
 rt[0] -> Print(drop) -> [1]ec;
 rt[1] -> [1]ec;

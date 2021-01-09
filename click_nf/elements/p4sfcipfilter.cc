@@ -105,6 +105,8 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
         separate_text(cp_unquote(conf[argno]), words);
 
         P4SFCState::TableEntry *e = parse(words, errh);
+        // TODO: priority ascending or descending
+        e->set_priority(argno);
         _rules.insert(*e);
         if (_debug)
             click_chatter("entry: %s", toString(*e).c_str());

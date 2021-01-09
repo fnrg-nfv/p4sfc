@@ -8,19 +8,11 @@ define(
 	$flowsize	10,
 );
 
-AddressInfo(
-  intern	10.0.0.1	10.0.0.0/8,
-  extern	66.66.66.66  00:a0:b0:c0:d0:e0,
-  extern_next_hop	00:10:20:30:40:50,
-);
+ec :: P4SFCEncap();
 
 // do not deny
 // <action srcip:port dstip:port proto>
 ipfilter :: P4SFCIPFilter(3, $debug,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
@@ -126,18 +118,20 @@ STOP false, DEBUG $debug,
 LIMIT -1, RATE $rate, BURST 32,
 SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE $range, LENGTH 1400,
 FLOWSIZE $flowsize,
+SFCH \<00 00 00 01 00 05>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 
 src	-> Strip(14)
+	-> ec
     -> CheckIPHeader
     -> ipfilter;
 
-out ::	EtherEncap(0x1234, 0:0:0:0:0:0, 0:0:0:0:0:0)
-		->tx :: ToDPDKDevice(0)
+ec[1] -> EtherEncap(0x1234, 0:0:0:0:0:0, 0:0:0:0:0:0)
+		-> tx :: ToDPDKDevice(0)
 
-ipfilter[0] -> out;
-ipfilter[1] -> Print(alert, ACTIVE $debug) -> out;
-ipfilter[2] -> Print(drop, ACTIVE $debug) -> out;
+ipfilter[0] -> [1]ec;
+ipfilter[1] -> Print(alert, ACTIVE $debug) -> [1]ec;
+ipfilter[2] -> Print(drop, ACTIVE $debug) -> [1]ec;
 
 rx :: FromDPDKDevice(0) 
 ->Discard
