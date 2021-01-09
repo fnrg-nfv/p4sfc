@@ -111,9 +111,20 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
     }
 }
 
+struct CustomizedEntry
+{
+    IPFlowID flowid;
+    IPFlowID mask;
+    uint8_t proto;
+    uint8_t proto_mask;
+
+    int port;
+};
+std::vector<CustomizedEntry> customized_entries;
 
 P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
 {
+    CustomizedEntry ce;
     int size = words.size();
     if (size != 4)
     {
@@ -144,6 +155,7 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
         p->set_param(P4_IPFILTER_PARAM_PORT);
         p->set_value(&out_port, 4);
     }
+    ce.port = out_port;
     P4SFCIPFilter::SingleAddress src = parseSingleAddress(words[1]);
     P4SFCIPFilter::SingleAddress dst = parseSingleAddress(words[2]);
     {
@@ -174,6 +186,8 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
         t->set_value(&dst.port, 2);
         t->set_mask(&dst.port_mask, 2);
     }
+    ce.flowid.assign(src.ip, src.port, dst.ip, dst.port);
+    ce.mask.assign(src.ip_mask, src.port_mask, dst.ip_mask, dst.port_mask);
     {
         uint8_t proto = 0;
         uint8_t proto_mask = 0;
@@ -189,7 +203,10 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
         auto t = m->mutable_ternary();
         t->set_value(&proto, 1);
         t->set_mask(&proto_mask, 1);
+        ce.proto = proto;
+        ce.proto_mask = proto_mask;
     }
+    customized_entries.push_back(ce);
 
     return e;
 }
@@ -222,6 +239,7 @@ P4SFCIPFilter::SingleAddress P4SFCIPFilter::parseSingleAddress(String &word)
         IPAddress ip;
         IPAddress mask;
         bool result = IPPrefixArg().parse(ip_str, ip, mask);
+        ip &= mask;
         ret.ip = ip.addr();
         ret.ip_mask = mask.addr();
 
@@ -286,6 +304,9 @@ bool P4SFCIPFilter::match(const IPFlow5ID &flowid, const P4SFCState::TableEntry 
 
 int P4SFCIPFilter::apply(P4SFCState::TableEntry *rule)
 {
+    if (!rule)
+        return -1;
+
     auto a = rule->action();
     int port = s2i<int>(a.params(0).value());
 
@@ -297,10 +318,20 @@ int P4SFCIPFilter::apply(P4SFCState::TableEntry *rule)
 
 int P4SFCIPFilter::process(int port, Packet *p)
 {
+    // IPFlow5ID flowid(p);
+    // auto lambda = [this](P4SFCState::TableEntry *e) -> bool { return match(flowid, e); };
+    // auto e = _rules.lookup(lambda);
+    // return apply(e);
     IPFlow5ID flowid(p);
-    auto lambda = [this](P4SFCState::TableEntry *e) -> bool { return match(flowid, e); };
-    auto e = _rules.lookup(lambda);
-    return apply(e);
+    for (auto ce = customized_entries.begin(); ce != customized_entries.end(); ce++)
+    {
+        if ((flowid & (*ce).mask) == (*ce).flowid &&
+            (flowid.proto() & (*ce).proto_mask) == (*ce).proto)
+        {
+            return (*ce).port;
+        }
+    }
+    return -1;
 }
 void P4SFCIPFilter::push(int port, Packet *p)
 {

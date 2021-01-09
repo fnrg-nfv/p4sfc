@@ -14,30 +14,9 @@ AddressInfo(
   extern_next_hop	00:10:20:30:40:50,
 );
 
-
-// ipfilter :: IPFilter(
-// 	allow src host intern && dst net intern,
-// 	allow src host intern && dst net intern,
-// 	allow src host intern && dst net intern,
-// 	allow src host intern && dst net intern,
-// 	allow src host intern && dst net intern,
-// 	allow src host intern && dst net intern,
-//                      1 src net intern,
-//                      1 dst host extern,
-//                      deny all)
-
 // do not deny
 // <action srcip:port dstip:port proto>
 ipfilter :: P4SFCIPFilter(3, $debug,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
 	1 10.0.0.0/8 - -,
