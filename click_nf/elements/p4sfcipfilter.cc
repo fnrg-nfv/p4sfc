@@ -111,7 +111,6 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
     }
 }
 
-
 P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
 {
     int size = words.size();
@@ -286,6 +285,8 @@ bool P4SFCIPFilter::match(const IPFlow5ID &flowid, const P4SFCState::TableEntry 
 
 int P4SFCIPFilter::apply(P4SFCState::TableEntry *rule)
 {
+    if (!rule)
+        return -1;
     auto a = rule->action();
     int port = s2i<int>(a.params(0).value());
 
