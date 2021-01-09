@@ -10,19 +10,41 @@ PrintTime::PrintTime() {}
 
 PrintTime::~PrintTime() {}
 
-int PrintTime::configure(Vector<String> &conf, ErrorHandler *errh)
+String PrintTime::read_handler(Element *e, void *thunk)
 {
-    String label = "Time";
-    if (Args(conf, this, errh)
-            .read_p("LABEL", label)
-            .complete() < 0)
-        return -1;
-    _label = label;
+    PrintTime *fr = static_cast<PrintTime *>(e);
+
+    if (thunk == (void *)0)
+    {
+        Timestamp avg_lat = fr->_latency / fr->_cnt;
+        String ret = avg_lat.unparse_interval() + "(" + String(fr->_cnt) + ")";
+
+        fr->_latency = Timestamp();
+        fr->_cnt = 0;
+
+        return ret;
+    }
+    return "<error>";
+}
+
+void PrintTime::add_handlers()
+{
+    add_read_handler("avg_latency", read_handler, 0);
 }
 
 Packet *PrintTime::simple_action(Packet *p)
 {
-    click_chatter("%s: %s", _label.c_str(), Timestamp::now().unparse().c_str());
+    Timestamp interval = Timestamp::now() - p->timestamp_anno();
+    if (interval < 0)
+    {
+        click_chatter("warning interval %s", interval.unparse_interval());
+    }
+    else
+    {
+        _cnt++;
+        _latency += interval;
+    }
+
     return p;
 }
 

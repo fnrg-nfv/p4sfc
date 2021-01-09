@@ -25,16 +25,15 @@ FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 	-> Print(out, ACTIVE $debug)
-	-> PrintTime(send)
 	-> tx::ToDPDKDevice($dev)
 
 rx :: FromDPDKDevice($dev, PROMISC true)
-	-> PrintTime(recv)
+	-> pt::PrintTime()
 	-> Discard;
 
 Script( 
 	TYPE ACTIVE,
-	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count)",
+	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count) latency: $(pt.avg_latency)",
 	wait 1,
 	loop
 );

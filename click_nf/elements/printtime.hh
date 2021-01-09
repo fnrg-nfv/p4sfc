@@ -12,10 +12,14 @@ public:
     const char *class_name() const { return "PrintTime"; }
     const char *port_count() const { return "1/1"; }
 
-    int configure(Vector<String> &conf, ErrorHandler *errh) CLICK_COLD;
     Packet *simple_action(Packet *p);
-protected:
-    String _label;
+
+    int _cnt;
+    Timestamp _latency;
+    void add_handlers() CLICK_COLD;
+
+private:
+    static String read_handler(Element *, void *) CLICK_COLD;
 };
 
 CLICK_ENDDECLS
