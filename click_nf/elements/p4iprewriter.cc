@@ -508,4 +508,4 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4IPRewriter)
-ELEMENT_LIBS(-L / home / sonic / p4sfc / click_nf / statelib - lstate - lprotobuf)
+ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)
