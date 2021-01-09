@@ -306,7 +306,6 @@ int P4SFCIPFilter::apply(P4SFCState::TableEntry *rule)
 {
     if (!rule)
         return -1;
-
     auto a = rule->action();
     int port = s2i<int>(a.params(0).value());
 
@@ -333,6 +332,7 @@ int P4SFCIPFilter::process(int port, Packet *p)
     }
     return -1;
 }
+
 void P4SFCIPFilter::push(int port, Packet *p)
 {
     checked_output_push(process(port, p), p);
