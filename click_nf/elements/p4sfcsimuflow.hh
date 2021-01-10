@@ -71,6 +71,7 @@ protected:
         unsigned flow_count;
     };
     flow_t *_flows;
+    Timestamp _now;
 
     inline Packet *next_packet();
     void setup_flows(ErrorHandler *);

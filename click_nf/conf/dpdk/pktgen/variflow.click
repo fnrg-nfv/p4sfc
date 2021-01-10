@@ -7,6 +7,7 @@ define(
 	$debug		false,
 	$rate		1,
 	$flowsize	5000,
+    $time_offset	4,
 );
 
 P4SFCVariFlow(
@@ -18,15 +19,15 @@ SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE 100, LENGTH 1494,
 FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
-	-> Print(out, ACTIVE $debug)
     -> tx::ToDPDKDevice($dev)
 
 rx::FromDPDKDevice($dev)
-    ->Discard
+	-> pt::PrintTime(DEBUG $debug, OFFSET $time_offset)
+    -> Discard
 
 Script( 
 	TYPE ACTIVE,
-	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count)",
+	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count) latency: $(pt.avg_latency)",
 	wait 1,
 	loop
 );

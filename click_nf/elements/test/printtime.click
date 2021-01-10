@@ -1,4 +1,5 @@
-// Run: sudo click --dpdk -l 0-1 -n 4 -- send_rcv_simu.click
+// Run: sudo click --dpdk -l 0-1 -n 4 -- printtime.click
+// need to run pipe.p4 in switch
 define(
 	$dev		0,
 	$header		"00 00 00 01 00 00",
@@ -24,11 +25,10 @@ SRCIP $srcip, DSTIP $dstip, RANGE $range, LENGTH $length,
 FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
-	-> Print(out, ACTIVE $debug)
 	-> tx::ToDPDKDevice($dev)
 
 rx :: FromDPDKDevice($dev, PROMISC true)
-	-> pt::PrintTime()
+	-> pt::PrintTime(DEBUG $debug, OFFSET 6)
 	-> Discard;
 
 Script( 

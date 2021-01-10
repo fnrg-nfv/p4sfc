@@ -165,7 +165,7 @@ bool P4SFCVariFlow::run_task(Task *)
         for (int i = 0; i < n; i++)
         {
             Packet *p = next_packet();
-            p->set_timestamp_anno(_now);
+            // p->set_timestamp_anno(_now);
 
             if (head == NULL)
                 head = PacketBatch::start_head(p);
@@ -190,7 +190,7 @@ bool P4SFCVariFlow::run_task(Task *)
             if (_tb.remove_if(1))
             {
                 Packet *p = next_packet()->clone();
-                p->set_timestamp_anno(_now);
+                // p->set_timestamp_anno(_now);
 
                 if (head == NULL)
                     head = PacketBatch::start_head(p);
@@ -328,6 +328,7 @@ inline Packet *P4SFCVariFlow::next_packet()
     // make a pakcet according to the flow
     WritablePacket *p = Packet::make(_len);
     memcpy(p->data(), _flows[next].data, _header_len);
+    memcpy(p->data() + _header_len, &_now, sizeof(Timestamp));
     return p;
 }
 

@@ -148,13 +148,13 @@ bool P4SFCSimuFlow::run_task(Task *)
     unsigned n = _batch_size;
     if (_limit != NO_LIMIT && n + _count >= _limit)
         n = _limit - _count;
-
+    _now = Timestamp::now();
     if (!_rate_limit)
     {
         for (int i = 0; i < n; i++)
         {
             Packet *p = next_packet();
-            p->set_timestamp_anno(Timestamp::now());
+            // p->set_timestamp_anno(Timestamp::now());
 
             if (head == NULL)
                 head = PacketBatch::start_head(p);
@@ -178,8 +178,7 @@ bool P4SFCSimuFlow::run_task(Task *)
         {
             if (_tb.remove_if(1))
             {
-                Packet *p = next_packet()->clone();
-                p->set_timestamp_anno(Timestamp::now());
+                Packet *p = next_packet();
 
                 if (head == NULL)
                     head = PacketBatch::start_head(p);
@@ -276,6 +275,7 @@ inline Packet *P4SFCSimuFlow::next_packet()
 
     WritablePacket *p = Packet::make(_len);
     memcpy(p->data(), _flows[next].data, _header_len);
+    memcpy(p->data() + _header_len, &_now, sizeof(Timestamp));
     return p;
 }
 
