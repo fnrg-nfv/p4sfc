@@ -264,7 +264,7 @@ void P4SFCVariFlow::new_header(unsigned char *data)
 Timestamp P4SFCVariFlow::random_duration(bool reverse)
 {
     // static const double short_prop = .8;
-    // static const int short_range = 10;
+    static const int short_base = 3;
     // static const uint32_t dividingline = short_prop * CLICK_RAND_MAX;
     const uint32_t rand1 = click_random();
     const uint32_t rand2 = click_random();
@@ -272,7 +272,7 @@ Timestamp P4SFCVariFlow::random_duration(bool reverse)
     if ((rand1 > _short_prop) ^ reverse) // long duration
         return Timestamp((int)((double)_short_time * CLICK_RAND_MAX / rand2));
     else // short duration
-        return Timestamp((rand2 % _short_time));
+        return Timestamp((rand2 % (_short_time - short_base) + short_base));
 }
 
 void P4SFCVariFlow::setup_flows(ErrorHandler *errh)
