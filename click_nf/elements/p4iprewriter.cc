@@ -269,13 +269,11 @@ Packet *P4IPRewriter::process(int port, Packet *p_in)
       entry = add_flow(flowid, rewritten_flowid, port);
       if (!entry)
       {
-        // checked_output_push(port, p);
         return p;
       }
       if (_debug)
         std::cout << "[new]\t";
     }
-    // TODO: ??
     else if (result == rw_drop)
       return NULL;
   }
@@ -496,10 +494,11 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
   uint32_t base = ntohs(_sport);
   uint32_t val;
 
+  // TOFIX: for test. correct behavior is to drop.
   if (_next_variation > _variation_top)
-    return P4IPRewriter::rw_drop;
-  else
-    val = _next_variation;
+    _next_variation = 0;
+  // return P4IPRewriter::rw_drop;
+  val = _next_variation;
 
   rewritten_flowid.set_sport(htons(base + val));
   _next_variation = val + 1;
@@ -508,4 +507,4 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4IPRewriter)
-ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)
+ELEMENT_LIBS(-L / home / sonic / p4sfc / click_nf / statelib - lstate - lprotobuf)
