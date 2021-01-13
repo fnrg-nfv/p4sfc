@@ -16,31 +16,40 @@ def gen_ip(base="10.0.0.1", range=1):
     return int_2_ipv4(ipv4_2_int(base) + randint(0, range))
 
 
-def gen_firewall_rules(n=100):
-    """Generate n firewall rules from the most-specific rule
-    to the most-general rule.
+def gen_firewall_rules():
+    """Generate firewall rules.
     As we need to test the throughput, all rules are allow.
     """
-    if (n - 1) % 3 != 0:
-        raise RuntimeError("rule size should be: 3x+1...")
-
     rules = []
-    rule_pattern = "allow %s/%d 77.77.77.77/8 0x06"
+    rule_pattern = "(0, 3, 0, %s, %s): allow();"
 
-    network_ip_len = 32
-    for i in range(3):
-        for i in range((n - 1) / 3):
-            rule = rule_pattern % (gen_ip(range=100), network_ip_len)
+    ip_src_base = ipv4_2_int("10.0.0.1")
+    ip_dst_base = ipv4_2_int("77.77.77.77")
+    for i in range(32):
+        ip_src = ip_src_base + i
+        for j in range(32):
+            ip_dst = ip_dst_base + j
+            rule = rule_pattern % (ip_src, ip_dst)
             rules.append(rule)
-        network_ip_len /= 2
-
-    rules.append("allow - - -")
-
     return rules
 
+def gen_forwarder_rules():
+    """Generate forwarder rules.
+    As we need to test the throughput, all rules are allow.
+    """
+    rules = []
+    rule_pattern = "(0, 4, 0, %s): set_output_port(128);"
+
+    ip_dst_base = ipv4_2_int("77.77.77.77")
+    for i in range(32):
+        for j in range(32):
+            ip_dst = ip_dst_base + j
+            rule = rule_pattern % (ip_dst)
+            rules.append(rule)
+    return rules
 
 if __name__ == '__main__':
-    rules = gen_firewall_rules(10)
+    rules = gen_forwarder_rules()
     with open("./rules", "w") as f:
         for rule in rules:
             f.write(rule)
