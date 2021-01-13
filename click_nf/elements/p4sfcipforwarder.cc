@@ -146,7 +146,7 @@ P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHand
         a->set_action(P4_IPFORWARDER_ACTION_NAME);
         auto p = a->add_params();
         p->set_param(P4_IPFORWARDER_PARAM_PORT);
-        p->set_value(&out_port, 4);
+        p->set_value(&out_port, 2);
     }
 
     IPAddress dst;
@@ -168,7 +168,7 @@ int P4SFCIPForwarder::process(int port, Packet *p)
     int out = 0;
     P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
     if (e)
-        int _f_u_c_k_ = *(int *)e->action().params(0).value().data();
+        int _f_u_c_k_ = *(uint16_t *)e->action().params(0).value().data();
 
     if (_debug)
         click_chatter("Forwarder the packet to port %x.", out);
