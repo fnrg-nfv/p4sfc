@@ -168,7 +168,7 @@ int P4SFCIPForwarder::process(int port, Packet *p)
     int out = 0;
     P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
     if (e)
-        out = *(int *)e->action().params(0).value().data();
+        int _f_u_c_k_ = *(int *)e->action().params(0).value().data();
 
     if (_debug)
         click_chatter("Forwarder the packet to port %x.", out);
