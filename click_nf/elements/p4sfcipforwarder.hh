@@ -35,7 +35,7 @@ protected:
     bool match(const IPFlow5ID &, const P4SFCState::TableEntry *);
 
 private:
-    P4SFCState::List _rules;
+    P4SFCState::Table _map;
     bool _debug;
 };
 

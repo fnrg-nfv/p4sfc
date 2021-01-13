@@ -4,7 +4,6 @@
 
 #include "p4sfcipforwarder.hh"
 #include "p4header.hh"
-#include "parserhelper.hh"
 #include <click/error.hh>
 #include <click/args.hh>
 #include <click/straccum.hh>
@@ -91,15 +90,21 @@ int P4SFCIPForwarder::configure(Vector<String> &conf, ErrorHandler *errh)
 {
     int click_instance_id = 1;
     _debug = false;
+    int port = 28282;
+    printf("get here\n");
     if (Args(conf, this, errh)
             .read_mp("CLICKINSTANCEID", click_instance_id)
             .read_mp("DEBUG", _debug)
+            .read_mp("PORT", port)
             .consume() < 0)
         return -1;
 
-    P4SFCState::startServer(click_instance_id);
 
-    for (int argno = 2; argno < conf.size(); argno++)
+    char addr[20];
+    sprintf(addr, "0.0.0.0:%d", port);
+    P4SFCState::startServer(click_instance_id, std::string(addr));
+
+    for (int argno = 3; argno < conf.size(); argno++)
     {
         // parse every rules into statelib
         Vector<String> words;
@@ -108,31 +113,18 @@ int P4SFCIPForwarder::configure(Vector<String> &conf, ErrorHandler *errh)
         P4SFCState::TableEntry *e = parse(words, errh);
         // TODO: priority ascending or descending
         e->set_priority(argno);
-        _rules.insert(*e);
+        _map.insert(*e);
         if (_debug)
             click_chatter("entry: %s", toString(*e).c_str());
     }
 }
 
-struct QuickEntry
+static inline std::string buildkey(const IPFlowID &flow)
 {
-    IPFlowID flowid;
-    IPFlowID mask;
-    int port;
-
-    bool match(const IPFlow5ID &cmp)
-    {
-        return (cmp & mask) == flowid;
-    }
-    QuickEntry(IPAddress dst_ip, IPAddress dst_ip_mask, uint16_t dst_port, uint16_t dst_port_mask, int p)
-    {
-        flowid.assign(IPAddress(), 0, dst_ip, dst_port);
-        mask.assign(IPAddress(), 0, dst_ip_mask, dst_port_mask);
-        port = p;
-    }
-};
-
-static std::map<P4SFCState::TableEntry *, QuickEntry> quick_map;
+    std::string ret;
+    ret.append((const char *)flow.daddr().data(), 4);
+    return ret;
+}
 
 P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHandler *errh)
 {
@@ -148,10 +140,7 @@ P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHand
 
     int out_port = 0;
     if (!IntArg().parse(words[0], out_port))
-    {
-        if (!(words[0].compare("allow") == 0))
-            errh->message("format error %s", words[0]);
-    }
+        errh->message("format error %s", words[0]);
     {
         auto a = e->mutable_action();
         a->set_action(P4_IPFORWARDER_ACTION_NAME);
@@ -159,42 +148,30 @@ P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHand
         p->set_param(P4_IPFORWARDER_PARAM_PORT);
         p->set_value(&out_port, 4);
     }
-    SingleAddress dst = SingleAddress::parse(words[1]);
+
+    IPAddress dst;
+    if (!IPAddressArg().parse(words[1], dst, this))
+        errh->message("dst IPAddress: parse error");
     {
         auto m = e->add_match();
         m->set_field_name(P4H_IP_DADDR);
-        auto t = m->mutable_ternary();
-        t->set_value(&dst.ip, 4);
-        t->set_mask(&dst.ip_mask, 4);
+        auto t = m->mutable_exact();
+        uint32_t dst_addr = dst.addr();
+        t->set_value(&dst_addr, 4);
     }
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_DPORT);
-        auto t = m->mutable_ternary();
-        t->set_value(&dst.port, 2);
-        t->set_mask(&dst.port_mask, 2);
-    }
-    quick_map.insert({e, QuickEntry(dst.ip, dst.ip_mask, dst.port, dst.port_mask, out_port)});
     return e;
 }
 
-
 int P4SFCIPForwarder::process(int port, Packet *p)
 {
-    IPFlow5ID flowid(p);
+    IPFlowID flowid(p);
     int out = 0;
-    auto lambda = [this, flowid, &out](P4SFCState::TableEntry *e) mutable {
-        auto ce = quick_map.find(e)->second;
-        if (ce.match(flowid))
-        {
-            out = ce.port;
-            return true;
-        }
-        return false;
-    };
-    auto e = _rules.lookup(lambda);
+    P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
+    if (e)
+        out = *(int *)e->action().params(0).value().data();
+
     if (_debug)
-        click_chatter("Forward the packet(%s) to port %x rule %d.", flowid.unparse().c_str(), out, e->priority());
+        click_chatter("Forwarder the packet to port %x.", out);
     return out;
 }
 

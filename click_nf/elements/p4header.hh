@@ -7,11 +7,11 @@
 #define P4H_IP_SPORT "hdr.tcp_udp.srcPort"
 #define P4H_IP_DPORT "hdr.tcp_udp.dstPort"
 
-#define P4_IPFORWARDER_TABLE_NAME "IpForwarder_ternary"
+#define P4_IPFORWARDER_TABLE_NAME "IpRoute_exact"
 #define P4_IPFORWARDER_ACTION_NAME "forward"
 #define P4_IPFORWARDER_PARAM_PORT "port"
 
-#define P4_IPFILTER_TABLE_NAME "IpFilter_ternary"
+#define P4_IPFILTER_TABLE_NAME "Firewall_exact"
 #define P4_IPFILTER_ACTION_NAME "forward"
 #define P4_IPFILTER_PARAM_PORT "port"
 
