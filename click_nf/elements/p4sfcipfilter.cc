@@ -140,25 +140,19 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
     P4SFCState::TableEntry *e = P4SFCState::newTableEntry();
     e->set_table_name(P4_IPFILTER_TABLE_NAME);
 
-    int out_port;
-    if (!IntArg().parse(words[0], out_port))
-    {
-        if (words[0].compare("allow") == 0)
-            out_port = 0;
-        else if (words[0].compare("deny") == 0)
-            out_port = -1;
-        else
-        {
-            errh->message("format error %s", words[0]);
-            out_port = -1;
-        }
-    }
+    bool allowed = false;
+    if (words[0].compare("allow") == 0)
+        allowed = true;
+    else if (words[0].compare("deny") == 0)
+        allowed = false;
+    else
+        errh->message("format error %s", words[0]);
     {
         auto a = e->mutable_action();
-        a->set_action(P4_IPFILTER_ACTION_NAME);
-        auto p = a->add_params();
-        p->set_param(P4_IPFILTER_PARAM_PORT);
-        p->set_value(&out_port, 4);
+        if (allowed)
+            a->set_action(P4_IPFILTER_ACTION_ALLOW_NAME);
+        else
+            a->set_action(P4_IPFILTER_ACTION_DENY_NAME);
     }
     IPAddress src;
     IPAddress dst;
@@ -199,8 +193,7 @@ int P4SFCIPFilter::process(int port, Packet *p)
     int out = -1;
     P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
     if (e)
-        out = *(int *)e->action().params(0).value().data();
-
+        out = (e->action().action().compare(P4_IPFILTER_ACTION_ALLOW_NAME) == 0);
     if (_debug)
         click_chatter("Filter the packet to port %x.", out);
     return out;
