@@ -12,8 +12,8 @@
 #define P4_IPFORWARDER_PARAM_PORT "port"
 
 #define P4_IPFILTER_TABLE_NAME "Firewall_exact"
-#define P4_IPFILTER_ACTION_NAME "forward"
-#define P4_IPFILTER_PARAM_PORT "port"
+#define P4_IPFILTER_ACTION_ALLOW_NAME "allow"
+#define P4_IPFILTER_ACTION_DENY_NAME "deny"
 
 #define P4_IPRW_TABLE_NAME "IpRewriter_exact"
 #define P4_IPRW_ACTION_NAME "rewrite"
