@@ -6,22 +6,18 @@ define(
 	$rate		-1,
 	$range		10,
 	$iprw_id	1,
-	$flowsize	10000,
+	$flowsize	1000,
+	$port		28282,
 );
 
 ec :: P4SFCEncap();
-rw :: P4IPRewriter($iprw_id, $debug, 28282, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
+rw :: P4IPRewriter($iprw_id, $debug, $port, pattern - - 192.168.0.1-192.168.0.255 - 0 0);
 
 AddressInfo(
   intern 	10.0.0.1	10.0.0.0/8,
-  extern	66.66.66.66  00:a0:b0:c0:d0:e0,
+  extern	77.77.77.77  00:a0:b0:c0:d0:e0,
   extern_next_hop	00:10:20:30:40:50,
 );
-
-ip :: IPClassifier(src net intern and dst net intern,
-                   src net intern,
-                   dst host extern,
-                   -);
 
 src::P4SFCSimuFlow(
 SRCETH $srcmac,
@@ -33,20 +29,14 @@ FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 
-src 
-	-> Strip(14)
+src -> Strip(14)
 	-> ec
 	-> Print(in, ACTIVE $debug)
 	-> CheckIPHeader 
 	-> IPPrint(in_ip, ACTIVE $debug)
-	-> ip; 
+	-> rw; 
 
-ip[0] -> Discard; // [1]ec;
-ip[1] -> [0]rw;
-ip[2] -> [1]rw;
-ip[3] -> [1]rw;
-
-rw[0]	-> CheckIPHeader	
+rw[0]	-> CheckIPHeader
 		-> IPPrint(out_ip, ACTIVE $debug)
 		-> [1]ec;
 
@@ -54,8 +44,7 @@ ec[1]	-> EtherEncap(0x1234, $srcmac, $dstmac)
 		-> Print(out, ACTIVE $debug)
 		-> tx :: ToDPDKDevice(0)
 
-rx :: FromDPDKDevice(0) 
--> Discard
+rx :: FromDPDKDevice(0) -> Discard
 
 
 Script( 

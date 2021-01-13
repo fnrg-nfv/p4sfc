@@ -1,14 +1,13 @@
 #include <thread>
 #include <grpc++/grpc++.h>
 
-#ifdef DEBUG
+#define DEBUG
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <chrono>
 #include <ctime>
-#endif
 
 #include "p4sfcstate.hh"
 
@@ -69,6 +68,31 @@ namespace P4SFCState
 
 #ifdef DEBUG
             std::cout << "Get size:" << size << "/" << total_entries.size() << std::endl;
+            auto t_end = std::chrono::high_resolution_clock::now();
+            std::cout << std::fixed << std::setprecision(2)
+                      << "Get state time passed:"
+                      << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
+#endif
+            return Status::OK;
+        }
+        Status GetNewState(ServerContext *context, const Empty *request, TableEntryReply *reply)
+        {
+#ifdef DEBUG
+            auto t_start = std::chrono::high_resolution_clock::now();
+#endif
+            reply->set_window_cur_pos(cur_pos);
+            reply->set_click_instance_id(_click_instance_id);
+            static int pos = 0;
+
+            size_t size = total_entries.size();
+            if (size > k && pos < size - k)
+                pos = size - k;
+            for (; pos < size; pos++)
+            {
+                reply->add_entries()->CopyFrom(*total_entries[pos]);
+            }
+#ifdef DEBUG
+            std::cout << "Get size:" << reply->entries_size() << "/" << size << std::endl;
             auto t_end = std::chrono::high_resolution_clock::now();
             std::cout << std::fixed << std::setprecision(2)
                       << "Get state time passed:"
