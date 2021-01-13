@@ -18,20 +18,16 @@ class P4IPRewriterInput;
 class P4IPRewriterEntry;
 class P4IPRewriter;
 
-class P4Element : public BatchElement
-{
-  // protected:
-  //   int _click_instance_id;
-};
-
 class P4IPRewriterPattern
 {
 public:
   P4IPRewriterPattern(const IPAddress &saddr, int sport, const IPAddress &daddr,
                       int dport, bool sequential, bool same_first,
-                      uint32_t variation);
+                      uint32_t variation, int vari_target);
   static bool parse_with_ports(const String &str, P4IPRewriterInput *input,
                                Element *context, ErrorHandler *errh);
+  static bool parse(const String &str, P4IPRewriterInput *input,
+                    Element *context, ErrorHandler *errh);
 
   void use() { _refcount++; }
   void unuse()
@@ -47,12 +43,22 @@ public:
 
   void unparse(StringAccum &sa) const;
 
+  enum
+  {
+    TARGET_NULL = 0,
+    TARGET_SADDR = 1,
+    TARGET_DADDR,
+    TARGET_SPORT,
+    TARGET_DPORT
+  };
+
 private:
   IPAddress _saddr;
   int _sport; // net byte order
   IPAddress _daddr;
   int _dport; // net byte order
 
+  int _vari_target;
   uint32_t _variation_top;
   uint32_t _next_variation;
 
@@ -87,7 +93,7 @@ public:
   void unparse(StringAccum &sa) const;
 };
 
-class P4IPRewriter : public P4Element
+class P4IPRewriter : public BatchElement
 {
 public:
   enum

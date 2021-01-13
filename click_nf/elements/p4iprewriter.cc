@@ -49,18 +49,22 @@ int P4IPRewriter::configure(Vector<String> &conf, ErrorHandler *errh)
   // std::cout << "Specs Len: " << conf.size() << std::endl;
   int click_instance_id = 1;
   _debug = false;
+  uint16_t port = 0;
   if (Args(conf, this, errh)
           .read_mp("CLICKINSTANCEID", click_instance_id)
           .read_mp("DEBUG", _debug)
+          .read_mp("PORT", port)
           .consume() < 0)
     return -1;
 
-  P4SFCState::startServer(click_instance_id);
+  char addr[20];
+  sprintf(addr, "0.0.0.0:%d", port);
+  P4SFCState::startServer(click_instance_id, std::string(addr));
 
   if (_debug)
     std::cout << _debug << std::endl;
 
-  for (int i = 2; i < conf.size(); ++i)
+  for (int i = 3; i < conf.size(); ++i)
   {
     P4IPRewriterInput is;
     if (parse_input_spec(conf[i], is, i, errh) >= 0)
@@ -96,7 +100,7 @@ int P4IPRewriter::parse_input_spec(const String &line, P4IPRewriterInput &is,
   }
   else if (word == "pattern")
   {
-    if (!P4IPRewriterPattern::parse_with_ports(rest, &is, this, &cerrh))
+    if (!P4IPRewriterPattern::parse(rest, &is, this, &cerrh))
       return -1;
     if ((unsigned)is.foutput >= (unsigned)noutputs() ||
         (unsigned)is.routput >= (unsigned)is.owner->noutputs())
@@ -362,10 +366,10 @@ void P4IPRewriterPattern::unparse(StringAccum &sa) const
 P4IPRewriterPattern::P4IPRewriterPattern(const IPAddress &saddr, int sport,
                                          const IPAddress &daddr, int dport,
                                          bool sequential, bool same_first,
-                                         uint32_t variation)
+                                         uint32_t variation, int vari_target)
     : _saddr(saddr), _sport(sport), _daddr(daddr), _dport(dport),
       _variation_top(variation), _next_variation(0), _sequential(sequential),
-      _same_first(same_first), _refcount(0) {}
+      _same_first(same_first), _refcount(0), _vari_target(vari_target) {}
 
 enum
 {
@@ -396,32 +400,40 @@ static bool parse_ports(const Vector<String> &words, P4IPRewriterInput *input,
     return errh->error("bad reply port"), false;
 }
 
-static bool port_variation(const String &str, int32_t *port, int32_t *variation,
-                           bool *sequential, bool *same_first)
+static bool port_variation(const String &str, int32_t &port, int32_t &variation)
 {
   const char *end = str.end();
-  if (end > str.begin() && end[-1] == '#')
-    *sequential = true, *same_first = false, --end;
-  else if (end > str.begin() && end[-1] == '?')
-    *same_first = false, --end;
   const char *dash = find(str.begin(), end, '-');
   int32_t port2 = 0;
 
-  if (IntArg().parse(str.substring(str.begin(), dash), *port) &&
-      IntArg().parse(str.substring(dash + 1, end), port2) && *port >= 0 &&
-      port2 >= *port && port2 < 65536)
+  if (IntArg().parse(str.substring(str.begin(), dash), port) &&
+      IntArg().parse(str.substring(dash + 1, end), port2) && port >= 0 &&
+      port2 >= port && port2 < 65536)
   {
-    *variation = port2 - *port;
+    variation = port2 - port;
     return true;
   }
   else
     return false;
 }
 
-bool P4IPRewriterPattern::parse_with_ports(const String &str,
-                                           P4IPRewriterInput *input,
-                                           Element *context,
-                                           ErrorHandler *errh)
+static bool addr_variation(const String &str, IPAddress &baseAddr, int32_t &variation)
+{
+  const char *end = str.end();
+  const char *dash = find(str.begin(), end, '-');
+  IPAddress addr2;
+  if (IPAddressArg().parse(str.substring(str.begin(), dash), baseAddr) &&
+      IPAddressArg().parse(str.substring(dash + 1, end), addr2) && ntohl(addr2.addr()) >= ntohl(baseAddr.addr()))
+  {
+    variation = ntohl(addr2.addr()) - ntohl(baseAddr.addr());
+    return true;
+  }
+  else
+    return false;
+}
+
+bool P4IPRewriterPattern::parse(const String &str, P4IPRewriterInput *input,
+                                Element *context, ErrorHandler *errh)
 {
   Vector<String> words, port_words;
   cp_spacevec(str, words);
@@ -438,7 +450,8 @@ bool P4IPRewriterPattern::parse_with_ports(const String &str,
 
   IPAddress saddr, daddr;
   int32_t sport = 0, dport = 0, variation = 0;
-  bool sequential = false, same_first = true;
+  bool sequential = true, same_first = false;
+  int vari_target = 0;
 
   // source address
   int i = 0;
@@ -447,35 +460,34 @@ bool P4IPRewriterPattern::parse_with_ports(const String &str,
     return pattern_error(PE_SADDR, errh);
 
   // source port
-  if (words.size() >= 3)
+  ++i;
+  if (!(words[i].equals("-", 1) || (IntArg().parse(words[i], sport) && sport > 0 && sport < 65536)))
   {
-    i = words.size() == 3 ? 2 : 1;
-    if (!(words[i].equals("-", 1) ||
-          (IntArg().parse(words[i], sport) && sport > 0 && sport < 65536) ||
-          port_variation(words[i], &sport, &variation, &sequential,
-                         &same_first)))
+    if (port_variation(words[i], sport, variation))
+      vari_target = TARGET_SPORT;
+    else
       return pattern_error(PE_SPORT, errh);
-    i = words.size() == 3 ? 0 : 1;
   }
 
   // destination address
   ++i;
-  if (!(words[i].equals("-", 1) ||
-        IPAddressArg().parse(words[i], daddr, context)))
-    return pattern_error(PE_DADDR, errh);
+  if (!(words[i].equals("-", 1) || IPAddressArg().parse(words[i], saddr, context)))
+  {
+    if (addr_variation(words[i], daddr, variation))
+      vari_target = TARGET_DADDR;
+    else
+      return pattern_error(PE_DADDR, errh);
+  }
 
   // destination port
-  if (words.size() == 4)
-  {
-    ++i;
-    if (!(words[i].equals("-", 1) ||
-          (IntArg().parse(words[i], dport) && dport > 0 && dport < 65536)))
-      return pattern_error(PE_DPORT, errh);
-  }
+  ++i;
+  if (!(words[i].equals("-", 1) ||
+        (IntArg().parse(words[i], dport) && dport > 0 && dport < 65536)))
+    return pattern_error(PE_DPORT, errh);
 
   input->pattern =
       new P4IPRewriterPattern(saddr, htons(sport), daddr, htons(dport),
-                              sequential, same_first, variation);
+                              sequential, same_first, variation, vari_target);
   return true;
 }
 
@@ -491,8 +503,7 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
   if (_dport)
     rewritten_flowid.set_dport(_dport);
 
-  uint32_t base = ntohs(_sport);
-  uint32_t val;
+  uint32_t val, base;
 
   // TOFIX: for test. correct behavior is to drop.
   if (_next_variation > _variation_top)
@@ -500,11 +511,21 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
   // return P4IPRewriter::rw_drop;
   val = _next_variation;
 
-  rewritten_flowid.set_sport(htons(base + val));
+  if (_vari_target == TARGET_SPORT)
+  {
+    base = ntohs(_sport);
+    rewritten_flowid.set_sport(htons(base + val));
+  }
+  else if (_vari_target == TARGET_DADDR)
+  {
+    base = ntohl(_daddr.addr());
+    rewritten_flowid.set_daddr(IPAddress(htonl(base + val)));
+  }
+
   _next_variation = val + 1;
   return P4IPRewriter::rw_addmap;
 }
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4IPRewriter)
-ELEMENT_LIBS(-L / home / sonic / p4sfc / click_nf / statelib - lstate - lprotobuf)
+// ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)

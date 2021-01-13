@@ -250,3 +250,4 @@ void P4SFCIPFilter::push_batch(int port, PacketBatch *batch)
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4SFCIPFilter)
+ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)
