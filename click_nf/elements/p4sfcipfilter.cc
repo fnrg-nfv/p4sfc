@@ -91,15 +91,19 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
 {
     int click_instance_id = 1;
     _debug = false;
+    int port = 28282;
     if (Args(conf, this, errh)
             .read_mp("CLICKINSTANCEID", click_instance_id)
             .read_mp("DEBUG", _debug)
+            .read_mp("PORT", port)
             .consume() < 0)
         return -1;
 
-    P4SFCState::startServer(click_instance_id);
+    char addr[20];
+    sprintf(addr, "0.0.0.0:%d", port);
+    P4SFCState::startServer(click_instance_id, std::string(addr));
 
-    for (int argno = 2; argno < conf.size(); argno++)
+    for (int argno = 3; argno < conf.size(); argno++)
     {
         // parse every rules into statelib
         Vector<String> words;
@@ -108,31 +112,24 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
         P4SFCState::TableEntry *e = parse(words, errh);
         // TODO: priority ascending or descending
         e->set_priority(argno);
-        _rules.insert(*e);
+        _map.insert(*e);
         if (_debug)
             click_chatter("entry: %s", toString(*e).c_str());
     }
 }
 
-struct QuickEntry
+static std::string buildkey(const IPFlow5ID &flow)
 {
-    IPFlowID flowid;
-    IPFlowID mask;
-    uint8_t proto;
-    uint8_t proto_mask;
-
-    int port;
-    bool match(const IPFlow5ID &cmp)
-    {
-        return (cmp & mask) == flowid && (cmp.proto() & proto_mask) == proto;
-    }
-};
-
-std::map<P4SFCState::TableEntry *, QuickEntry> quick_map;
+    std::string ret;
+    ret.append((const char *)flow.saddr().data(), 4);
+    ret.append((const char *)flow.daddr().data(), 4);
+    uint8_t proto = flow.proto();
+    ret.append((const char *)&proto, 1);
+    return ret;
+}
 
 P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
 {
-    QuickEntry ce;
     int size = words.size();
     if (size != 4)
     {
@@ -163,58 +160,36 @@ P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler
         p->set_param(P4_IPFILTER_PARAM_PORT);
         p->set_value(&out_port, 4);
     }
-    ce.port = out_port;
-    SingleAddress src = SingleAddress::parse(words[1]);
-    SingleAddress dst = SingleAddress::parse(words[2]);
+    IPAddress src;
+    IPAddress dst;
+
+    if (!IPAddressArg().parse(words[1], src, this))
+        errh->message("src IPAddress: parse error");
+    if (!IPAddressArg().parse(words[2], dst, this))
+        errh->message("dst IPAddress: parse error");
     {
         auto m = e->add_match();
         m->set_field_name(P4H_IP_SADDR);
-        auto t = m->mutable_ternary();
-        t->set_value(&src.ip, 4);
-        t->set_mask(&src.ip_mask, 4);
+        auto t = m->mutable_exact();
+        uint32_t src_addr = src.addr();
+        t->set_value(&src_addr, 4);
     }
     {
         auto m = e->add_match();
         m->set_field_name(P4H_IP_DADDR);
-        auto t = m->mutable_ternary();
-        t->set_value(&dst.ip, 4);
-        t->set_mask(&dst.ip_mask, 4);
+        auto t = m->mutable_exact();
+        uint32_t dst_addr = dst.addr();
+        t->set_value(&dst_addr, 4);
     }
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_SPORT);
-        auto t = m->mutable_ternary();
-        t->set_value(&src.port, 2);
-        t->set_mask(&src.port_mask, 2);
-    }
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_DPORT);
-        auto t = m->mutable_ternary();
-        t->set_value(&dst.port, 2);
-        t->set_mask(&dst.port_mask, 2);
-    }
-    ce.flowid.assign(src.ip, src.port, dst.ip, dst.port);
-    ce.mask.assign(src.ip_mask, src.port_mask, dst.ip_mask, dst.port_mask);
     {
         uint8_t proto = 0;
-        uint8_t proto_mask = 0;
-        if (words[3] != "-")
-        {
-            if (IntArg().parse(words[3], proto))
-                proto_mask = 0xff;
-            else
-                errh->message("bad proto number %s", words[3].c_str());
-        }
+        if (!IntArg().parse(words[3], proto))
+            errh->message("bad proto number %s", words[3].c_str());
         auto m = e->add_match();
         m->set_field_name(P4H_IP_PROTO);
-        auto t = m->mutable_ternary();
+        auto t = m->mutable_exact();
         t->set_value(&proto, 1);
-        t->set_mask(&proto_mask, 1);
-        ce.proto = proto;
-        ce.proto_mask = proto_mask;
     }
-    quick_map.insert({e, ce});
     return e;
 }
 
@@ -222,16 +197,10 @@ int P4SFCIPFilter::process(int port, Packet *p)
 {
     IPFlow5ID flowid(p);
     int out = -1;
-    auto lambda = [this, flowid, &out](P4SFCState::TableEntry *e) mutable {
-        auto ce = quick_map.find(e)->second;
-        if (ce.match(flowid))
-        {
-            out = ce.port;
-            return true;
-        }
-        return false;
-    };
-    auto e = _rules.lookup(lambda);
+    P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
+    if (e)
+        out = *(int *)e->action().params(0).value().data();
+
     if (_debug)
         click_chatter("Filter the packet to port %x.", out);
     return out;
@@ -250,4 +219,3 @@ void P4SFCIPFilter::push_batch(int port, PacketBatch *batch)
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4SFCIPFilter)
-ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)

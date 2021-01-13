@@ -4,7 +4,7 @@ define(
 	$dstmac		0:0:0:0:0:0,
 	$debug		false,
 	$rate		1,
-	$range		10,
+	$range		0,
 	$flowsize	10,
 );
 
@@ -12,24 +12,10 @@ ec :: P4SFCEncap();
 
 // do not deny
 // <action srcip:port dstip:port proto>
-ipfilter :: P4SFCIPFilter(3, $debug,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8:80 10.0.0.0/8 0x06,
-	allow 10.0.0.0/8 - -,
-	1 10.0.0.0/8 - -,
-	1 - 66.66.66.66 -,
-	2 - - -)
+ipfilter :: P4SFCIPFilter(3, $debug, 28282,
+	allow 10.0.0.1 77.77.77.77 0x06, // tcp
+	allow 10.0.0.1 77.77.77.77 0x11, // udp
+)
 
 src::P4SFCSimuFlow(
 SRCETH $srcmac,

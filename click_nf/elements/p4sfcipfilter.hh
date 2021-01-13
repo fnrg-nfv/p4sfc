@@ -37,7 +37,7 @@ protected:
     T s2i(const std::string &);
 
 private:
-    P4SFCState::List _rules;
+    P4SFCState::Table _map;
     bool _debug;
     // Vector<P4SFCState::TableEntry *> rules;
 };
