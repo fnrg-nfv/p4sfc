@@ -9,6 +9,7 @@ define(
     $flowsize	5000,
     $seed		1,
     $time_offset	4,
+    $range		1,
 );
 
 P4SFCSimuFlow(
@@ -16,7 +17,7 @@ SRCETH $srcmac,
 DSTETH $dstmac,
 STOP false, DEBUG $debug,
 LIMIT -1, RATE $rate, BURST 32,
-SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE 1, LENGTH 1500,
+SRCIP 10.0.0.1, DSTIP 77.77.77.77, RANGE $range, LENGTH 1500,
 FLOWSIZE $flowsize,
 SFCH \<$header>,
 SEED $seed, MAJORFLOW 0.2, MAJORDATA 0.8)
