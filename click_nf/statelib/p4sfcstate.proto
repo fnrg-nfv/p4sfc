@@ -11,6 +11,8 @@ service RPC {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
 
   rpc GetState (Empty) returns (TableEntryReply) {}
+
+  rpc GetNewState (Empty) returns (TableEntryReply) {}
 }
 
 

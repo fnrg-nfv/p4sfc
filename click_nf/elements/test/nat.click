@@ -34,11 +34,8 @@ SFCH \<$header>,
 SEED 1, MAJORFLOW 0.2, MAJORDATA 0.8) 
 
 src 
-	// -> Align(4, 2)
 	-> Strip(14)
-	-> [0]ec
-
-ec[0]
+	-> ec
 	-> Print(in, ACTIVE $debug)
 	-> CheckIPHeader 
 	-> IPPrint(in_ip, ACTIVE $debug)
@@ -59,7 +56,7 @@ ec[1]	-> EtherEncap(0x1234, $srcmac, $dstmac)
 		-> tx :: ToDPDKDevice(0)
 
 rx :: FromDPDKDevice(0) 
-->Discard
+-> Discard
 
 
 Script( 
