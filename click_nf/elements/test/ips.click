@@ -135,14 +135,17 @@ ips[0]  -> Print(Alert, ACTIVE $debug)
 ips[1]  -> [1]ec;
 
 ec[1] -> EtherEncap(0x1234, 0:0:0:0:0:0, 0:0:0:0:0:0)
+    	-> pt::PrintTime(DEBUG $debug, OFFSET 4)
 		-> tx :: ToDPDKDevice(0)
 
-rx :: FromDPDKDevice(0) -> Discard
 
-Script( 
-	TYPE ACTIVE,
-	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count)",
-	wait 1,
-	loop
-	);
+rx::FromDPDKDevice(0)
+    -> Discard
+
+Script(
+    TYPE ACTIVE,
+    print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count) latency: $(pt.avg_latency)",
+    wait 1,
+    loop
+);
 
