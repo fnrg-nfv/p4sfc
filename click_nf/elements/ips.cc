@@ -3,21 +3,25 @@
 
 #include "ips.hh"
 #include <click/error.hh>
+#include <click/args.hh>
+#include <click/straccum.hh>
 #include <iostream>
+#include <queue>
 CLICK_DECLS
 
 SampleIPS::SampleIPS() {}
 
 SampleIPS::~SampleIPS() {}
 
-void SampleIPS::parse_pattern(String &s) {
-  char *data = (char *)malloc(s.length() / 2);
+int number2String(unsigned char *dest, const unsigned char *src, int len)
+{
   uint32_t cur_p = 0;
   unsigned char cur_v = 0;
 
   bool first = true;
-  for (int i = 0; i < s.length(); ++i) {
-    char c = s.at(i);
+  for (int i = 0; i < len; ++i)
+  {
+    char c = src[i];
 
     if (c >= '0' && c <= '9')
       c -= '0';
@@ -28,73 +32,128 @@ void SampleIPS::parse_pattern(String &s) {
     else
       continue;
 
-    if (first) {
+    if (first)
       cur_v = c, first = false;
-    } else {
-      data[cur_p++] = (cur_v << 4) + c;
+    else
+    {
+      dest[cur_p++] = (cur_v << 4) + c;
       cur_v = 0, first = true;
     }
   }
 
   if (!first)
-    data[cur_p++] = cur_v;
+    dest[cur_p++] = cur_v;
 
-  patterns.push_back({.len = cur_p, .data = (char *)realloc(data, cur_p)});
+  return cur_p;
 }
 
-#define PATTERN_MAX_LENGTH 100
-int SampleIPS::configure(Vector<String> &conf, ErrorHandler *errh) {
-  if (conf.size() == 0)
+#define PATTERN_BUFSIZE 1500
+
+SampleIPS::IPSPattern SampleIPS::parse_pattern(String &s)
+{
+  unsigned char buf[PATTERN_BUFSIZE];
+  unsigned char *bufp = buf;
+  const unsigned char *strp = (const unsigned char *)s.data();
+  int len = s.length(), cur = 0;
+  int i, j;
+
+  while ((i = s.find_left("|", cur)) != -1)
+  {
+    j = s.find_left("|", i + 1);
+    if (j == -1)
+      break;
+
+    memcpy(bufp, strp + cur, i - cur);
+    bufp += i - cur;
+
+    bufp += number2String(bufp, strp + i + 1, j - i - 1);
+    cur = j + 1;
+  }
+
+  memcpy(bufp, strp + cur, len - cur);
+  bufp += len - cur;
+
+  SampleIPS::IPSPattern ret = {.len = (uint32_t)(bufp - buf), .data = (unsigned char *)malloc(bufp - buf)};
+  memcpy(ret.data, buf, ret.len);
+
+  return ret;
+}
+
+int SampleIPS::configure(Vector<String> &conf, ErrorHandler *errh)
+{
+  _debug = false;
+  if (Args(conf, this, errh)
+          .read_mp("DEBUG", _debug)
+          .consume() < 0)
+    return -1;
+
+  if (conf.size() == 1)
     errh->warning("empty configuration");
 
-  for (int i = 0; i < conf.size(); ++i) {
-    String s = conf[i];
-    parse_pattern(s);
+  for (int i = 1; i < conf.size(); ++i)
+  {
+    IPSPattern pattern = parse_pattern(conf[i]);
+    patterns.push_back(pattern);
+    pattern_trie.insert(pattern.data, pattern.len);
   }
-  print_patterns();
+  if (_debug)
+    print_patterns();
   return 0;
 }
 
-void SampleIPS::print_patterns(void) {
+void SampleIPS::print_patterns(void)
+{
   printf("Patterns:\n");
-  for (int i = 0; i < patterns.size(); ++i) {
-    const uint32_t *data = (const uint32_t *)patterns[i].data;
-    for (uint j = 0; j < patterns[i].len / sizeof(uint32_t); ++j) {
-      printf("%08x ", ntohl(data[j]));
-    }
+  for (int i = 0; i < patterns.size(); ++i)
+  {
+    for (uint j = 0; j < patterns[i].len; ++j)
+      printf("%02x ", patterns[i].data[j]);
     printf("\n");
   }
 }
 
-void SampleIPS::push(int, Packet *p) {
-  for (int i = 0; i < patterns.size(); ++i) {
-    if (pattern_match(patterns[i], p)) {
-      // TODO: alert something here.
-      output(0).push(p);
-      return;
-    }
-  }
-  output(1).push(p);
+int SampleIPS::process(Packet *p)
+{
+  const unsigned char *data = p->data();
+  int len = p->length();
+  if (pattern_trie.iterSearch(data, len))
+    return 0;
+  return 1;
 }
 
-bool SampleIPS::pattern_match(IPSPattern &pt, Packet *p) {
-  uint32_t len = p->length();
-  const unsigned char *d = p->data();
-
-  // naive
-  for (uint i = 0; i < len; i++) {
-    uint k = 0;
-    for (uint j = 0; j < pt.len; j++) {
-      if (d[i + j] == pt.data[j]) {
-        k++;
-      } else
-        break;
-    }
-    if (k == pt.len)
-      return true;
-  }
-  return false;
+void SampleIPS::push(int, Packet *p)
+{
+  output(process(p)).push(p);
 }
+
+void SampleIPS::push_batch(int, PacketBatch *batch)
+{
+  CLASSIFY_EACH_PACKET(noutputs() + 1, process, batch, checked_output_push_batch);
+}
+
+// bool SampleIPS::pattern_match(SampleIPS::IPSPattern &pt, Packet *p)
+// {
+//   uint32_t len = p->length() - pt.len;
+//   const unsigned char *d = p->data();
+
+//   bool ret;
+//   // naive
+//   for (int i = 0; i < len; i++)
+//   {
+//     ret = true;
+//     for (int j = 0; j < pt.len; j++)
+//     {
+//       if (d[i + j] != pt.data[j])
+//       {
+//         ret = false;
+//         break;
+//       }
+//     }
+//     if (ret)
+//       return true;
+//   }
+//   return false;
+// }
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(SampleIPS)
