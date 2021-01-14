@@ -1,4 +1,4 @@
-from random import choice, randint
+from random import choice, randint, shuffle
 import socket
 import struct
 import argparse
@@ -21,32 +21,34 @@ def gen_firewall_rules():
     As we need to test the throughput, all rules are allow.
     """
     rules = []
-    rule_pattern = "(0, 3, 0, %s, %s): allow();"
+    rule_pattern = "allow %s %s 0x11,"
 
     ip_src_base = ipv4_2_int("10.0.0.1")
     ip_dst_base = ipv4_2_int("77.77.77.77")
-    for i in range(32):
+    for i in range(100):
         ip_src = ip_src_base + i
-        for j in range(32):
+        for j in range(100):
             ip_dst = ip_dst_base + j
-            rule = rule_pattern % (ip_src, ip_dst)
+            rule = rule_pattern % (int_2_ipv4(ip_src), int_2_ipv4(ip_dst))
             rules.append(rule)
     return rules
+
 
 def gen_forwarder_rules():
     """Generate forwarder rules.
-    As we need to test the throughput, all rules are allow.
+    As we need to test the throughput, all rules are forward.
     """
     rules = []
-    rule_pattern = "(0, 4, 0, %s): set_output_port(128);"
+    rule_pattern = "128 %s,"
 
     ip_dst_base = ipv4_2_int("77.77.77.77")
-    for i in range(32):
-        for j in range(32):
-            ip_dst = ip_dst_base + j
-            rule = rule_pattern % (ip_dst)
-            rules.append(rule)
+    for i in range(10000):
+        ip_dst = ip_dst_base + i
+        rule = rule_pattern % (int_2_ipv4(ip_dst))
+        rules.append(rule)
+    shuffle(rules)
     return rules
+
 
 if __name__ == '__main__':
     rules = gen_forwarder_rules()
