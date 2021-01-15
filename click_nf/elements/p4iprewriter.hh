@@ -5,6 +5,7 @@
 #include <click/hashtable.hh>
 #include <click/ipflowid.hh>
 #include <click/timer.hh>
+#include <unordered_map>
 
 #include "/home/sonic/p4sfc/click_nf/statelib/p4sfcstate.hh"
 
@@ -18,12 +19,24 @@ class P4IPRewriterInput;
 class P4IPRewriterEntry;
 class P4IPRewriter;
 
+class P4IPRewriterEntry : public P4SFCState::TableEntryImpl
+{
+public:
+  P4IPRewriterEntry(const IPFlowID &in, const IPFlowID &out);
+  void apply(WritablePacket *p);
+  String unparse();
+
+private:
+  IPFlowID flowid;
+  IPFlowID rw_flowid;
+};
+
 class P4IPRewriterPattern
 {
 public:
   P4IPRewriterPattern(const IPAddress &saddr, int sport, const IPAddress &daddr,
-                      int dport, bool sequential, bool same_first,
-                      uint32_t variation, int vari_target);
+                          int dport, bool sequential, bool same_first,
+                          uint32_t variation, int vari_target);
   static bool parse_with_ports(const String &str, P4IPRewriterInput *input,
                                Element *context, ErrorHandler *errh);
   static bool parse(const String &str, P4IPRewriterInput *input,
@@ -112,9 +125,7 @@ public:
 
   int configure(Vector<String> &conf, ErrorHandler *errh);
 
-  // inline P4IPRewriterEntry *get_entry(const IPFlowID &flowid, int input);
-  P4SFCState::TableEntry *add_flow(const IPFlowID &flowid, const IPFlowID &rewritten_flowid, int input);
-  // void destroy_flow(P4IPRewriterFlow *flow);
+  P4IPRewriterEntry *add_flow(const IPFlowID &flowid, const IPFlowID &rewritten_flowid);
 
   Packet *process(int, Packet *);
 
@@ -122,7 +133,14 @@ public:
   void push_batch(int port, PacketBatch *batch) override;
 
 protected:
-  P4SFCState::Table _map;
+  struct hash_IPFlowID
+  {
+    size_t operator()(const IPFlowID &a) const
+    {
+      return a.hashcode();
+    }
+  };
+  P4SFCState::Table<IPFlowID, struct hash_IPFlowID> _map;
   Vector<P4IPRewriterInput> _input_specs;
   bool _debug;
 

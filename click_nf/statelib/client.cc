@@ -81,16 +81,14 @@ int main(int argc, char **argv)
             << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
   std::cout << teReply.click_instance_id() << std::endl;
   int size = teReply.entries_size();
-  if (size <= 100)
+  size = size > 100 ? 100 : size;
+  for (size_t i = 0; i < size; i++)
   {
-    for (size_t i = 0; i < size; i++)
-    {
-      auto e = teReply.entries(i);
-      std::cout << toString(e) << std::endl;
-    }
+    auto e = teReply.entries(i);
+    const TableEntryImpl *p = (const TableEntryImpl *)&e;
+    std::cout << p->unparse() << std::endl;
   }
-  else
-    std::cout << "Entries size: " << size << std::endl;
+  std::cout << "Entries size: " << teReply.entries_size() << std::endl;
 
   return 0;
 }

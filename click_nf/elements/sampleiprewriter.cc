@@ -103,11 +103,6 @@ int SampleIPRewriter::parse_input_spec(const String &line, SampleIPRewriterInput
   return 0;
 }
 
-inline std::string encode(uint16_t i)
-{
-  char *c = (char *)&i;
-  return std::string(c, sizeof(uint16_t));
-}
 
 SampleIPRewriterEntry::SampleIPRewriterEntry(const IPFlowID &in, const IPFlowID &out)
     : flowid(in), rw_flowid(out) {}

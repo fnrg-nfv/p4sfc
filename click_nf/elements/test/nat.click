@@ -52,6 +52,7 @@ rw[0]	-> CheckIPHeader
 
 ec[1]	-> EtherEncap(0x1234, $srcmac, $dstmac)
 		-> Print(out, ACTIVE $debug)
+		-> pt::PrintTime(DEBUG $debug, OFFSET 4)
 		-> tx :: ToDPDKDevice(0)
 
 rx :: FromDPDKDevice(0) 
@@ -60,7 +61,7 @@ rx :: FromDPDKDevice(0)
 
 Script( 
 	TYPE ACTIVE,
-	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count)",
+	print "TX: $(tx.count)/$(tx.dropped); RX: $(rx.count) latency: $(pt.avg_latency)",
 	wait 1,
 	loop
 	);

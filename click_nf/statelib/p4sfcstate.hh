@@ -4,6 +4,7 @@
 #include "p4sfcstate.pb.h"
 
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -14,113 +15,65 @@ namespace P4SFCState
     using namespace std;
 
     // declare
+    extern int cur_pos;
+    class TableEntryImpl : public TableEntry
+    {
+    public:
+        TableEntryImpl();
+
+        void inc_slot();
+        string unparse() const;
+    };
+
+    template <typename Key, typename Hash>
     class Table
     {
     public:
         Table() {}
         int size();
 
-        void insert(const string &, TableEntry &);
-        void insert(TableEntry &);
-        void remove(const string &);
-        TableEntry *lookup(const string &);
-        TableEntry *lookup(const TableEntry &);
+        void insert(const Key &, TableEntryImpl *);
+        TableEntryImpl *lookup(const Key &);
+        // void remove(const Key &);
 
-        map<string, TableEntry *> _map;
+        unordered_map<Key, TableEntryImpl *, Hash> _map;
     };
 
-    class List
-    {
-    public:
-        List() {}
-        int size();
-
-        void insert(TableEntry &);
-        TableEntry *at(int);
-        TableEntry *operator[](int);
-
-        // TODO: std::function is cost heavy
-        // TableEntry *lookup(std::function<bool(TableEntry *)> match);
-        template <typename T>
-        TableEntry *lookup(T match);
-
-        // TODO
-        void remove(int index);
-
-    private:
-        vector<TableEntry *> _list;
-    };
-
-    string buildKey(const TableEntry &entry);
-    TableEntry *newTableEntry();
     void deleteTableEntries();
     void startServer(int click_instance_id = 1, string addr = "0.0.0.0:28282");
     void shutdownServer();
-    string toString(const TableEntry &entry);
 
     // should not be exploded
-    void incSlot(TableEntry *);
 
     // inline definition
-    inline int Table::size()
+    template <typename Key, typename Hash>
+    inline int Table<Key, Hash>::size()
     {
         return _map.size();
     }
 
-    inline void
-    Table::insert(const string &key, TableEntry &entry)
+    template <typename Key, typename Hash>
+    inline void Table<Key, Hash>::insert(const Key &key, TableEntryImpl *entry)
     {
-        _map.insert({key, &entry});
+        _map[key] = entry;
     }
 
-    inline void Table::insert(TableEntry &entry)
+    template <typename Key, typename Hash>
+    inline TableEntryImpl *Table<Key, Hash>::lookup(const Key &key)
     {
-        string key = buildKey(entry);
-        _map.insert({key, &entry});
+        auto it = _map.find(key);
+        if (it == _map.end())
+            return 0;
+        auto e = it->second;
+        e->inc_slot();
+        return e;
     }
 
-    inline TableEntry *Table::lookup(const TableEntry &e)
+    inline void TableEntryImpl::inc_slot()
     {
-        string key = buildKey(e);
-        return lookup(key);
+        auto w = mutable_window();
+        w->set_slot(cur_pos, w->slot(cur_pos) + 1);
     }
-
-    inline void Table::remove(const string &key)
-    {
-        _map.erase(key);
-    }
-
-    inline int List::size()
-    {
-        return _list.size();
-    }
-
-    inline void List::insert(TableEntry &e)
-    {
-        _list.push_back(&e);
-    }
-    inline TableEntry *List::at(int i)
-    {
-        return _list[i];
-    }
-
-    inline TableEntry *List::operator[](int i)
-    {
-        return at(i);
-    }
-
-    template <typename T>
-    inline TableEntry *List::lookup(T match)
-    {
-        for (auto e = _list.begin(); e != _list.end(); e++)
-            if (match(*e))
-            {
-                incSlot(*e);
-                return *e;
-            }
-        return 0;
-    }
-
 } // namespace P4SFCState
 
 #endif

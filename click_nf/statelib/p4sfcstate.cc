@@ -15,10 +15,9 @@
 
 namespace P4SFCState
 {
-
     using namespace grpc;
 
-    vector<TableEntry *> total_entries;
+    vector<TableEntryImpl *> total_entries;
     int cur_pos;
     const int k = 1000;
 
@@ -35,7 +34,7 @@ namespace P4SFCState
 
         typedef struct
         {
-            TableEntry *e;
+            TableEntryImpl *e;
             uint64_t sum;
         } entry_sum;
 
@@ -51,7 +50,7 @@ namespace P4SFCState
             vector<entry_sum> entries;
             for (auto i = total_entries.begin(); i != total_entries.cend(); i++)
             {
-                TableEntry *e = *i;
+                TableEntryImpl *e = *i;
                 entries.push_back({e, window_sum(*e)});
             }
 
@@ -172,17 +171,16 @@ namespace P4SFCState
         return stream.str();
     }
 
-    string
-    toString(const TableEntry &entry)
+    string TableEntryImpl::unparse() const
     {
         string ret("");
         std::stringstream stream;
-        stream << "TableName: " << entry.table_name();
+        stream << "TableName: " << table_name();
         stream << "\tMatch: ";
-        int size = entry.match_size();
+        int size = match_size();
         for (size_t i = 0; i < size; i++)
         {
-            auto m = entry.match(i);
+            auto m = match(i);
             stream << m.field_name() << ": ";
             if (m.has_exact())
                 stream << "exact: "
@@ -195,7 +193,7 @@ namespace P4SFCState
             //    << int_to_hexstr(m.ternary().mask().data());
             stream << "; ";
         }
-        auto a = entry.action();
+        auto a = action();
         size = a.params_size();
         stream << "\tAction: " << a.action() << " param: ";
         for (size_t i = 0; i < size; i++)
@@ -203,8 +201,8 @@ namespace P4SFCState
             auto p = a.params(i);
             stream << p.param() << ": " << p.value() << "; ";
         }
-        stream << "\tPriority: " << to_string(entry.priority());
-        auto w = entry.window();
+        stream << "\tPriority: " << to_string(priority());
+        auto w = window();
         size = w.slot_size();
         stream << "\tSlidingWindow(" + to_string(size) + "): ";
         for (size_t i = 0; i < size; i++)
@@ -212,31 +210,13 @@ namespace P4SFCState
         return stream.str();
     }
 
-    TableEntry *Table::lookup(const string &key)
+    TableEntryImpl::TableEntryImpl()
     {
-        auto it = _map.find(key);
-        if (it == _map.end())
-            return 0;
-        auto e = it->second;
-        incSlot(e);
-        return e;
-    }
-
-    void incSlot(TableEntry *entry)
-    {
-        auto w = entry->mutable_window();
-        w->set_slot(cur_pos, w->slot(cur_pos) + 1);
-    }
-
-    TableEntry *newTableEntry()
-    {
-        TableEntry *entry = new TableEntry();
-        total_entries.push_back(entry);
+        total_entries.push_back(this);
         // init sliding window
-        SlidingWindow *window = entry->mutable_window();
+        SlidingWindow *window = mutable_window();
         for (int i = 0; i < WINDOW_SIZE; i++)
             window->add_slot(0);
-        return entry;
     }
 
     void deleteTableEntries()
@@ -245,28 +225,4 @@ namespace P4SFCState
             if (*e)
                 delete *e;
     }
-
-    // concat all val as key, seperated by commas
-    // entry maybe a true tableentry or something built from packet header
-    string buildKey(const TableEntry &entry)
-    {
-        string ret("");
-        int match_size = entry.match_size();
-        for (int i = 0; i < match_size; i++)
-        {
-            auto m = entry.match(i);
-            // TODO: only support exact currently
-            if (m.has_exact())
-            {
-                ret += m.exact().value();
-            }
-            else if (m.has_ternary())
-            {
-                ret += m.ternary().value();
-                ret += m.ternary().mask();
-            }
-        }
-        return ret;
-    }
-
 } // namespace P4SFCState

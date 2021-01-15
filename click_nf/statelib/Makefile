@@ -16,13 +16,13 @@ GRPC_PY_PLUGIN = grpc_python_plugin
 GRPC_PY_PLUGIN_PATH ?= `which $(GRPC_PY_PLUGIN)`
 
 
-all: libstate.so client server test proto_py
+all: libstate.a proto_py
 
 libstate.so: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o
 	$(CXX) $^ $(LDFLAGS) -shared -o $@
 
-test: test.o
-	$(CXX) $^ $(LDFLAGS) -L. -lstate -o $@
+libstate.a: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o
+	ar -crv $@ $^
 
 client: p4sfcstate.pb.o p4sfcstate.grpc.pb.o p4sfcstate.o client.o
 	$(CXX) $^ $(LDFLAGS) -o $@

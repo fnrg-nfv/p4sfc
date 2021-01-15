@@ -122,108 +122,82 @@ inline std::string encode(uint16_t i)
   return std::string(c, sizeof(uint16_t));
 }
 
-std::string buildkey(const IPFlowID &flow)
+P4IPRewriterEntry::P4IPRewriterEntry(const IPFlowID &in, const IPFlowID &out)
+    : P4SFCState::TableEntryImpl(), flowid(in), rw_flowid(out)
 {
-  std::string ret;
-  ret.append((const char *)flow.saddr().data(), 4);
-  ret.append((const char *)flow.daddr().data(), 4);
-  ret.append(encode(flow.sport()));
-  ret.append(encode(flow.dport()));
-  return ret;
-}
+  {
+    auto m = add_match();
+    m->set_field_name(P4H_IP_SADDR);
+    auto ex = m->mutable_exact();
+    ex->set_value(in.saddr().data(), 4);
+  }
+  {
+    auto m = add_match();
+    m->set_field_name(P4H_IP_DADDR);
+    auto ex = m->mutable_exact();
+    ex->set_value(in.daddr().data(), 4);
+  }
+  {
+    auto m = add_match();
+    m->set_field_name(P4H_IP_SPORT);
+    auto ex = m->mutable_exact();
+    ex->set_value(encode(in.sport()));
+  }
+  {
+    auto m = add_match();
+    m->set_field_name(P4H_IP_DPORT);
+    auto ex = m->mutable_exact();
+    ex->set_value(encode(in.dport()));
+  }
 
-void flow2entry_action(const IPFlowID &flow, P4SFCState::TableEntry *e)
-{
-  auto a = e->mutable_action();
+  auto a = mutable_action();
   a->set_action(P4_IPRW_ACTION_NAME);
-
   {
     auto p = a->add_params();
     p->set_param(P4_IPRW_PARAM_SA);
-    p->set_value(flow.saddr().data(), 4);
+    p->set_value(out.saddr().data(), 4);
   }
   {
     auto p = a->add_params();
     p->set_param(P4_IPRW_PARAM_DA);
-    p->set_value(flow.daddr().data(), 4);
+    p->set_value(out.daddr().data(), 4);
   }
   {
     auto p = a->add_params();
     p->set_param(P4_IPRW_PARAM_SP);
-    p->set_value(encode(flow.sport()));
+    p->set_value(encode(out.sport()));
   }
   {
     auto p = a->add_params();
     p->set_param(P4_IPRW_PARAM_DP);
-    p->set_value(encode(flow.dport()));
+    p->set_value(encode(out.dport()));
   }
 }
 
-void flow2entry_match(const IPFlowID &flow, P4SFCState::TableEntry *e)
+String P4IPRewriterEntry::unparse()
 {
-  {
-    auto m = e->add_match();
-    m->set_field_name(P4H_IP_SADDR);
-    auto ex = m->mutable_exact();
-    ex->set_value(flow.saddr().data(), 4);
-  }
-  {
-    auto m = e->add_match();
-    m->set_field_name(P4H_IP_DADDR);
-    auto ex = m->mutable_exact();
-    ex->set_value(flow.daddr().data(), 4);
-  }
-  {
-    auto m = e->add_match();
-    m->set_field_name(P4H_IP_SPORT);
-    auto ex = m->mutable_exact();
-    ex->set_value(encode(flow.sport()));
-  }
-  {
-    auto m = e->add_match();
-    m->set_field_name(P4H_IP_DPORT);
-    auto ex = m->mutable_exact();
-    ex->set_value(encode(flow.dport()));
-  }
+  StringAccum sa;
+  sa << flowid.unparse() << "->" << rw_flowid.unparse() << "\n";
+  sa << P4SFCState::TableEntryImpl::unparse().c_str();
+  return sa.take_string();
 }
 
-void apply(WritablePacket *p, const P4SFCState::Action &a)
+void P4IPRewriterEntry::apply(WritablePacket *p)
 {
   assert(p->has_network_header());
   click_ip *iph = p->ip_header();
 
-  // TODO: need to optimize: forced type convert
-  {
-    std::string val = a.params(0).value();
-    iph->ip_src.s_addr = *((uint32_t *)val.c_str());
-  }
-  {
-    std::string val = a.params(1).value();
-    iph->ip_dst.s_addr = *((uint32_t *)val.c_str());
-  }
+  // IP header
+  iph->ip_src = rw_flowid.saddr();
+  iph->ip_dst = rw_flowid.daddr();
 
   if (!IP_FIRSTFRAG(iph))
     return;
   click_udp *udph = p->udp_header(); // TCP ports in the same place
-
-  {
-    std::string val = a.params(2).value();
-    udph->uh_sport = *((uint16_t *)val.c_str());
-  }
-  {
-    std::string val = a.params(3).value();
-    udph->uh_dport = *((uint16_t *)val.c_str());
-  }
+  udph->uh_sport = rw_flowid.sport();
+  udph->uh_dport = rw_flowid.dport();
   iph->ip_sum = 0;
   iph->ip_sum = click_in_cksum((unsigned char *)iph, sizeof(click_ip));
-  // IP header
-  // iph->ip_src = rw_flowid.saddr();
-  // iph->ip_dst = rw_flowid.daddr();
-  // click_update_in_cksum(&iph->ip_sum, 0, 0);
-  // update_csum(, direction, _ip_csum_delta);
-  // end if not first fragment
-  // udph->uh_sport = rw_flowid.sport();
-  // udph->uh_dport = rw_flowid.dport();
 }
 
 void P4IPRewriter::push_batch(int port, PacketBatch *batch)
@@ -255,7 +229,7 @@ Packet *P4IPRewriter::process(int port, Packet *p_in)
   IPFlowID flowid(p);
 
   // 1. check in map
-  P4SFCState::TableEntry *entry = _map.lookup(buildkey(flowid));
+  P4IPRewriterEntry *entry = (P4IPRewriterEntry *)_map.lookup(flowid);
   if (entry)
   {
     // print the match entry
@@ -266,15 +240,13 @@ Packet *P4IPRewriter::process(int port, Packet *p_in)
   {
     // 2. if not in map, inputspec.output
     P4IPRewriterInput &is = _input_specs.at(port);
-    IPFlowID rewritten_flowid = IPFlowID::uninitialized_t();
-    int result = is.rewrite_flowid(flowid, rewritten_flowid);
+    IPFlowID rw_flowid = IPFlowID::uninitialized_t();
+    int result = is.rewrite_flowid(flowid, rw_flowid);
     if (result == rw_addmap)
     {
-      entry = add_flow(flowid, rewritten_flowid, port);
+      entry = add_flow(flowid, rw_flowid);
       if (!entry)
-      {
         return p;
-      }
       if (_debug)
         std::cout << "[new]\t";
     }
@@ -282,29 +254,22 @@ Packet *P4IPRewriter::process(int port, Packet *p_in)
       return NULL;
   }
   if (_debug)
-    std::cout << toString(*entry) << std::endl;
+    std::cout << entry->unparse().c_str() << std::endl;
 
   // update the header
-  apply(p, entry->action());
+  entry->apply(p);
 
   // output(entry->output()).push(p);
   return p;
 }
 
-P4SFCState::TableEntry *P4IPRewriter::add_flow(const IPFlowID &flowid, const IPFlowID &rewritten_flowid, int input)
+P4IPRewriterEntry *P4IPRewriter::add_flow(const IPFlowID &flowid, const IPFlowID &rw_flowid)
 {
-  P4SFCState::TableEntry *entry = P4SFCState::newTableEntry();
-  P4SFCState::TableEntry *entry_r = P4SFCState::newTableEntry();
-  entry->set_table_name(P4_IPRW_TABLE_NAME);
-  entry_r->set_table_name(P4_IPRW_TABLE_NAME);
-  flow2entry_match(flowid, entry);
-  flow2entry_match(rewritten_flowid.reverse(), entry_r);
+  P4IPRewriterEntry *entry = new P4IPRewriterEntry(flowid, rw_flowid);
+  P4IPRewriterEntry *entry_r = new P4IPRewriterEntry(rw_flowid.reverse(), flowid.reverse());
 
-  flow2entry_action(rewritten_flowid, entry);
-  flow2entry_action(flowid.reverse(), entry_r);
-
-  _map.insert(*entry);
-  _map.insert(*entry_r);
+  _map.insert(flowid, entry);
+  _map.insert(rw_flowid.reverse(), entry_r);
 
   return entry;
 }
@@ -315,14 +280,14 @@ P4IPRewriterInput::P4IPRewriterInput()
   pattern = 0;
 }
 
-int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid)
+int P4IPRewriterInput::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rw_flowid)
 {
   int i;
   switch (kind)
   {
   case i_pattern:
   {
-    i = pattern->rewrite_flowid(flowid, rewritten_flowid);
+    i = pattern->rewrite_flowid(flowid, rw_flowid);
     if (i == P4IPRewriter::rw_drop)
       ++failures;
     return i;
@@ -364,9 +329,9 @@ void P4IPRewriterPattern::unparse(StringAccum &sa) const
 }
 
 P4IPRewriterPattern::P4IPRewriterPattern(const IPAddress &saddr, int sport,
-                                         const IPAddress &daddr, int dport,
-                                         bool sequential, bool same_first,
-                                         uint32_t variation, int vari_target)
+                                                 const IPAddress &daddr, int dport,
+                                                 bool sequential, bool same_first,
+                                                 uint32_t variation, int vari_target)
     : _saddr(saddr), _sport(sport), _daddr(daddr), _dport(dport),
       _variation_top(variation), _next_variation(0), _sequential(sequential),
       _same_first(same_first), _refcount(0), _vari_target(vari_target) {}
@@ -433,7 +398,7 @@ static bool addr_variation(const String &str, IPAddress &baseAddr, int32_t &vari
 }
 
 bool P4IPRewriterPattern::parse(const String &str, P4IPRewriterInput *input,
-                                Element *context, ErrorHandler *errh)
+                                    Element *context, ErrorHandler *errh)
 {
   Vector<String> words, port_words;
   cp_spacevec(str, words);
@@ -487,21 +452,21 @@ bool P4IPRewriterPattern::parse(const String &str, P4IPRewriterInput *input,
 
   input->pattern =
       new P4IPRewriterPattern(saddr, htons(sport), daddr, htons(dport),
-                              sequential, same_first, variation, vari_target);
+                                  sequential, same_first, variation, vari_target);
   return true;
 }
 
-int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewritten_flowid)
+int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rw_flowid)
 {
-  rewritten_flowid = flowid;
+  rw_flowid = flowid;
   if (_saddr)
-    rewritten_flowid.set_saddr(_saddr);
+    rw_flowid.set_saddr(_saddr);
   if (_sport)
-    rewritten_flowid.set_sport(_sport);
+    rw_flowid.set_sport(_sport);
   if (_daddr)
-    rewritten_flowid.set_daddr(_daddr);
+    rw_flowid.set_daddr(_daddr);
   if (_dport)
-    rewritten_flowid.set_dport(_dport);
+    rw_flowid.set_dport(_dport);
 
   uint32_t val, base;
 
@@ -514,12 +479,12 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
   if (_vari_target == TARGET_SPORT)
   {
     base = ntohs(_sport);
-    rewritten_flowid.set_sport(htons(base + val));
+    rw_flowid.set_sport(htons(base + val));
   }
   else if (_vari_target == TARGET_DADDR)
   {
     base = ntohl(_daddr.addr());
-    rewritten_flowid.set_daddr(IPAddress(htonl(base + val)));
+    rw_flowid.set_daddr(IPAddress(htonl(base + val)));
   }
 
   _next_variation = val + 1;
@@ -528,4 +493,4 @@ int P4IPRewriterPattern::rewrite_flowid(const IPFlowID &flowid, IPFlowID &rewrit
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4IPRewriter)
-ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -lprotobuf)
+ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -L/usr/local/lib `pkg-config --libs grpc++ grpc` -lgrpc++_reflection -lprotobuf -lpthread -ldl)
