@@ -3,7 +3,6 @@
 #include <click/config.h>
 
 #include "p4sfcipfilter.hh"
-#include "parserhelper.hh"
 #include "p4header.hh"
 #include <click/error.hh>
 #include <click/args.hh>
@@ -109,91 +108,86 @@ int P4SFCIPFilter::configure(Vector<String> &conf, ErrorHandler *errh)
         Vector<String> words;
         separate_text(cp_unquote(conf[argno]), words);
 
-        P4SFCState::TableEntry *e = parse(words, errh);
+        P4IPFilterEntry *e = parse(words, errh);
         // TODO: priority ascending or descending
         e->set_priority(argno);
-        _map.insert(*e);
+        _map.insert(e->key(), e);
         if (_debug)
-            click_chatter("entry: %s", toString(*e).c_str());
+            click_chatter("entry: %s", e->unparse().c_str());
     }
 }
 
-static std::string buildkey(const IPFlow5ID &flow)
+P4IPFilterEntry::P4IPFilterEntry(P4IPFilterEntry::Key &key, bool allowed) : _key(key), _allowed(allowed)
 {
-    std::string ret;
-    ret.append((const char *)flow.saddr().data(), 4);
-    ret.append((const char *)flow.daddr().data(), 4);
-    uint8_t proto = flow.proto();
-    ret.append((const char *)&proto, 1);
-    return ret;
+    set_table_name(P4_IPFILTER_TABLE_NAME);
+    {
+        auto a = mutable_action();
+        if (allowed)
+            a->set_action(P4_IPFILTER_ACTION_ALLOW_NAME);
+        else
+            a->set_action(P4_IPFILTER_ACTION_DENY_NAME);
+    }
+
+    {
+        auto m = add_match();
+        m->set_field_name(P4H_IP_SADDR);
+        auto t = m->mutable_exact();
+        uint32_t src_addr = key.src.addr();
+        t->set_value(&src_addr, 4);
+    }
+    {
+        auto m = add_match();
+        m->set_field_name(P4H_IP_DADDR);
+        auto t = m->mutable_exact();
+        uint32_t dst_addr = key.dst.addr();
+        t->set_value(&dst_addr, 4);
+    }
+    {
+        auto m = add_match();
+        m->set_field_name(P4H_IP_PROTO);
+        auto t = m->mutable_exact();
+        t->set_value(&key.proto, 1);
+    }
 }
 
-P4SFCState::TableEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
+P4IPFilterEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
 {
-    int size = words.size();
+    size_t size = words.size();
     if (size != 4)
     {
         errh->message("firewall rule must be 4-tuple, but is a %d-tuple", size);
         return NULL;
     }
 
-    P4SFCState::TableEntry *e = P4SFCState::newTableEntry();
-    e->set_table_name(P4_IPFILTER_TABLE_NAME);
-
     bool allowed = false;
+    IPAddress src, dst;
+    uint8_t proto = 0;
+
     if (words[0].compare("allow") == 0)
         allowed = true;
     else if (words[0].compare("deny") == 0)
         allowed = false;
     else
         errh->message("format error %s", words[0]);
-    {
-        auto a = e->mutable_action();
-        if (allowed)
-            a->set_action(P4_IPFILTER_ACTION_ALLOW_NAME);
-        else
-            a->set_action(P4_IPFILTER_ACTION_DENY_NAME);
-    }
-    IPAddress src;
-    IPAddress dst;
 
     if (!IPAddressArg().parse(words[1], src, this))
         errh->message("src IPAddress: parse error");
     if (!IPAddressArg().parse(words[2], dst, this))
         errh->message("dst IPAddress: parse error");
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_SADDR);
-        auto t = m->mutable_exact();
-        uint32_t src_addr = src.addr();
-        t->set_value(&src_addr, 4);
-    }
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_DADDR);
-        auto t = m->mutable_exact();
-        uint32_t dst_addr = dst.addr();
-        t->set_value(&dst_addr, 4);
-    }
-    {
-        uint8_t proto = 0;
-        if (!IntArg().parse(words[3], proto))
-            errh->message("bad proto number %s", words[3].c_str());
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_PROTO);
-        auto t = m->mutable_exact();
-        t->set_value(&proto, 1);
-    }
-    return e;
+    if (!IntArg().parse(words[3], proto))
+        errh->message("bad proto number %s", words[3].c_str());
+    P4IPFilterEntry::Key key(src, dst, proto);
+    return new P4IPFilterEntry(key, allowed);
 }
 
 int P4SFCIPFilter::process(int port, Packet *p)
 {
     IPFlow5ID flowid(p);
     int out = -1;
-    P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
-    if (e)
-        out = (e->action().action().compare(P4_IPFILTER_ACTION_ALLOW_NAME) == 0);
+    P4IPFilterEntry::Key key(flowid.saddr(), flowid.daddr(), flowid.proto());
+    P4IPFilterEntry *e = (P4IPFilterEntry *)_map.lookup(key);
+    if (e->allowed())
+        out = 0;
     if (_debug)
         click_chatter("Filter the packet to port %x.", out);
     return out;
@@ -212,3 +206,4 @@ void P4SFCIPFilter::push_batch(int port, PacketBatch *batch)
 
 CLICK_ENDDECLS
 EXPORT_ELEMENT(P4SFCIPFilter)
+ELEMENT_LIBS(-L/home/sonic/p4sfc/click_nf/statelib -lstate -L/usr/local/lib `pkg-config --libs grpc++ grpc` -lgrpc++_reflection -lprotobuf -lpthread -ldl)

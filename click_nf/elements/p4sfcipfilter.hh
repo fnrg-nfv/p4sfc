@@ -10,6 +10,34 @@
 
 CLICK_DECLS
 
+class P4IPFilterEntry : public P4SFCState::TableEntryImpl
+{
+public:
+    struct Key
+    {
+    public:
+        Key(IPAddress src, IPAddress dst, uint8_t proto) : src(src), dst(dst), proto(proto) {}
+
+        IPAddress src, dst;
+        uint8_t proto;
+    };
+    struct Hash_Key
+    {
+        size_t operator()(const P4IPFilterEntry::Key &a) const
+        {
+            return (a.src.hashcode() + a.dst.hashcode()) ^ (a.proto << 24);
+        }
+    };
+    P4IPFilterEntry(Key &key, bool allowed);
+    bool allowed() const;
+    const Key key() const;
+    // void unparse(StringAccum &sa);
+
+private:
+    Key _key;
+    bool _allowed;
+};
+
 class P4SFCIPFilter : public BatchElement
 {
 public:
@@ -27,7 +55,7 @@ public:
     void push_batch(int port, PacketBatch *batch) override;
 
 protected:
-    P4SFCState::TableEntry *parse(Vector<String> &, ErrorHandler *);
+    P4IPFilterEntry *parse(Vector<String> &, ErrorHandler *);
 
     int process(int port, Packet *);
     int apply(P4SFCState::TableEntry *);
@@ -37,10 +65,23 @@ protected:
     T s2i(const std::string &);
 
 private:
-    P4SFCState::Table _map;
+    P4SFCState::Table<P4IPFilterEntry::Key, P4IPFilterEntry::Hash_Key> _map;
     bool _debug;
     // Vector<P4SFCState::TableEntry *> rules;
 };
+
+inline bool P4IPFilterEntry::allowed() const
+{
+    return _allowed;
+}
+inline const P4IPFilterEntry::Key P4IPFilterEntry::key() const
+{
+    return _key;
+}
+inline bool operator==(const struct P4IPFilterEntry::Key &a, const struct P4IPFilterEntry::Key &b)
+{
+    return ((a.src == b.src) && (a.dst == b.dst) && (a.proto == b.proto));
+}
 
 CLICK_ENDDECLS
 #endif
