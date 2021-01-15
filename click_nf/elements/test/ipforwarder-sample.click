@@ -10,7 +10,7 @@ define(
 
 ec :: P4SFCEncap();
 
-ipforwarder :: P4SFCIPForwarder(3, $debug, 28282,
+ipforwarder :: SampleIPForwarder($debug,
 	0 10.0.0.0,
 	1 77.77.77.77,
 )
