@@ -10,6 +10,19 @@
 
 CLICK_DECLS
 
+class P4IPForwarderEntry : public P4SFCState::TableEntryImpl
+{
+public:
+    P4IPForwarderEntry(IPAddress dst, int port);
+
+    IPAddress dst() const;
+    int port() const;
+
+private:
+    IPAddress _dst;
+    int _port;
+};
+
 class P4SFCIPForwarder : public BatchElement
 {
 public:
@@ -28,14 +41,19 @@ public:
 
 protected:
 
-    P4SFCState::TableEntry *parse(Vector<String> &, ErrorHandler *);
+    P4IPForwarderEntry *parse(Vector<String> &, ErrorHandler *);
 
     int process(int port, Packet *);
-    int apply(P4SFCState::TableEntry *);
-    bool match(const IPFlow5ID &, const P4SFCState::TableEntry *);
 
 private:
-    P4SFCState::Table _map;
+    struct Hash_IPAddress
+    {
+        size_t operator()(const IPAddress &a) const
+        {
+            return a.hashcode();
+        }
+    };
+    P4SFCState::Table<IPAddress, struct Hash_IPAddress> _map;
     bool _debug;
 };
 

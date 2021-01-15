@@ -76,6 +76,37 @@ separate_text(const String &text, Vector<String> &words)
     }
 }
 
+P4IPForwarderEntry::P4IPForwarderEntry(IPAddress dst, int port) : _dst(dst), _port(port)
+{
+
+    set_table_name(P4_IPFORWARDER_TABLE_NAME);
+
+    {
+        auto a = mutable_action();
+        a->set_action(P4_IPFORWARDER_ACTION_NAME);
+        auto p = a->add_params();
+        p->set_param(P4_IPFORWARDER_PARAM_PORT);
+        p->set_value(&port, 2);
+    }
+
+    {
+        auto m = add_match();
+        m->set_field_name(P4H_IP_DADDR);
+        auto t = m->mutable_exact();
+        uint32_t dst_addr = dst.addr();
+        t->set_value(&dst_addr, 4);
+    }
+}
+
+inline IPAddress P4IPForwarderEntry::dst() const
+{
+    return _dst;
+}
+inline int P4IPForwarderEntry::port() const
+{
+    return _port;
+}
+
 P4SFCIPForwarder::P4SFCIPForwarder()
 {
     in_batch_mode = BATCH_MODE_IFPOSSIBLE;
@@ -91,14 +122,12 @@ int P4SFCIPForwarder::configure(Vector<String> &conf, ErrorHandler *errh)
     int click_instance_id = 1;
     _debug = false;
     int port = 28282;
-    printf("get here\n");
     if (Args(conf, this, errh)
             .read_mp("CLICKINSTANCEID", click_instance_id)
             .read_mp("DEBUG", _debug)
             .read_mp("PORT", port)
             .consume() < 0)
         return -1;
-
 
     char addr[20];
     sprintf(addr, "0.0.0.0:%d", port);
@@ -110,23 +139,16 @@ int P4SFCIPForwarder::configure(Vector<String> &conf, ErrorHandler *errh)
         Vector<String> words;
         separate_text(cp_unquote(conf[argno]), words);
 
-        P4SFCState::TableEntry *e = parse(words, errh);
+        P4IPForwarderEntry *e = parse(words, errh);
         // TODO: priority ascending or descending
         e->set_priority(argno);
-        _map.insert(*e);
+        _map.insert(e->dst(), e);
         if (_debug)
-            click_chatter("entry: %s", toString(*e).c_str());
+            click_chatter("entry: %s", e->unparse().c_str());
     }
 }
 
-static inline std::string buildkey(const IPFlowID &flow)
-{
-    std::string ret;
-    ret.append((const char *)flow.daddr().data(), 4);
-    return ret;
-}
-
-P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHandler *errh)
+P4IPForwarderEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHandler *errh)
 {
     int size = words.size();
     if (size != 2)
@@ -134,41 +156,25 @@ P4SFCState::TableEntry *P4SFCIPForwarder::parse(Vector<String> &words, ErrorHand
         errh->message("firewall rule must be 2-tuple, but is a %d-tuple", size);
         return NULL;
     }
-
-    P4SFCState::TableEntry *e = P4SFCState::newTableEntry();
-    e->set_table_name(P4_IPFORWARDER_TABLE_NAME);
-
-    int out_port = 0;
-    if (!IntArg().parse(words[0], out_port))
-        errh->message("format error %s", words[0]);
-    {
-        auto a = e->mutable_action();
-        a->set_action(P4_IPFORWARDER_ACTION_NAME);
-        auto p = a->add_params();
-        p->set_param(P4_IPFORWARDER_PARAM_PORT);
-        p->set_value(&out_port, 2);
-    }
-
+    int port = 0;
     IPAddress dst;
+
+    if (!IntArg().parse(words[0], port))
+        errh->message("format error %s", words[0]);
     if (!IPAddressArg().parse(words[1], dst, this))
         errh->message("dst IPAddress: parse error");
-    {
-        auto m = e->add_match();
-        m->set_field_name(P4H_IP_DADDR);
-        auto t = m->mutable_exact();
-        uint32_t dst_addr = dst.addr();
-        t->set_value(&dst_addr, 4);
-    }
-    return e;
+
+    return new P4IPForwarderEntry(dst, port);
 }
 
 int P4SFCIPForwarder::process(int port, Packet *p)
 {
     IPFlowID flowid(p);
     int out = 0;
-    P4SFCState::TableEntry *e = _map.lookup(buildkey(flowid));
+    IPAddress dst = flowid.daddr();
+    P4IPForwarderEntry *e = (P4IPForwarderEntry *)_map.lookup(dst);
     if (e)
-        int _f_u_c_k_ = *(uint16_t *)e->action().params(0).value().data();
+        out = e->port();
 
     if (_debug)
         click_chatter("Forwarder the packet to port %x.", out);
