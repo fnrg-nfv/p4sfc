@@ -12,7 +12,7 @@ ec :: P4SFCEncap();
 
 // do not deny
 // <action srcip dstip proto>
-ipfilter :: P4SFCIPFilter(3, $debug, 28282,
+ipfilter :: SampleIPFilter($debug,
 	allow 10.0.0.1 77.77.77.77 0x06, // tcp
 	allow 10.0.0.1 77.77.77.77 0x11, // udp
 )
@@ -32,9 +32,10 @@ src	-> Strip(14)
     -> CheckIPHeader
     -> ipfilter;
 
+
 ipfilter[0] -> [1]ec;
-ipfilter[1] -> Print(alert, ACTIVE $debug) -> [1]ec;
-ipfilter[2] -> Print(drop, ACTIVE $debug) -> [1]ec;
+// ipfilter[1] -> Print(alert, ACTIVE $debug) -> [1]ec;
+// ipfilter[2] -> Print(drop, ACTIVE $debug) -> [1]ec;
 
 ec[1] -> EtherEncap(0x1234, 0:0:0:0:0:0, 0:0:0:0:0:0)
 		-> pt::PrintTime(DEBUG $debug, OFFSET 4)

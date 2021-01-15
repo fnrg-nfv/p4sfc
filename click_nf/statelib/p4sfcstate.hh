@@ -64,7 +64,7 @@ namespace P4SFCState
         auto it = _map.find(key);
         if (it == _map.end())
             return 0;
-        auto e = it->second;
+        TableEntryImpl *e = it->second;
         e->inc_slot();
         return e;
     }
