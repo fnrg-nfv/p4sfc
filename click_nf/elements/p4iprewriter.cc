@@ -125,6 +125,7 @@ inline std::string encode(uint16_t i)
 P4IPRewriterEntry::P4IPRewriterEntry(const IPFlowID &in, const IPFlowID &out)
     : P4SFCState::TableEntryImpl(), flowid(in), rw_flowid(out)
 {
+  set_table_name(P4_IPREWRITER_TABLE_NAME);
   {
     auto m = add_match();
     m->set_field_name(P4H_IP_SADDR);
