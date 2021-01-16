@@ -1,15 +1,13 @@
 // Run: sudo bash
-// Run: click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- lb.click
+// Run: ~/fastclick/bin/click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- lb.click
 define(
     $nf_id		5,
-    $iprw_id	1280,
 	$debug		false,
     $queueSize	1024,
-	$port		28282,
 );
 
 ec :: P4SFCEncap();
-rw :: SampleIPRewriter($iprw_id, $debug, $port, pattern - - 192.168.0.1-192.168.0.255 - 0 0);
+rw :: SampleIPRewriter($debug, pattern - - 192.168.0.1-192.168.0.255 - 0 0);
 
 nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);
 nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(nf_id)_tx, TO_PROC main_rx, IQUEUE $queueSize);

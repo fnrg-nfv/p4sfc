@@ -1,17 +1,18 @@
 // Run: sudo bash
-// Run: click --dpdk -l 8-9 -n 4 --proc-type=secondary -v -- firewall.click
+// Run: ~/fastclick/bin/click --dpdk -l 8-9 -n 4 --proc-type=secondary -v -- firewall.click
 define(
       $nf_id 3,
-      $ipft_id 768,
+      $ipft_id 	768,
       $queueSize 1024,
       $debug false,
+	  $port 28282
       );
 
 nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);
 nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(nf_id)_tx, TO_PROC main_rx, IQUEUE $queueSize);
 ec :: P4SFCEncap();
 
-ipfilter :: P4SFCIPFilter($ipft_id, $debug, 28282,
+ipfilter :: P4SFCIPFilter($ipft_id, $debug, $port,
 	allow 10.0.0.1 77.77.77.77 0x11,
 	allow 10.0.0.1 77.77.77.78 0x11,
 	allow 10.0.0.1 77.77.77.79 0x11,

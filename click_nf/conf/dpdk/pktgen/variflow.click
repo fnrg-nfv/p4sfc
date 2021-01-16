@@ -1,4 +1,4 @@
-// Run: sudo click --dpdk -l 0-1 -n 4 -- variflow.click
+// Run: sudo ~/fastclick/bin/click --dpdk -l 0-1 -n 4 -- variflow.click
 define(
 	$dev		0,
 	$header		"00 00 00 01 00 09",

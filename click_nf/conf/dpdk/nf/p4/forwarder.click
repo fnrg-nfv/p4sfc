@@ -1,5 +1,5 @@
 // Run: sudo bash
-// Run: click --dpdk -l 9-10 -n 4 --proc-type=secondary -v -- forwarder.click
+// Run: ~/fastclick/bin/click --dpdk -l 9-10 -n 4 --proc-type=secondary -v -- forwarder.click
 define(
       $ipfw_id    1024,
       $nf_id      4,

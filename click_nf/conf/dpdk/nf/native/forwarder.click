@@ -1,9 +1,7 @@
 // Run: sudo bash
-// Run: click --dpdk -l 9-10 -n 4 --proc-type=secondary -v -- forwarder.click
+// Run: ~/fastclick/binclick --dpdk -l 9-10 -n 4 --proc-type=secondary -v -- forwarder.click
 define(
-      $ipfw_id    1024,
       $nf_id      4,
-      $port       28282,
       $queueSize  1024,
       $debug      false
       );
@@ -12,7 +10,7 @@ nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);
 nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(nf_id)_tx, TO_PROC main_rx, IQUEUE $queueSize);
 ec :: P4SFCEncap();
 
-ipforwarder :: SampleIPForwarder($ipfw_id, $debug, $port,
+ipforwarder :: SampleIPForwarder($debug,
 	128 77.77.108.214,
       128 77.77.110.250,
       128 77.77.96.111,

@@ -1,5 +1,5 @@
 // Run: sudo bash
-// Run: click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- nat-p4.click
+// Run: ~/fastclick/bin/click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- nat-p4.click
 define(
       $nf_id      2,
       $iprw_id    512,

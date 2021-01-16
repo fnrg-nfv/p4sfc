@@ -1,5 +1,5 @@
 // Run: sudo bash
-// Run: click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- lb.click
+// Run: ~/fastclick/bin/click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- lb.click
 define(
     $nf_id		5,
     $iprw_id	1280,
