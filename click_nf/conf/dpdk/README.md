@@ -4,7 +4,7 @@
 
 ```bash
 # <pktgen.click> includes pktgen/*.click
-sudo ~/fastclick/bin/click --dpdk -l 0-1 -n 4 -- <pktgen.click>
+sudo ~/fastclick/bin/click --dpdk -- <pktgen.click>
 ```
 
 ## Run distributor

@@ -22,6 +22,7 @@ int PrintTime::configure(Vector<String> &conf, ErrorHandler *errh)
 
     if (_header_offset > 100)
         errh->warning("_header_offset (%d) is too large\n", _header_offset);
+    _header_offset += 14 + sizeof(click_ip) + sizeof(click_udp);
 
     return 0;
 }
@@ -61,7 +62,7 @@ PacketBatch *PrintTime::simple_action_batch(PacketBatch *batch)
 
 Packet *PrintTime::simple_action(Packet *p)
 {
-    const Timestamp *send_time = (const Timestamp *)(p->data() + 14 + _header_offset + sizeof(click_ip) + sizeof(click_udp));
+    const Timestamp *send_time = (const Timestamp *)(p->data() + _header_offset);
     Timestamp interval = Timestamp::now() - *send_time;
 
     if (_debug)
