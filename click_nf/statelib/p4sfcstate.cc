@@ -2,6 +2,7 @@
 #include <grpc++/grpc++.h>
 
 #define DEBUG
+
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -42,34 +43,33 @@ namespace P4SFCState
             reply->set_click_instance_id(_click_instance_id);
 
             size_t size = total_entries.size();
-            vector<TableEntryImpl *> entries;
             for (auto i = total_entries.begin(); i != total_entries.cend(); i++)
             {
                 TableEntryImpl *e = *i;
                 e->build_slots();
-                entries.push_back(e);
             }
 
-            sort(entries.begin(), entries.end(),
-                 [this](const TableEntryImpl *a, const TableEntryImpl *b) {
+            sort(total_entries.begin(), total_entries.end(),
+                 [](const TableEntryImpl *a, const TableEntryImpl *b) {
                      return a->slots_sum > b->slots_sum;
                  });
 
             size = k < size ? k : size;
             for (size_t i = 0; i < size; i++)
-                reply->add_entries()->CopyFrom(*(entries[i]));
+                reply->add_entries()->CopyFrom(*(total_entries[i]));
 
             move_window_forward();
 
 #ifdef DEBUG
             cout << "Get size:" << size << "/" << total_entries.size() << endl;
-            auto t_end = chrono::high_resolution_clock::now();
+            auto t_end = std::chrono::high_resolution_clock::now();
             cout << fixed << setprecision(2)
                  << "Get state time passed:"
                  << chrono::duration<double, milli>(t_end - t_start).count() << " ms\n";
 #endif
             return Status::OK;
         }
+
         Status GetNewState(ServerContext *context, const Empty *request, TableEntryReply *reply)
         {
 #ifdef DEBUG
@@ -83,9 +83,8 @@ namespace P4SFCState
             if (size > k && pos < size - k)
                 pos = size - k;
             for (; pos < size; pos++)
-            {
                 reply->add_entries()->CopyFrom(*total_entries[pos]);
-            }
+
 #ifdef DEBUG
             cout << "Get size:" << reply->entries_size() << "/" << size << endl;
             auto t_end = chrono::high_resolution_clock::now();
@@ -203,10 +202,10 @@ namespace P4SFCState
     {
         total_entries.push_back(this);
         // init sliding window
-        SlidingWindow *window = mutable_window();
+        auto window = mutable_window();
         for (int i = 0; i < WINDOW_SIZE; i++)
             window->add_slot(0);
-        fill(slots, slots + WINDOW_SIZE, 0);
+        std::fill(slots, slots + WINDOW_SIZE, 0);
     }
 
     void deleteTableEntries()

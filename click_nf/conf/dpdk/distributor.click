@@ -51,7 +51,7 @@ from_nf5 -> Print("After-NF5", ACTIVE $debug) -> NFClf
 
 
 Script( TYPE ACTIVE,
-        print "RX: $(nicIn.count), TX: $(nicOut.count)",
+        print "RX: $(nicIn.count), TX: $(nicOut.count)/$(nicOut.dropped)",
         wait $interval,
-	    loop
+        loop
         );
