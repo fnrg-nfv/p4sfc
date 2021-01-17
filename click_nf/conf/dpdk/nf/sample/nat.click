@@ -43,3 +43,9 @@ ec[1] -> Print(before_eth, ACTIVE $debug)
       -> EtherEncap(0x1234, extern:eth, extern_next_hop:eth)
       -> Print(out, ACTIVE $debug)
       -> nf_to;
+
+Script( TYPE ACTIVE,
+        print "RX: $(nf_from.count), TX: $(nf_to.n_sent)/$(nf_to.n_dropped)",
+        wait 1,
+  	  loop
+        );

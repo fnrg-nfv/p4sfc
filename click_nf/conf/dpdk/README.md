@@ -21,5 +21,5 @@ sudo bash
 sudo bash
 # <nf.click> includes nf/p4/*.click, nf/native/*.clcik,
 #                     nf/lb.click and nf/pipe.click
-~/fastclick/bin/click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- <nf.click>
+~/fastclick/bin/click --dpdk -l 6 -n 4 --proc-type=secondary -v -- <nf.click>
 ```
