@@ -1,5 +1,3 @@
-// Run: sudo bash
-// Run: ~/fastclick/bin/click --dpdk -l 8-9 -n 4 --proc-type=secondary -v -- firewall.click
 define(
       $nf_id 3,
       $queueSize 1024,

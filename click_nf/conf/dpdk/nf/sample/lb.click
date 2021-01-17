@@ -1,5 +1,3 @@
-// Run: sudo bash
-// Run: ~/fastclick/bin/click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- lb.click
 define(
     $nf_id		5,
 	$debug		false,

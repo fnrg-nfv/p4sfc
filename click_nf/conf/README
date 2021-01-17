@@ -8,6 +8,7 @@ dpdk            : interfaces are in DPDK styles, including From/ToDPDKDevice, Fr
 CLICK-BASED NETWORK FUNCTION: 
 
 - NAT           : nat.click, nat-p4.click
+- Load Balancer : lb.click
 - firewall      : firewall.click
 - monitor       : monitor.click
 - IPS           : ips.click                    # based on snort

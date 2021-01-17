@@ -1,5 +1,3 @@
-// Run: sudo bash
-// Run: click --dpdk -l 4-5 -n 4 --proc-type=secondary -v -- ips.click
 define(
         $nf_id 1,
         $queueSize 1024,

@@ -1,17 +1,13 @@
-// Run: sudo bash
-// Run: ~/fastclick/bin/click --dpdk -l 6-7 -n 4 --proc-type=secondary -v -- nat-p4.click
 define(
       $nf_id      2,
-      $iprw_id    512,
       $queueSize  1024,
-	$port		28282,
       $debug      false
       );
 
 nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);
 nf_to   ::  ToDPDKRing  (MEM_POOL 2,  FROM_PROC nf$(nf_id)_tx, TO_PROC main_rx, IQUEUE $queueSize);
 
-rw :: P4IPRewriter($iprw_id, $debug, $port, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
+rw :: SampleIPRewriter($debug, pattern 66.66.66.66 10000-65535 - - 0 0, drop);
 ec :: P4SFCEncap();
 
 AddressInfo(

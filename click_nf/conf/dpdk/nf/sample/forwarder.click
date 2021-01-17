@@ -1,5 +1,3 @@
-// Run: sudo bash
-// Run: ~/fastclick/binclick --dpdk -l 9-10 -n 4 --proc-type=secondary -v -- forwarder.click
 define(
       $nf_id      4,
       $queueSize  1024,
