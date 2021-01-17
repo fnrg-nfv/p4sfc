@@ -173,8 +173,10 @@ int P4SFCIPForwarder::process(int port, Packet *p)
     int out = 0;
     IPAddress dst = flowid.daddr();
     P4IPForwarderEntry *e = (P4IPForwarderEntry *)_map.lookup(dst);
+
+    // simulate the behavior of forwarder.
     if (e)
-        out = e->port();
+        int _fuck_ = e->port();
 
     if (_debug)
         click_chatter("Forwarder the packet to port %x.", out);
