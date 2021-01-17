@@ -23,6 +23,12 @@ namespace P4SFCState
 
         void inc_slot();
         string unparse() const;
+
+        void build_slots();
+
+        uint64_t slots[WINDOW_SIZE];
+        uint64_t slots_sum;
+
     };
 
     template <typename Key, typename Hash>
@@ -71,9 +77,9 @@ namespace P4SFCState
 
     inline void TableEntryImpl::inc_slot()
     {
-        auto w = mutable_window();
-        w->set_slot(cur_pos, w->slot(cur_pos) + 1);
+        slots[cur_pos] += 1;
     }
+
 } // namespace P4SFCState
 
 #endif

@@ -16,6 +16,7 @@
 namespace P4SFCState
 {
     using namespace grpc;
+    using namespace std;
 
     vector<TableEntryImpl *> total_entries;
     int cur_pos;
@@ -27,57 +28,52 @@ namespace P4SFCState
         Status SayHello(ServerContext *context, const HelloRequest *request,
                         HelloReply *reply) override
         {
-            std::string prefix("Hello ");
+            string prefix("Hello ");
             reply->set_message(prefix + request->name());
             return Status::OK;
         }
 
-        typedef struct
-        {
-            TableEntryImpl *e;
-            uint64_t sum;
-        } entry_sum;
-
         Status GetState(ServerContext *context, const Empty *request, TableEntryReply *reply)
         {
 #ifdef DEBUG
-            auto t_start = std::chrono::high_resolution_clock::now();
+            auto t_start = chrono::high_resolution_clock::now();
 #endif
             reply->set_window_cur_pos(cur_pos);
             reply->set_click_instance_id(_click_instance_id);
 
             size_t size = total_entries.size();
-            vector<entry_sum> entries;
+            vector<TableEntryImpl *> entries;
             for (auto i = total_entries.begin(); i != total_entries.cend(); i++)
             {
                 TableEntryImpl *e = *i;
-                entries.push_back({e, window_sum(*e)});
+                e->build_slots();
+                entries.push_back(e);
             }
 
-            std::sort(entries.begin(), entries.end(),
-                      [this](const entry_sum &a, const entry_sum &b) {
-                          return a.sum > b.sum;
-                      });
+            sort(entries.begin(), entries.end(),
+                 [this](const TableEntryImpl *a, const TableEntryImpl *b) {
+                     return a->slots_sum > b->slots_sum;
+                 });
 
             size = k < size ? k : size;
             for (size_t i = 0; i < size; i++)
-                reply->add_entries()->CopyFrom(*(entries[i].e));
+                reply->add_entries()->CopyFrom(*(entries[i]));
 
             move_window_forward();
 
 #ifdef DEBUG
-            std::cout << "Get size:" << size << "/" << total_entries.size() << std::endl;
-            auto t_end = std::chrono::high_resolution_clock::now();
-            std::cout << std::fixed << std::setprecision(2)
-                      << "Get state time passed:"
-                      << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
+            cout << "Get size:" << size << "/" << total_entries.size() << endl;
+            auto t_end = chrono::high_resolution_clock::now();
+            cout << fixed << setprecision(2)
+                 << "Get state time passed:"
+                 << chrono::duration<double, milli>(t_end - t_start).count() << " ms\n";
 #endif
             return Status::OK;
         }
         Status GetNewState(ServerContext *context, const Empty *request, TableEntryReply *reply)
         {
 #ifdef DEBUG
-            auto t_start = std::chrono::high_resolution_clock::now();
+            auto t_start = chrono::high_resolution_clock::now();
 #endif
             reply->set_window_cur_pos(cur_pos);
             reply->set_click_instance_id(_click_instance_id);
@@ -91,11 +87,11 @@ namespace P4SFCState
                 reply->add_entries()->CopyFrom(*total_entries[pos]);
             }
 #ifdef DEBUG
-            std::cout << "Get size:" << reply->entries_size() << "/" << size << std::endl;
-            auto t_end = std::chrono::high_resolution_clock::now();
-            std::cout << std::fixed << std::setprecision(2)
-                      << "Get state time passed:"
-                      << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
+            cout << "Get size:" << reply->entries_size() << "/" << size << endl;
+            auto t_end = chrono::high_resolution_clock::now();
+            cout << fixed << setprecision(2)
+                 << "Get state time passed:"
+                 << chrono::duration<double, milli>(t_end - t_start).count() << " ms\n";
 #endif
             return Status::OK;
         }
@@ -108,20 +104,13 @@ namespace P4SFCState
 
         void move_window_forward()
         {
-            int nextPos = (cur_pos + 1) % WINDOW_SIZE;
+            int next_pos = (cur_pos + 1) % WINDOW_SIZE;
             for (auto i = total_entries.begin(); i != total_entries.cend(); i++)
             {
-                TableEntry *e = *i;
-                auto w = e->mutable_window();
-                w->set_slot(nextPos, w->slot(cur_pos));
+                TableEntryImpl *e = *i;
+                e->slots[next_pos] = e->slots[cur_pos];
             }
-            cur_pos = nextPos;
-        }
-
-        uint64_t window_sum(const TableEntry &e)
-        {
-            auto w = e.window();
-            return w.slot(cur_pos) - w.slot((cur_pos + 1) % WINDOW_SIZE);
+            cur_pos = next_pos;
         }
     };
 
@@ -138,7 +127,7 @@ namespace P4SFCState
         builder.RegisterService(&service);
         server = builder.BuildAndStart();
 
-        std::cout << "Server listening on " << addr << std::endl;
+        cout << "Server listening on " << addr << endl;
         server->Wait();
     }
 
@@ -160,13 +149,13 @@ namespace P4SFCState
     {
         typedef uint8_t unit;
         const unit *i = (const unit *)s.data();
-        std::stringstream stream;
+        stringstream stream;
         stream << "0x";
         int len = s.length() / sizeof(unit);
         for (size_t j = 0; j < len; j++)
         {
-            stream << std::setfill('0') << std::setw(sizeof(unit) * 2)
-                   << std::hex << unsigned(i[j]);
+            stream << setfill('0') << setw(sizeof(unit) * 2)
+                   << hex << unsigned(i[j]);
         }
         return stream.str();
     }
@@ -174,7 +163,7 @@ namespace P4SFCState
     string TableEntryImpl::unparse() const
     {
         string ret("");
-        std::stringstream stream;
+        stringstream stream;
         stream << "TableName: " << table_name();
         stream << "\tMatch: ";
         int size = match_size();
@@ -217,6 +206,7 @@ namespace P4SFCState
         SlidingWindow *window = mutable_window();
         for (int i = 0; i < WINDOW_SIZE; i++)
             window->add_slot(0);
+        fill(slots, slots + WINDOW_SIZE, 0);
     }
 
     void deleteTableEntries()
@@ -224,5 +214,13 @@ namespace P4SFCState
         for (auto e = total_entries.begin(); e != total_entries.end(); e = total_entries.erase(e))
             if (*e)
                 delete *e;
+    }
+
+    void TableEntryImpl::build_slots()
+    {
+        auto w = mutable_window();
+        for (size_t i = 0; i < WINDOW_SIZE; i++)
+            w->set_slot(i, slots[i]);
+        slots_sum = slots[cur_pos] - slots[(cur_pos + 1) % WINDOW_SIZE];
     }
 } // namespace P4SFCState
