@@ -33,9 +33,9 @@ public:
     const Key key() const;
     // void unparse(StringAccum &sa);
 
+    bool _allowed;
 private:
     Key _key;
-    bool _allowed;
 };
 
 class P4SFCIPFilter : public BatchElement

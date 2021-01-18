@@ -138,7 +138,7 @@ SampleIPFilterEntry *SampleIPFilter::parse(Vector<String> &words, ErrorHandler *
 int SampleIPFilter::process(int port, Packet *p)
 {
     IPFlow5ID flowid(p);
-    int out = -1;
+    int out = 0;
     SampleIPFilterEntry::Key key(flowid.saddr(), flowid.daddr(), flowid.proto());
     auto it = _map.find(key);
     if (it != _map.end())

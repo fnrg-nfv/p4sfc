@@ -5,7 +5,7 @@ define(
 	$burst     32,
 	$debug 	   false,
 	$rate	   1,
-	$header		"00 00 00 01 00 05",
+	$header		"00 00 00 02 00 04 00 07",
 	$srcmac		0:0:0:0:0:0,
 	$dstmac		0:0:0:0:0:0,
 	$range		32,

@@ -3,7 +3,7 @@ define(
       $ipft_id 	768,
       $queueSize 1024,
       $debug false,
-	  $port 28282
+	  $port 28283
       );
 
 nf_from ::  FromDPDKRing(MEM_POOL 1,  FROM_PROC nf$(nf_id)_rx, TO_PROC main_tx);

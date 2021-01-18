@@ -183,11 +183,12 @@ P4IPFilterEntry *P4SFCIPFilter::parse(Vector<String> &words, ErrorHandler *errh)
 int P4SFCIPFilter::process(int port, Packet *p)
 {
     IPFlow5ID flowid(p);
-    int out = -1;
+    int out = 0;
     P4IPFilterEntry::Key key(flowid.saddr(), flowid.daddr(), flowid.proto());
     P4IPFilterEntry *e = (P4IPFilterEntry *)_map.lookup(key);
-    if (e->allowed())
+    if (e && e->allowed()) {
         out = 0;
+    }
     if (_debug)
         click_chatter("Filter the packet to port %x.", out);
     return out;

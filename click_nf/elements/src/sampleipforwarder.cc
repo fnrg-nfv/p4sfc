@@ -142,8 +142,9 @@ int SampleIPForwarder::process(int port, Packet *p)
     int out = 0;
     IPAddress dst = flowid.daddr();
     auto it = _map.find(dst);
+    // simulate the action
     if (it != _map.end())
-        out = it->second->port();
+        int _fuck_ = it->second->port();
 
     if (_debug)
         click_chatter("Forwarder the packet to port %x.", out);
