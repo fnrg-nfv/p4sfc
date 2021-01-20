@@ -24,7 +24,7 @@ P4SFCVariFlow::P4SFCVariFlow() : _task(this), _timer(&_task)
 
 int P4SFCVariFlow::configure(Vector<String> &conf, ErrorHandler *errh)
 {
-    int rate = 10;
+    _rate = 10;
     unsigned burst = 32;
     int limit = -1;
     unsigned eth_type = 0x1234;
@@ -54,7 +54,7 @@ int P4SFCVariFlow::configure(Vector<String> &conf, ErrorHandler *errh)
             .read("SEED", _seed)
             .read("SFCH", sfch)
             .read("ETHTYPE", eth_type)
-            .read("RATE", rate)
+            .read("RATE", _rate)
             .read("BURST", burst)
             .read("LIMIT", limit)
             .read("ACTIVE", _active)
@@ -69,14 +69,13 @@ int P4SFCVariFlow::configure(Vector<String> &conf, ErrorHandler *errh)
 
     _ethh.ether_type = htons(eth_type);
 
-    if (rate < 0)
+    if (_rate < 0)
         _rate_limit = false;
     else
     {
         _rate_limit = true;
-        if (rate < burst)
-            burst = rate;
-        _tb.assign(rate, burst);
+        if (_rate < burst)
+            burst = _rate;
     }
 
     if (burst < (int)_batch_size)
@@ -181,16 +180,16 @@ bool P4SFCVariFlow::run_task(Task *)
     }
     else
     {
-        // Refill the token bucket
-        _tb.refill();
+        static const Timestamp interval = Timestamp((double)_batch_size / _rate);
+        static Timestamp last_timestamp = Timestamp::now();
 
-        // Create a batch
-        for (int i = 0; i < (int)n; i++)
+        if (_now - last_timestamp >= interval)
         {
-            if (_tb.remove_if(1))
+            last_timestamp += interval;
+            // Create a batch
+            for (int i = 0; i < (int)n; i++)
             {
-                Packet *p = next_packet()->clone();
-                // p->set_timestamp_anno(_now);
+                Packet *p = next_packet();
 
                 if (head == NULL)
                     head = PacketBatch::start_head(p);
@@ -198,16 +197,8 @@ bool P4SFCVariFlow::run_task(Task *)
                     last->set_next(p);
                 last = p;
             }
-            else
-            {
-                _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(_batch_size)));
-                return false;
-            }
-        }
 
-        // Push the batch
-        if (head)
-        {
+            // Push the batch
             output_push_batch(0, head->make_tail(last, n));
             if (_debug)
                 print_flow_counts();
@@ -219,7 +210,7 @@ bool P4SFCVariFlow::run_task(Task *)
         }
         else
         {
-            _timer.schedule_after(Timestamp::make_jiffies(_tb.time_until_contains(1)));
+            _task.fast_reschedule();
             return false;
         }
     }

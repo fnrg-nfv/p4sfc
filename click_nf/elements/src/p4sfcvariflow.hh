@@ -46,6 +46,7 @@ protected:
     Task _task;
     Timer _timer;
     bool _rate_limit;
+    unsigned long _rate;
 
     unsigned _major_flowsize;
     unsigned _major_data;
