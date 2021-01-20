@@ -55,6 +55,8 @@ protected:
     unsigned _major_flowsize;
     unsigned _major_data;
     unsigned _flowsize;
+    uint16_t _sport;
+    uint16_t _dport;
 
     String _sfch;
     click_ether _ethh;

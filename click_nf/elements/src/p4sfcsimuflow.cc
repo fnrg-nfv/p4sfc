@@ -38,6 +38,7 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
     _sipaddr.s_addr = 0x0100000A;
     _dipaddr.s_addr = 0x4D4D4D4D;
     _seed = 0xABCDABCD;
+    _sport = 0, _dport = 0;
     String sfch = "";
 
     if (Args(conf, this, errh)
@@ -46,6 +47,8 @@ int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
             .read("DEBUG", _debug)
             .read("SRCIP", _sipaddr)
             .read("DSTIP", _dipaddr)
+            .read("SPORT", _sport)
+            .read("DPORT", _dport)
             .read("RANGE", _range)
             .read("FLOWSIZE", _flowsize)
             .read("SEED", _seed)
@@ -245,8 +248,14 @@ void P4SFCSimuFlow::setup_flows(ErrorHandler *errh)
         // _flows[i].packet->set_ip_header(ip, sizeof(click_ip));
 
         // set up UDP header
-        udp->uh_sport = (click_random() >> 2) % 0xFFFF;
-        udp->uh_dport = (click_random() >> 2) % 0xFFFF;
+        if (_sport)
+            udp->uh_sport = _sport;
+        else
+            udp->uh_sport = (click_random() >> 2) % 0xFFFF;
+        if (_dport)
+            udp->uh_dport = _dport;
+        else
+            udp->uh_dport = (click_random() >> 2) % 0xFFFF;
         udp->uh_sum = 0;
         unsigned short len = _len - 14 - _sfch.length() - sizeof(click_ip);
         udp->uh_ulen = htons(len);
