@@ -12,6 +12,7 @@ define(
 
 ips :: SampleIPS(
 	$debug,
+	DEPTH 128,
 	2|00 00 00 06 00 00 00|Drives|24 00|,
 	qazwsx.hsq,
 	GetInfo|0D|,

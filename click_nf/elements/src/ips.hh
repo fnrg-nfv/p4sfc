@@ -92,6 +92,7 @@ protected:
   Trie pattern_trie;
 
   bool _debug;
+  uint32_t _depth;
   Vector<IPSPattern> patterns;
 };
 

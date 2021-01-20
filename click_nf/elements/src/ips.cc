@@ -82,15 +82,17 @@ SampleIPS::IPSPattern SampleIPS::parse_pattern(String &s)
 int SampleIPS::configure(Vector<String> &conf, ErrorHandler *errh)
 {
   _debug = false;
+  _depth = 64;
   if (Args(conf, this, errh)
           .read_mp("DEBUG", _debug)
+          .read_mp("DEPTH", _depth)
           .consume() < 0)
     return -1;
 
-  if (conf.size() == 1)
+  if (conf.size() == 2)
     errh->warning("empty configuration");
 
-  for (int i = 1; i < conf.size(); ++i)
+  for (int i = 2; i < conf.size(); ++i)
   {
     IPSPattern pattern = parse_pattern(conf[i]);
     patterns.push_back(pattern);
@@ -116,6 +118,8 @@ int SampleIPS::process(Packet *p)
 {
   const unsigned char *data = p->data();
   int len = p->length();
+  if (_depth < len)
+    len = _depth;
   if (pattern_trie.iterSearch(data, len))
     return 0;
   return 1;
