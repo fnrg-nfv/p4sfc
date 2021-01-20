@@ -7,8 +7,6 @@
 #include <click/timer.hh>
 #include <unordered_map>
 
-#include "/home/sonic/p4sfc/click_nf/statelib/p4sfcstate.hh"
-
 CLICK_DECLS
 
 /*
