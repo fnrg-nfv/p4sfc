@@ -325,6 +325,7 @@ inline Packet *P4SFCVariFlow::next_packet()
 
 void P4SFCVariFlow::print_flow_counts()
 {
+    printf("Flow count:");
     for (size_t i = 0; i < _flowsize; i++)
         printf("%u\t", _flows[i].flow_count);
     printf("\n");
