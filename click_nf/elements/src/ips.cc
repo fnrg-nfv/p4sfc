@@ -11,7 +11,7 @@ CLICK_DECLS
 
 SampleIPS::SampleIPS() {}
 
-SampleIPS::~SampleIPS() {}
+SampleIPS::~SampleIPS() { }
 
 int number2String(unsigned char *dest, const unsigned char *src, int len)
 {
@@ -49,7 +49,7 @@ int number2String(unsigned char *dest, const unsigned char *src, int len)
 
 #define PATTERN_BUFSIZE 1500
 
-SampleIPS::IPSPattern SampleIPS::parse_pattern(String &s)
+void SampleIPS::parse_pattern(String &s, SampleIPS::IPSPattern *pattern)
 {
   unsigned char buf[PATTERN_BUFSIZE];
   unsigned char *bufp = buf;
@@ -73,10 +73,11 @@ SampleIPS::IPSPattern SampleIPS::parse_pattern(String &s)
   memcpy(bufp, strp + cur, len - cur);
   bufp += len - cur;
 
-  SampleIPS::IPSPattern ret = {.len = (uint32_t)(bufp - buf), .data = (unsigned char *)malloc(bufp - buf)};
-  memcpy(ret.data, buf, ret.len);
-
-  return ret;
+  static int index = 0;
+  pattern->index = index++;
+  pattern->len = (uint32_t)(bufp - buf),
+  pattern->data = (unsigned char *)malloc(bufp - buf),
+  memcpy(pattern->data, buf, pattern->len);
 }
 
 int SampleIPS::configure(Vector<String> &conf, ErrorHandler *errh)
@@ -94,24 +95,32 @@ int SampleIPS::configure(Vector<String> &conf, ErrorHandler *errh)
 
   for (int i = 2; i < conf.size(); ++i)
   {
-    IPSPattern pattern = parse_pattern(conf[i]);
+    if (conf[i].length() == 0)
+      continue;
+
+    IPSPattern *pattern = new IPSPattern();
+    parse_pattern(conf[i], pattern);
     patterns.push_back(pattern);
-    pattern_trie.insert(pattern.data, pattern.len);
+    pattern_trie.insert(pattern->data, pattern->len, pattern);
   }
   if (_debug)
     print_patterns();
   return 0;
 }
 
+void SampleIPS::IPSPattern::print()
+{
+  printf("%d: ", index);
+  for (uint j = 0; j < len; ++j)
+    printf("%02x ", data[j]);
+  printf("\n");
+}
+
 void SampleIPS::print_patterns(void)
 {
   printf("Patterns:\n");
   for (int i = 0; i < patterns.size(); ++i)
-  {
-    for (uint j = 0; j < patterns[i].len; ++j)
-      printf("%02x ", patterns[i].data[j]);
-    printf("\n");
-  }
+    patterns[i]->print();
 }
 
 int SampleIPS::process(Packet *p)
@@ -120,8 +129,14 @@ int SampleIPS::process(Packet *p)
   int len = p->length();
   if (_depth < len)
     len = _depth;
-  if (pattern_trie.iterSearch(data, len))
+  IPSPattern *pattern;
+  if (pattern = (IPSPattern *)pattern_trie.iterSearch(data, len))
+  {
+    if (_debug && pattern)
+      pattern->print();
+
     return 0;
+  }
   return 1;
 }
 

@@ -6,59 +6,75 @@ CLICK_DECLS
 #define TRIENODESIZE 256
 struct TrieNode
 {
-  bool flag;
+  void *flag;
+  int depth;
   TrieNode *failure;
+  TrieNode *parent;
   TrieNode *child[TRIENODESIZE];
-  TrieNode()
+  TrieNode(int d, TrieNode *p)
   {
-    flag = false;
+    depth = d;
+    parent = p;
+    flag = NULL;
     for (int i = 0; i < TRIENODESIZE; ++i)
       child[i] = NULL;
+  }
+  ~TrieNode()
+  {
+    for (size_t i = 0; i < TRIENODESIZE; i++)
+      child[i]->~TrieNode();
+    delete[] this;
   }
 };
 
 class Trie
 {
 private:
-  TrieNode *root = new TrieNode();
-
 public:
-  void insert(unsigned char *pattern, int len)
+  TrieNode *root = new TrieNode(0, 0);
+  void insert(unsigned char *pattern, int len, void *val)
   {
     TrieNode *cur = root;
     for (int i = 0; i < len; ++i)
     {
       uint8_t cid = pattern[i];
       if (cur->child[cid] == NULL)
-        cur->child[cid] = new TrieNode();
+        cur->child[cid] = new TrieNode(0, 0);
       cur = cur->child[cid];
     }
-    cur->flag = true;
+    if (!(cur->flag))
+      cur->flag = val;
   }
-  bool search(const unsigned char *big_str, int len)
+  void *search(const unsigned char *big_str, int len)
   {
     TrieNode *cur = root;
     for (int i = 0; i < len; ++i)
     {
       int cid = big_str[i];
       if (cur->flag)
-        return true;
+      {
+        return cur->flag;
+      }
+
       if (cur->child[cid] == NULL)
-        return false;
+      {
+        return NULL;
+      }
       cur = cur->child[cid];
     }
-    if (cur->flag)
-      return true;
-    return false;
+    return cur->flag;
   }
-  bool iterSearch(const unsigned char *big_str, int len)
+  void *iterSearch(const unsigned char *big_str, int len)
   {
+    void *ret = NULL;
     for (int i = 0; i < len; ++i)
     {
-      if (search(big_str + i, len - i))
-        return true;
+      if (ret = search(big_str + i, len - i))
+      {
+        return ret;
+      }
     }
-    return false;
+    return NULL;
   }
 };
 
@@ -79,8 +95,11 @@ public:
 
   struct IPSPattern
   {
+    int index;
     uint32_t len;
     unsigned char *data;
+
+    void print();
   };
   bool pattern_match(IPSPattern &pt, Packet *p);
   // bool pattern_match(String &pt, Packet *p);
@@ -88,12 +107,12 @@ public:
 protected:
   int process(Packet *p);
   void print_patterns(void);
-  IPSPattern parse_pattern(String &);
+  void parse_pattern(String &s, IPSPattern *pattern);
   Trie pattern_trie;
 
   bool _debug;
   uint32_t _depth;
-  Vector<IPSPattern> patterns;
+  Vector<IPSPattern*> patterns;
 };
 
 CLICK_ENDDECLS
