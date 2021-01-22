@@ -1,7 +1,7 @@
 define(
       $ipfw_id    1024,
       $nf_id      4,
-      $port       28282,
+      $port       28284,
       $queueSize  1024,
       $debug      false
       );
