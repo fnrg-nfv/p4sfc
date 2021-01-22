@@ -24,7 +24,6 @@ P4SFCSimuFlow::P4SFCSimuFlow() : _task(this), _timer(&_task)
 
 int P4SFCSimuFlow::configure(Vector<String> &conf, ErrorHandler *errh)
 {
-    printf("here\n");
     int rate = 10;
     unsigned burst = 32;
     int limit = -1;
