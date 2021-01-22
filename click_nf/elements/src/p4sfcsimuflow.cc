@@ -250,11 +250,11 @@ void P4SFCSimuFlow::setup_flows(ErrorHandler *errh)
 
         // set up UDP header
         if (_sport)
-            udp->uh_sport = _sport;
+            udp->uh_sport = htons(_sport);
         else
             udp->uh_sport = (click_random() >> 2) % 0xFFFF;
         if (_dport)
-            udp->uh_dport = _dport;
+            udp->uh_dport = htons(_dport);
         else
             udp->uh_dport = (click_random() >> 2) % 0xFFFF;
         udp->uh_sum = 0;
