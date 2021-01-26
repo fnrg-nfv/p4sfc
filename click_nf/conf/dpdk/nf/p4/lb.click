@@ -1,9 +1,9 @@
 define(
     $nf_id		5,
-    $iprw_id	1280,
+    $iprw_id	1282,
 	$debug		false,
     $queueSize	1024,
-	$port		28282,
+	$port		28284,
 );
 
 ec :: P4SFCEncap();
